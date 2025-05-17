@@ -1,0 +1,318 @@
+{
+  "name": "Project",
+  "type": "ARM",
+  "dependenceList": [],
+  "srcDirs": [],
+  "virtualFolder": {
+    "name": "<virtual_root>",
+    "files": [],
+    "folders": [
+      {
+        "name": "Application",
+        "files": [
+          {
+            "path": "../gd32e23x_it.c"
+          },
+          {
+            "path": "../main.c"
+          },
+          {
+            "path": "../systick.c"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "CMSIS",
+        "files": [
+          {
+            "path": "../../Firmware/CMSIS/GD/GD32E23x/Source/system_gd32e23x.c"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "Peripherals",
+        "files": [
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_adc.c"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_cmp.c"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_crc.c"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_dbg.c"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_dma.c"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_exti.c"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_fmc.c"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_fwdgt.c"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_gpio.c"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_i2c.c"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_misc.c"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_pmu.c"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_rcu.c"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_rtc.c"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_spi.c"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_syscfg.c"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_timer.c"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_usart.c"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_wwdgt.c"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "Startup",
+        "files": [
+          {
+            "path": "../../Firmware/CMSIS/GD/GD32E23x/Source/ARM/startup_gd32e23x.s"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "Utilities",
+        "files": [
+          {
+            "path": "../../Utilities/gd32e230c_eval.c"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "Doc",
+        "files": [
+          {
+            "path": "../readme.txt"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "::CMSIS",
+        "files": [],
+        "folders": []
+      }
+    ]
+  },
+  "outDir": "build",
+  "deviceName": null,
+  "packDir": null,
+  "miscInfo": {
+    "uid": "45812ba6bf2c08d3aaed8126bc8eeb6a"
+  },
+  "targets": {
+    "GD32E23x": {
+      "excludeList": [],
+      "toolchain": "AC6",
+      "compileConfig": {
+        "cpuType": "Cortex-M23",
+        "floatingPointHardware": "none",
+        "scatterFilePath": "output/Project.sct",
+        "useCustomScatterFile": false,
+        "storageLayout": {
+          "RAM": [
+            {
+              "tag": "RAM",
+              "id": 1,
+              "mem": {
+                "startAddr": "0x0",
+                "size": "0x0"
+              },
+              "isChecked": false,
+              "noInit": false
+            },
+            {
+              "tag": "RAM",
+              "id": 2,
+              "mem": {
+                "startAddr": "0x0",
+                "size": "0x0"
+              },
+              "isChecked": false,
+              "noInit": false
+            },
+            {
+              "tag": "RAM",
+              "id": 3,
+              "mem": {
+                "startAddr": "0x0",
+                "size": "0x0"
+              },
+              "isChecked": false,
+              "noInit": false
+            },
+            {
+              "tag": "IRAM",
+              "id": 1,
+              "mem": {
+                "startAddr": "0x20000000",
+                "size": "0x2000"
+              },
+              "isChecked": true,
+              "noInit": false
+            },
+            {
+              "tag": "IRAM",
+              "id": 2,
+              "mem": {
+                "startAddr": "0x0",
+                "size": "0x0"
+              },
+              "isChecked": false,
+              "noInit": false
+            }
+          ],
+          "ROM": [
+            {
+              "tag": "ROM",
+              "id": 1,
+              "mem": {
+                "startAddr": "0x0",
+                "size": "0x0"
+              },
+              "isChecked": false,
+              "isStartup": false
+            },
+            {
+              "tag": "ROM",
+              "id": 2,
+              "mem": {
+                "startAddr": "0x0",
+                "size": "0x0"
+              },
+              "isChecked": false,
+              "isStartup": false
+            },
+            {
+              "tag": "ROM",
+              "id": 3,
+              "mem": {
+                "startAddr": "0x0",
+                "size": "0x0"
+              },
+              "isChecked": false,
+              "isStartup": false
+            },
+            {
+              "tag": "IROM",
+              "id": 1,
+              "mem": {
+                "startAddr": "0x8000000",
+                "size": "0x10000"
+              },
+              "isChecked": true,
+              "isStartup": true
+            },
+            {
+              "tag": "IROM",
+              "id": 2,
+              "mem": {
+                "startAddr": "0x0",
+                "size": "0x0"
+              },
+              "isChecked": false,
+              "isStartup": false
+            }
+          ]
+        },
+        "options": "null"
+      },
+      "uploader": "JLink",
+      "uploadConfig": {
+        "bin": "",
+        "baseAddr": "",
+        "cpuInfo": {
+          "vendor": "null",
+          "cpuName": "null"
+        },
+        "proType": 1,
+        "speed": 8000,
+        "otherCmds": ""
+      },
+      "uploadConfigMap": {},
+      "custom_dep": {
+        "name": "default",
+        "incList": [
+          "../../Firmware/CMSIS",
+          "../../Utilities",
+          "..",
+          "../../Utilities/LCD_Commom",
+          "../../Firmware/GD32E23x_standard_peripheral/Include",
+          "../../Firmware/CMSIS/GD/GD32E23x/Include",
+          ".cmsis/include",
+          "RTE/_GD32E23x"
+        ],
+        "libList": [],
+        "defineList": [
+          "GD32E230"
+        ]
+      },
+      "builderOptions": {
+        "AC6": {
+          "version": 3,
+          "beforeBuildTasks": [],
+          "afterBuildTasks": [],
+          "global": {
+            "use-microLIB": true,
+            "output-debug-info": "enable"
+          },
+          "c/cpp-compiler": {
+            "optimization": "level-0",
+            "language-c": "c99",
+            "language-cpp": "c++11",
+            "link-time-optimization": false,
+            "one-elf-section-per-function": true,
+            "short-enums#wchar": true,
+            "warnings": "ac5-like-warnings"
+          },
+          "asm-compiler": {
+            "$use": "asm"
+          },
+          "linker": {
+            "output-format": "elf",
+            "misc-controls": "--diag_suppress=L6329",
+            "xo-base": "",
+            "ro-base": "0x08000000",
+            "rw-base": "0x20000000",
+            "$disableOutputTask": true
+          }
+        }
+      }
+    }
+  },
+  "version": "3.5"
+}

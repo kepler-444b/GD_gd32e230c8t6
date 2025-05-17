@@ -1,0 +1,38 @@
+#include "gpio.h"
+#include <stdint.h>
+#include <stdbool.h>
+#include "gd32e23x.h"
+
+GPIO_PinTypeDef PA0 = {GPIOA, GPIO_PIN_0};
+GPIO_PinTypeDef PA1 = {GPIOA, GPIO_PIN_1};
+GPIO_PinTypeDef PA2 = {GPIOA, GPIO_PIN_2};
+GPIO_PinTypeDef PA3 = {GPIOA, GPIO_PIN_3};
+GPIO_PinTypeDef PA4 = {GPIOA, GPIO_PIN_4};
+GPIO_PinTypeDef PA5 = {GPIOA, GPIO_PIN_5};
+GPIO_PinTypeDef PA6 = {GPIOA, GPIO_PIN_6};
+GPIO_PinTypeDef PA7 = {GPIOA, GPIO_PIN_7};
+GPIO_PinTypeDef PA8 = {GPIOA, GPIO_PIN_8};
+GPIO_PinTypeDef PA9 = {GPIOA, GPIO_PIN_9};
+GPIO_PinTypeDef PA10 = {GPIOA, GPIO_PIN_10};
+GPIO_PinTypeDef PA11 = {GPIOA, GPIO_PIN_11};
+GPIO_PinTypeDef PA12 = {GPIOA, GPIO_PIN_12};
+GPIO_PinTypeDef PA13 = {GPIOA, GPIO_PIN_13};
+GPIO_PinTypeDef PA14 = {GPIOA, GPIO_PIN_14};
+GPIO_PinTypeDef PA15 = {GPIOA, GPIO_PIN_15};
+
+GPIO_PinTypeDef PB0 = {GPIOB, GPIO_PIN_0};
+GPIO_PinTypeDef PB1 = {GPIOB, GPIO_PIN_1};
+GPIO_PinTypeDef PB2 = {GPIOB, GPIO_PIN_2};
+GPIO_PinTypeDef PB3 = {GPIOB, GPIO_PIN_3};
+GPIO_PinTypeDef PB4 = {GPIOB, GPIO_PIN_4};
+GPIO_PinTypeDef PB5 = {GPIOB, GPIO_PIN_5};
+GPIO_PinTypeDef PB6 = {GPIOB, GPIO_PIN_6};
+GPIO_PinTypeDef PB7 = {GPIOB, GPIO_PIN_7};
+GPIO_PinTypeDef PB8 = {GPIOB, GPIO_PIN_8};
+GPIO_PinTypeDef PB9 = {GPIOB, GPIO_PIN_9};
+GPIO_PinTypeDef PB10 = {GPIOB, GPIO_PIN_10};
+GPIO_PinTypeDef PB11 = {GPIOB, GPIO_PIN_11};
+GPIO_PinTypeDef PB12 = {GPIOB, GPIO_PIN_12};
+GPIO_PinTypeDef PB13 = {GPIOB, GPIO_PIN_13};
+GPIO_PinTypeDef PB14 = {GPIOB, GPIO_PIN_14};
+GPIO_PinTypeDef PB15 = {GPIOB, GPIO_PIN_15};
