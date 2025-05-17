@@ -18,3 +18,9 @@
 /.eide
 /.cmsis
 /.vscode
+/Template/Keil_project/.cmsis
+/Template/Keil_project/output
+/Template/Keil_project/JLinkLog.txt
+/Template/Keil_project/Project.uvguix.sds
+/Template/Keil_project/Project.uvoptx
+/Template/Keil_project/list
