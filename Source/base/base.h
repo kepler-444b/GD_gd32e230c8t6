@@ -6,6 +6,14 @@
     本模块用于各种通用接口
 */
 
+// 一个简单的延时函数,使用systick有时会导致单片机卡死,暂用这种方法
+#define APP_DELAY_1MS() \
+        do { \
+            for (volatile uint32_t i = 0; i < (1000); i++) { \
+                __NOP(); /* 插入空指令防止编译器优化 */ \
+            } \
+        } while (0)
+
 
 /// @brief 用于求一组数据的平均数
 /// @param buffer 传入数组

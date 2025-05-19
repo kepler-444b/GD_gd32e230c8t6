@@ -6,7 +6,7 @@
 
 uint8_t rcu_config(void);
 uint8_t adc_config(uint8_t adc_channel);
-void app_get_value(void);
+void app_get_value(void* arg);
 
 static adc_voltage_callback_t voltage_callback = NULL;
 void app_adc_callback(adc_voltage_callback_t callback)
@@ -17,7 +17,7 @@ uint8_t app_adc_init(uint8_t adc_channel)
 { 
     if(rcu_config() == true && adc_config(adc_channel) == true)
     {
-        int timer_adc = app_timer_start(1, app_get_value, true);
+        int timer_adc = app_timer_start(1, app_get_value, true, NULL);
         return true;
     }
     else
@@ -73,7 +73,7 @@ uint8_t adc_config(uint8_t adc_channel)
     return true;
 }
 
-void app_get_value(void)
+void app_get_value(void* arg)
 {
     adc_software_trigger_enable(ADC_INSERTED_CHANNEL);
 

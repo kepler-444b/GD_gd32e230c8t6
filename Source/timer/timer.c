@@ -32,12 +32,11 @@ void app_timer_init(void)
     timer_interrupt_enable(TIMER14, TIMER_INT_UP);
     timer_enable(TIMER14);
 
-    nvic_irq_enable(TIMER14_IRQn, 1); // 配置 NVIC
+    nvic_irq_enable(TIMER14_IRQn, 2); // 配置 NVIC
 }
 
 void TIMER14_IRQHandler(void) 
 {
-    #if 1
     if(timer_interrupt_flag_get(TIMER14, TIMER_INT_FLAG_UP)) {
         timer_interrupt_flag_clear(TIMER14, TIMER_INT_FLAG_UP);
         system_ticks++;
@@ -51,37 +50,14 @@ void TIMER14_IRQHandler(void)
                     } else {
                         soft_timers[i].active = false;
                     }
-                    soft_timers[i].callback();  // 直接执行回调
+                    soft_timers[i].callback(soft_timers[i].user_arg);  // 传递用户参数
                 }
             }
         }
     }
-    #endif
-    #if 0
-    if (timer_interrupt_flag_get(TIMER14, TIMER_INT_FLAG_UP)) {
-        timer_interrupt_flag_clear(TIMER14, TIMER_INT_FLAG_UP);
-        system_ticks++;
-
-        for (int i = 0; i < MAX_SOFT_TIMERS; i++) {
-            if (soft_timers[i].active) {
-                uint32_t elapsed = system_ticks - soft_timers[i].start_time;
-                if (elapsed >= soft_timers[i].interval_ms) {
-                    if (soft_timers[i].repeat) {
-                        // 更新下一次触发时间（补偿误差）
-                        soft_timers[i].start_time += soft_timers[i].interval_ms;
-                    } else {
-                        soft_timers[i].active = false;
-                    }
-                    // 标记回调需要处理
-                    soft_timers[i].pending = true;
-                }
-            }
-        }
-    }
-    #endif
 }
 
-int app_timer_start(uint32_t interval_ms, SoftTimerCallback callback, bool repeat) 
+int app_timer_start(uint32_t interval_ms, SoftTimerCallback callback, bool repeat, void* arg) 
 {
     if (!callback || interval_ms == 0) return -1;
 
@@ -95,7 +71,9 @@ int app_timer_start(uint32_t interval_ms, SoftTimerCallback callback, bool repea
                 .repeat = repeat,
                 .start_time = system_ticks,
                 .interval_ms = interval_ms,
-                .callback = callback
+                .callback = callback,
+                .user_arg = arg,  // 设置用户参数
+                .pending = false
             };
             id = i;
             break;
@@ -122,26 +100,7 @@ bool app_timer_is_active(int timer_id)
     return false;
 }
 
-void app_timer_process(void)
-{
-    SoftTimerCallback callbacks[MAX_SOFT_TIMERS] = {0};
-    uint8_t count = 0;
-    
-    uint32_t primask = __get_PRIMASK();
-    __disable_irq();
-    
-    // 收集需要执行的回调
-    for (int i = 0; i < MAX_SOFT_TIMERS; i++) {
-        if (soft_timers[i].pending && soft_timers[i].callback) {
-            soft_timers[i].pending = false;
-            callbacks[count++] = soft_timers[i].callback;
-        }
-    }
-    
-    __set_PRIMASK(primask);
-    
-    // 执行所有回调
-    for (int i = 0; i < count; i++) {
-        callbacks[i]();
-    }
-}
+
+
+
+

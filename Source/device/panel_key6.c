@@ -53,11 +53,6 @@ void panel_gpio_init(void);
 void panel_ctrl_led(uint8_t led_num, bool led_state);
 void panel_adc_cb(float adc_value);
 uint8_t rx_buffer[512] = {0};
-void my_rx_callback(uint8_t *data, uint16_t length)
-{
-    // APP_PRINTF("%02x", data);
-    APP_PRINTF_BUF("data", data, length);
-}
 
 void panel_key6_init(void)
 {
@@ -65,7 +60,6 @@ void panel_key6_init(void)
     app_adc_init(2);
     app_adc_callback(panel_adc_cb);     // 注册ADC回调函数
     app_slow_ctrl_led(PA8, 10, true);
-    app_usart0_rx_callback(my_rx_callback);
     
 }
 
@@ -132,6 +126,10 @@ void panel_ctrl_led(uint8_t led_num, bool led_state)
         case 1: 
             led_gpio = PA15;
             eraly_gpio = PB12;
+            const char *cmd = "AT+SEND=FFFFFFFFFFFF,16,\"F10E010000002100\",1\r\n"; 
+             
+            app_usart0_send_string(cmd);
+            APP_PRINTF("cmd:%s", cmd);
             break;
         case 2: 
             led_gpio = PB3;

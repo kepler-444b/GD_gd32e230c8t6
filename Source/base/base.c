@@ -22,8 +22,8 @@ typedef struct
 }timer_id;
 static timer_id my_timer_id = {0, 0};
 
-void app_start_close_led(void);
-void app_start_open_led(void);
+void app_start_close_led(void *arg);
+void app_start_open_led(void* arg);
 float app_calculate_average(const float *buffer, uint16_t count) 
 {
     // 参数检查
@@ -48,15 +48,15 @@ void app_slow_ctrl_led(GPIO_PinTypeDef gpio, uint8_t pwm_cycle, bool status)
     if(status)
     {
         
-        my_timer_id.timer_1 = app_timer_start(1, app_start_open_led, true);
+        my_timer_id.timer_1 = app_timer_start(1, app_start_open_led, true, NULL);
     }
     else 
     {
-        my_timer_id.timer_2 = app_timer_start(1, app_start_close_led, true);
+        my_timer_id.timer_2 = app_timer_start(1, app_start_close_led, true, NULL);
     }
 }
 
-void app_start_open_led(void)
+void app_start_open_led(void* arg)
 {
     my_pwm_state.pwm_counter++;
     if (my_pwm_state.pwm_counter >= my_pwm_state.pwm_cycle) {
@@ -79,7 +79,7 @@ void app_start_open_led(void)
     app_ctrl_gpio(PA8, led_on);
 }
 
-void app_start_close_led(void)
+void app_start_close_led(void *arg)
 {
     my_pwm_state.pwm_counter++;
     if (my_pwm_state.pwm_counter >= my_pwm_state.pwm_cycle) {

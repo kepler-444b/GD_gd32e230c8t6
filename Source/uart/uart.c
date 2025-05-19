@@ -4,6 +4,11 @@
 #include "gd32e23x_usart.h"
 #include "uart.h"
 #include "../base/debug.h"
+#include "../Source/timer/timer.h"
+#include "../Source/base/base.h"
+
+#define USART0_BAUDRATE    115200U
+#define USART1_BAUDRATE    115200U
 
 
 typedef struct {
@@ -19,8 +24,6 @@ void app_usart0_rx_callback(usart_rx_callback_t callback)
     rx_callback = callback;
 }
 
-#define USART0_BAUDRATE    115200U
-#define USART1_BAUDRATE    115200U
 void app_usart_init(uint8_t usart_num, uint32_t baudrate)
 {
     /* 使能GPIO和USART时钟 */
@@ -128,6 +131,7 @@ void app_usart0_send_byte(uint8_t data)
 {
     usart_data_transmit(USART0, data);
     while(RESET == usart_flag_get(USART0, USART_FLAG_TBE));
+    APP_DELAY_1MS();
 }
 
 // 发送字符串

@@ -23,7 +23,9 @@
             "__availability": "c",
             "unordered_map": "c",
             "limits": "c",
-            "ratio": "c"
+            "ratio": "c",
+            "string": "c",
+            "string_view": "c"
         },
         "[yaml]": {
             "editor.insertSpaces": true,
