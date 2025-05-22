@@ -37,20 +37,30 @@ void app_timer_init(void)
 
 void TIMER14_IRQHandler(void) 
 {
-    if(timer_interrupt_flag_get(TIMER14, TIMER_INT_FLAG_UP)) {
+    if (timer_interrupt_flag_get(TIMER14, TIMER_INT_FLAG_UP)) 
+    {
         timer_interrupt_flag_clear(TIMER14, TIMER_INT_FLAG_UP);
         system_ticks++;
-        
-        for(int i=0; i<MAX_SOFT_TIMERS; i++) {
-            if(soft_timers[i].active) {
+
+        // 遍历定时器，标记到期事件
+        for (int i = 0; i < MAX_SOFT_TIMERS; i++) 
+        {
+            if (soft_timers[i].active && !soft_timers[i].pending) 
+            {
                 uint32_t elapsed = system_ticks - soft_timers[i].start_time;
-                if(elapsed >= soft_timers[i].interval_ms) {
-                    if(soft_timers[i].repeat) {
+                if (elapsed >= soft_timers[i].interval_ms) 
+                {
+                    soft_timers[i].pending = true; // 标记待处理
+
+                    // 更新定时器状态
+                    if (soft_timers[i].repeat) 
+                    {
                         soft_timers[i].start_time += soft_timers[i].interval_ms;
-                    } else {
+                    } 
+                    else 
+                    {
                         soft_timers[i].active = false;
                     }
-                    soft_timers[i].callback(soft_timers[i].user_arg);  // 传递用户参数
                 }
             }
         }
@@ -63,17 +73,18 @@ int app_timer_start(uint32_t interval_ms, SoftTimerCallback callback, bool repea
 
     uint32_t flags = __get_PRIMASK();
     __disable_irq();
+
     int id = -1;
     for (int i = 0; i < MAX_SOFT_TIMERS; i++) {
         if (!soft_timers[i].active) {
             soft_timers[i] = (SoftTimer){
                 .active = true,
                 .repeat = repeat,
+                .pending = false,
                 .start_time = system_ticks,
                 .interval_ms = interval_ms,
                 .callback = callback,
-                .user_arg = arg,  // 设置用户参数
-                .pending = false
+                .user_arg = arg,
             };
             id = i;
             break;
@@ -87,7 +98,11 @@ void app_timer_stop(int timer_id)
 {
     if (timer_id >= 0 && timer_id < MAX_SOFT_TIMERS) 
     {
+        uint32_t flags = __get_PRIMASK();
+        __disable_irq();
         soft_timers[timer_id].active = false;
+        soft_timers[timer_id].pending = false;
+        __set_PRIMASK(flags);
     }
 }
 
@@ -100,7 +115,20 @@ bool app_timer_is_active(int timer_id)
     return false;
 }
 
+void app_timer_poll(void) {
+    for (int i = 0; i < MAX_SOFT_TIMERS; i++) 
+    {
+        if (soft_timers[i].pending) {
+            // 原子操作确保pending状态正确
+            uint32_t flags = __get_PRIMASK();
+            __disable_irq();
+            bool pending = soft_timers[i].pending;
+            soft_timers[i].pending = false;
+            __set_PRIMASK(flags);
 
-
-
-
+            if (pending && soft_timers[i].callback) {
+                soft_timers[i].callback(soft_timers[i].user_arg);
+            }
+        }
+    }
+}

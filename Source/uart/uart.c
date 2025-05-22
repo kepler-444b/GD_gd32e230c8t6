@@ -4,19 +4,14 @@
 #include "gd32e23x_usart.h"
 #include "uart.h"
 #include "../base/debug.h"
-#include "../Source/timer/timer.h"
-#include "../Source/base/base.h"
+#include "../timer/timer.h"
+#include "../base/base.h"
 
 #define USART0_BAUDRATE    115200U
 #define USART1_BAUDRATE    115200U
 
 
-typedef struct {
-    uint8_t buffer[512];
-    uint16_t length;
-} uart_rx_buffer_t;
 
-static uart_rx_buffer_t rx_buffer = {0};
 
 static usart_rx_callback_t rx_callback = NULL;
 void app_usart0_rx_callback(usart_rx_callback_t callback) 
@@ -58,8 +53,8 @@ void app_usart_init(uint8_t usart_num, uint32_t baudrate)
 
         // USART0 作为业务口，需要配置中断
         usart_interrupt_enable(USART0, USART_INT_RBNE);  // 接收缓冲区非空中断使能
-        usart_interrupt_enable(USART0, USART_INT_IDLE);  // 空闲中断使能
-        nvic_irq_enable(USART0_IRQn, 15);   // 配置 NVIC
+        // usart_interrupt_enable(USART0, USART_INT_IDLE);  // 空闲中断使能
+        nvic_irq_enable(USART0_IRQn, 3);   // 配置 NVIC
     }
     else if(usart_num == 1)
     {
@@ -87,6 +82,7 @@ void app_usart_init(uint8_t usart_num, uint32_t baudrate)
 }
 
 
+#if 1
 // USART0中断服务函数
 void USART0_IRQHandler(void)
 {
@@ -94,38 +90,29 @@ void USART0_IRQHandler(void)
     {
         // 处理接收数据
         uint8_t data = (uint8_t)usart_data_receive(USART0);
-        if (rx_buffer.length < 512) {
+        if (rx_buffer.length < 512) 
+        {
             rx_buffer.buffer[rx_buffer.length++] = data;
         }
         usart_interrupt_flag_clear(USART0, USART_INT_FLAG_RBNE);
     }
     
     // 单独处理空闲中断
-    if(usart_interrupt_flag_get(USART0, USART_INT_FLAG_IDLE)) {
-        if (rx_buffer.length > 0 && rx_callback != NULL) {
-            rx_callback(rx_buffer.buffer, rx_buffer.length);
-        }
-        rx_buffer.length = 0;
-        usart_data_receive(USART0);  // 清除空闲中断
-        usart_interrupt_flag_clear(USART0, USART_INT_FLAG_IDLE);
-    }
-    
-    /* 其他错误处理 */
-    if(RESET != usart_flag_get(USART0, USART_FLAG_ORERR)) {
-        usart_flag_clear(USART0, USART_FLAG_ORERR);
-    }
-    if(RESET != usart_flag_get(USART0, USART_FLAG_NERR)) {
-        usart_flag_clear(USART0, USART_FLAG_NERR);
-    }
-    if(RESET != usart_flag_get(USART0, USART_FLAG_FERR)) {
-        usart_flag_clear(USART0, USART_FLAG_FERR);
-    }
-    if(RESET != usart_flag_get(USART0, USART_FLAG_PERR)) {
-        usart_flag_clear(USART0, USART_FLAG_PERR);
-    }
+    // if(usart_interrupt_flag_get(USART0, USART_INT_FLAG_IDLE)) 
+    // {
+    //     if (rx_buffer.length > 0 && rx_callback != NULL) 
+    //     {
+    //         rx_callback(rx_buffer.buffer, rx_buffer.length);
+    //     }
+    //     rx_buffer.length = 0;
+    //     usart_data_receive(USART0);  // 清除空闲中断
+    //     usart_interrupt_flag_clear(USART0, USART_INT_FLAG_IDLE);
+    // }
 }
 
+#endif
 
+#if 1
 // 发送一个字节
 void app_usart0_send_byte(uint8_t data)
 {
@@ -142,6 +129,34 @@ void app_usart0_send_string(const char *str)
     }
 }
 
+// 发送指定长度的数据
+void app_usart0_send_data(const uint8_t *data, uint16_t length) 
+{
+    for(uint16_t i = 0; i < length; i++) {
+        app_usart0_send_byte(data[i]);  // 复用单字节发送函数
+    }
+}
+#endif
+
+#if 1
+void app_usart_poll(void)
+{
+    // 检测空闲状态标志
+    if(usart_flag_get(USART0, USART_FLAG_IDLE) != RESET)
+    {
+        // 清除空闲标志
+        usart_data_receive(USART0);
+        usart_flag_clear(USART0, USART_FLAG_IDLE);
+        
+        // 处理接收到的数据
+        if (rx_buffer.length > 0 && rx_callback != NULL) 
+        {
+            rx_callback(rx_buffer.buffer, rx_buffer.length);
+        }
+        rx_buffer.length = 0; // 重置缓冲区
+    }
+}
+#endif
 // printf 重定向到 USART1
 int fputc(int ch, FILE *f)
 {

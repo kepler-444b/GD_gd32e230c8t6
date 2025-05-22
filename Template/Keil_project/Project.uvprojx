@@ -695,21 +695,6 @@
               <FilePath>..\..\Source\gpio\gpio.h</FilePath>
             </File>
             <File>
-              <FileName>base.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\Source\base\base.c</FilePath>
-            </File>
-            <File>
-              <FileName>base.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\..\Source\base\base.h</FilePath>
-            </File>
-            <File>
-              <FileName>debug.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\..\Source\base\debug.h</FilePath>
-            </File>
-            <File>
               <FileName>protocol.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\Source\protocol\protocol.c</FilePath>
@@ -758,6 +743,36 @@
               <FileName>device_manager.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\..\Source\device\device_manager.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>base</GroupName>
+          <Files>
+            <File>
+              <FileName>base.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Source\base\base.c</FilePath>
+            </File>
+            <File>
+              <FileName>base.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\Source\base\base.h</FilePath>
+            </File>
+            <File>
+              <FileName>debug.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\Source\base\debug.h</FilePath>
+            </File>
+            <File>
+              <FileName>panel_base.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Source\base\panel_base.c</FilePath>
+            </File>
+            <File>
+              <FileName>panel_base.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\Source\base\panel_base.h</FilePath>
             </File>
           </Files>
         </Group>

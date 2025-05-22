@@ -4,164 +4,228 @@
 #include <string.h>
 #include "flash.h"
 #include "../base/debug.h"
+#include "../base/base.h"
 
-
-#define USER_DATA_START_ADDR        0x08004000U
-#define USER_DATA_END_ADDR          0x08004800U
-#define USER_DATA_SIZE              (USER_DATA_END_ADDR - USER_DATA_START_ADDR)  // 用户数据区大小 32KB
-#define FLASH_PAGE_SIZE             0x400U       // 1024 字节 1KB
-
-static uint32_t app_get_page_address(uint32_t addr);
-static bool app_flash_need_erase(uint32_t addr, uint32_t value);
-fmc_state_enum app_flash_init(void)
+fmc_state_enum app_flash_read(uint32_t address, uint32_t *data, uint32_t length)
 {
-    // 检查是否已经解锁
-    if(FMC_CTL & FMC_CTL_LK) 
-    {
-        fmc_unlock();
+    fmc_state_enum state = FMC_READY;
+    
+    /* 参数有效性检查 */
+    if((address % 4 != 0) || (length % 4 != 0) || (data == NULL)) {
+        return FMC_PGAERR;  // 返回编程对齐错误
     }
     
-    fmc_prefetch_enable();
-    
-    // 根据时钟频率设置等待周期
-    if(SystemCoreClock > 24000000) 
-    {
-        fmc_wscnt_set(WS_WSCNT_2);  // 主频>24MHz时使用2等待周期
-    } 
-    else 
-    {
-        fmc_wscnt_set(WS_WSCNT_1);  // 默认1等待周期
-    }
-    
-    return fmc_flag_get(FMC_FLAG_BUSY) ? FMC_BUSY : FMC_READY;
-}
-
-// 向指定的 Flash 地址写入数据
-fmc_state_enum app_flash_write(uint32_t offset, const uint32_t *data, uint32_t size)
-{
-    if(data == NULL) return FMC_PGERR;
-    if((offset % 4) != 0 || (size % 4) != 0) return FMC_PGAERR;
-    if((offset + size) > USER_DATA_SIZE) return FMC_PGAERR;
-    
-    uint32_t addr = USER_DATA_START_ADDR + offset;
-    fmc_state_enum ret = FMC_READY;
-    
-    if(fmc_flag_get(FMC_FLAG_WPERR)) 
-    {
-        return FMC_WPERR;
-    }
-    
+    /* 解锁Flash操作 */
     fmc_unlock();
     
-    // 首先检查哪些页需要擦除
-    uint32_t first_page = app_get_page_address(addr);
-    uint32_t last_page = app_get_page_address(addr + size - 1);
-    
-    // 检查范围内的所有页是否需要擦除
-    bool need_erase = false;
-    for(uint32_t page = first_page; page <= last_page; page += FLASH_PAGE_SIZE) 
-    {
-        // 检查页内是否有需要擦除的数据
-        for(uint32_t i = 0; i < (size / 4); i++) 
-        {
-            uint32_t current_addr = addr + i*4;
-            if(current_addr >= page && current_addr < (page + FLASH_PAGE_SIZE)) 
-            {
-                if(app_flash_need_erase(current_addr, data[i])) 
-                {
-                    need_erase = true;
-                    break;
-                }
-            }
-        }
-        if(need_erase) break;
+    /* 等待Flash就绪 */
+    state = fmc_ready_wait(FMC_TIMEOUT_COUNT);
+    if(state != FMC_READY) {
+        fmc_lock();  // 如果超时则重新上锁
+        return state;
     }
     
-    // 如果需要擦除，执行擦除操作
-    if(need_erase) 
-    {
-        for(uint32_t page = first_page; page <= last_page; page += FLASH_PAGE_SIZE) 
-        {
-            ret = fmc_page_erase(page);
-            if(ret != FMC_READY) 
-            {
-                fmc_lock();
-                return ret;
-            }
-        }
+    /* 逐字读取数据 */
+    for(uint32_t i = 0; i < length/4; i++) {
+        data[i] = REG32(address + (i * 4));  // 使用寄存器访问宏读取
     }
     
-    // 执行写入操作
-    for(uint32_t i = 0; i < (size / 4); i++) 
-    {
-        ret = fmc_word_program(addr, data[i]);
-        if(ret != FMC_READY) break;
-        addr += 4;
-    }
-    
+    /* 重新锁定Flash */
     fmc_lock();
-    return ret;
-}
-
-// 从指定的 Flash 地址偏移处读取指定大小的数据到缓冲区中
-fmc_state_enum app_flash_read(uint32_t offset, uint32_t *buffer, uint32_t size)
-{
-    if(buffer == NULL) return FMC_PGERR;
-    if((offset + size) > USER_DATA_SIZE) 
-    {
-        return FMC_PGAERR;
-    }
-
-    uint32_t addr = USER_DATA_START_ADDR + offset;
-    
-    for(uint32_t i = 0; i < (size / 4); i++) 
-    {
-        buffer[i] = *(__IO uint32_t*)addr;
-        addr += 4;
-    }
     
     return FMC_READY;
 }
 
-// 擦除指定地址范围内的 Flash 页
-static fmc_state_enum app_flash_erase_page_range(uint32_t start_addr, uint32_t end_addr)
+/*!
+    \brief      以字(32位)为单位写入Flash
+    \param[in]  address: 写入起始地址(必须4字节对齐)
+    \param[in]  data: 要写入的数据指针
+    \param[in]  length: 要写入的字节数(必须是4的倍数)
+    \retval     fmc_state: 操作状态
+*/
+fmc_state_enum app_flash_write_word(uint32_t address, uint32_t *data, uint32_t length)
 {
-    if((start_addr % FLASH_PAGE_SIZE) != 0 ||  ((end_addr + 1) % FLASH_PAGE_SIZE) != 0) 
-    {
+    fmc_state_enum state = FMC_READY;
+    
+    /* 参数有效性检查 */
+    if((address % 4 != 0) || (length % 4 != 0) || (data == NULL)) {
         return FMC_PGAERR;
     }
     
-    fmc_state_enum status = FMC_READY;
+    /* 解锁Flash操作 */
     fmc_unlock();
     
-    for(uint32_t addr = start_addr; addr <= end_addr; addr += FLASH_PAGE_SIZE) 
-    {
-        status = fmc_page_erase(addr);
-        if(status != FMC_READY) break;
+    /* 逐字编程 */
+    for(uint32_t i = 0; i < length/4; i++) {
+        state = fmc_word_program(address + (i * 4), data[i]);
+        if(state != FMC_READY) {
+            fmc_lock();  // 出错时重新上锁
+            return state;
+        }
     }
     
+    /* 重新锁定Flash */
     fmc_lock();
-    return status;
+    
+    return FMC_READY;
 }
 
-// 擦除用户数据区的所有Flash页面
-fmc_state_enum app_flash_erase_all(void)
+/*!
+    \brief      以双字(64位)为单位写入Flash
+    \param[in]  address: 写入起始地址(必须8字节对齐)
+    \param[in]  data: 要写入的数据指针(作为64位值处理)
+    \param[in]  length: 要写入的字节数(必须是8的倍数)
+    \retval     fmc_state: 操作状态
+*/
+fmc_state_enum app_flash_write_doubleword(uint32_t address, uint64_t *data, uint32_t length)
 {
-    return app_flash_erase_page_range(
-        app_get_page_address(USER_DATA_START_ADDR),
-        app_get_page_address(USER_DATA_END_ADDR - 1));
+    fmc_state_enum state = FMC_READY;
+    
+    /* 参数有效性检查 */
+    if((address % 8 != 0) || (length % 8 != 0) || (data == NULL)) {
+        return FMC_PGAERR;
+    }
+    
+    /* 解锁Flash操作 */
+    fmc_unlock();
+    
+    /* 逐双字编程 */
+    for(uint32_t i = 0; i < length/8; i++) {
+        state = fmc_doubleword_program(address + (i * 8), data[i]);
+        if(state != FMC_READY) {
+            fmc_lock();  // 出错时重新上锁
+            return state;
+        }
+    }
+    
+    /* 重新锁定Flash */
+    fmc_lock();
+    
+    return FMC_READY;
 }
 
-// 获取指定地址 addr 所在的 Flash 页的起始地址
-static uint32_t app_get_page_address(uint32_t addr)
+/*!
+    \brief      擦除Flash页
+    \param[in]  page_address: 要擦除页的起始地址
+    \retval     fmc_state: 操作状态
+*/
+fmc_state_enum app_flash_erase_page(uint32_t page_address)
 {
-    return (addr & ~(FLASH_PAGE_SIZE - 1));
+    fmc_state_enum state;
+    
+    /* 解锁Flash操作 */
+    fmc_unlock();
+    fmc_flag_clear(FMC_FLAG_END | FMC_FLAG_WPERR | FMC_FLAG_PGERR);
+    /* 执行页擦除 */
+    state = fmc_page_erase(page_address);
+    
+    /* 重新锁定Flash */
+    fmc_lock();
+    
+    return state;
 }
 
-// 检查是否需要擦除的辅助函数
-static bool app_flash_need_erase(uint32_t addr, uint32_t value)
+/*!
+    \brief      整片擦除Flash存储器
+    \retval     fmc_state: 操作状态
+*/
+fmc_state_enum app_flash_mass_erase(void)
 {
-    uint32_t current_value = *(__IO uint32_t*)addr;
-    // 如果当前值不是0xFFFFFFFF且与新值不同，则需要擦除
-    return (current_value != 0xFFFFFFFF) && (current_value != value);
+    fmc_state_enum state;
+    
+    /* 解锁Flash操作 */
+    fmc_unlock();
+    
+    /* 执行整片擦除 */
+    state = fmc_mass_erase();
+    
+    /* 重新锁定Flash */
+    fmc_lock();
+    
+    return state;
+}
+
+/*!
+    \brief      验证Flash内容是否与预期数据匹配
+    \param[in]  address: 验证起始地址
+    \param[in]  data: 预期数据指针
+    \param[in]  length: 要验证的字节数
+    \retval     fmc_state: 验证状态(FMC_READY表示匹配，FMC_PGERR表示不匹配)
+*/
+fmc_state_enum app_flash_verify(uint32_t address, uint32_t *data, uint32_t length)
+{
+    fmc_state_enum state = FMC_READY;
+    uint32_t read_data;
+    
+    /* 参数有效性检查 */
+    if((address % 4 != 0) || (length % 4 != 0) || (data == NULL)) {
+        return FMC_PGAERR;
+    }
+    
+    /* 逐字读取并比较 */
+    for(uint32_t i = 0; i < length/4; i++) {
+        read_data = REG32(address + (i * 4));
+        if(read_data != data[i]) {
+            state = FMC_PGERR;  // 数据不匹配
+            break;
+        }
+    }
+    
+    return state;
+}
+
+/*!
+    \brief      Flash编程函数(带自动擦除选项)
+    \param[in]  address: 写入起始地址(必须4字节对齐)
+    \param[in]  data: 要写入的数据指针
+    \param[in]  length: 要写入的字节数(必须是4的倍数)
+    \param[in]  erase_first: 是否先执行擦除操作
+    \retval     fmc_state: 操作状态
+*/
+fmc_state_enum app_flash_program(uint32_t address, uint32_t *data, uint32_t length, bool erase_first)
+{
+    fmc_state_enum state;
+    
+    /* 如果需要先擦除 */
+    if(erase_first) {
+        /* 计算页地址(假设已知FLASH_PAGE_SIZE) */
+        uint32_t page_address = address & ~(FLASH_PAGE_SIZE - 1);
+        
+        /* 执行页擦除 */
+        state = app_flash_erase_page(page_address);
+        if(state != FMC_READY) {
+            return state;  // 擦除失败直接返回
+        }
+    }
+    
+    /* 执行数据写入 */
+    return app_flash_write_word(address, data, length);
+}
+
+// 加载 flash 里的配置信息到结构体
+bool app_load_config(void)
+{
+    uint32_t read_data[32] = {0};
+    
+    if (app_flash_read(CONFIG_START_ADDR, read_data, sizeof(read_data)) != FMC_READY) 
+    {
+        APP_PRINTF("app_flash_read failed\n");
+        return false;
+    }
+
+    uint8_t new_data[128] = {0};
+    if (app_uint32_to_uint8(read_data, sizeof(read_data) / sizeof(read_data[0]), new_data, sizeof(new_data)) != true) 
+    {
+        APP_PRINTF("app_uint32_to_uint8 error\n");
+        return false;
+    }
+
+    if (sizeof(my_dev_config) > sizeof(new_data)) {
+        APP_PRINTF("Destination buffer too small\n");
+        return false;
+    }
+
+    memcpy(&my_dev_config, new_data, sizeof(my_dev_config));
+
+    return true;
 }

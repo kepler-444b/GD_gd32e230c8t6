@@ -4,6 +4,10 @@
 #include <float.h>
 #include "../timer/timer.h"
 
+
+timer_id my_timer_id = {0, 0, 0, 0};
+dev_config my_dev_config = {0};
+
 typedef struct
 {
     uint8_t pwm_counter;
@@ -15,12 +19,6 @@ typedef struct
 static pwm_state my_pwm_state;
 
 
-typedef struct
-{
-    uint8_t timer_1;
-    uint8_t timer_2;
-}timer_id;
-static timer_id my_timer_id = {0, 0};
 
 void app_start_close_led(void *arg);
 void app_start_open_led(void* arg);
@@ -97,3 +95,40 @@ void app_start_close_led(void *arg)
 
     app_ctrl_gpio(PA8, led_on);
 }
+
+bool app_uint8_to_uint32(const uint8_t* input, size_t input_count, uint32_t* output, size_t output_count) 
+{
+    if (!input || !output) return false;
+    if (output_count < (input_count + 3) / 4) 
+    {
+        return false;
+    }
+
+    for (size_t i = 0; i < (input_count + 3) / 4; i++) {
+        uint32_t packed = 0;
+        size_t bytes_to_pack = (input_count - i * 4) >= 4 ? 4 : (input_count - i * 4);
+        
+        for (size_t j = 0; j < bytes_to_pack; j++) {
+            packed |= (uint32_t)input[i * 4 + j] << (j * 8);  // 小端序
+        }
+        output[i] = packed;
+    }
+    return true;
+}
+
+bool app_uint32_to_uint8(const uint32_t* input, size_t input_count, uint8_t* output, size_t output_count) 
+{
+    if (!input || !output) return false;
+    if (output_count < input_count * 4) 
+    {
+        return false;
+    }
+
+    for (size_t i = 0; i < input_count; i++) {
+        for (size_t j = 0; j < 4; j++) {
+            output[i * 4 + j] = (uint8_t)((input[i] >> (j * 8)) & 0xFF);  // 小端序
+        }
+    }
+    return true;
+}
+

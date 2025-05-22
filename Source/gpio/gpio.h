@@ -2,8 +2,11 @@
 #define _GPIO_H_
 #include "gd32e23x.h"
 #include <stdbool.h>
+#include "../base/debug.h"
 
 #define GPIO_DEFAULT {0, 0}  // 0 表示未初始化或无效引脚
+#define GPIO_IS_VALID(gpio) ((gpio).pin != 0 || (gpio).port != 0)  // 检查GPIO是否有效
+
 typedef struct {
     uint32_t port;
     uint32_t pin;

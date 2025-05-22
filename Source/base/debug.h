@@ -21,6 +21,7 @@
         } \
         APP_PRINTF("\n"); \
     } while (0)
+
 #else
 #define APP_PRINTF(...)
 #define APP_PRINTF_BUF(name, buf, len)

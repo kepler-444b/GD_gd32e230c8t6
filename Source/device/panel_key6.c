@@ -9,6 +9,7 @@
 #include "../timer/timer.h"
 #include "../gpio/gpio.h"
 #include "../uart/uart.h"
+#include "../base/panel_base.h"
 
 
 #define KEY_NUMBER_COUNT (sizeof(my_key_config) / sizeof(my_key_config[0]))   // 按键数量
@@ -26,13 +27,6 @@ typedef struct
     float min;
     float max;
 }key_config;
-// static const key_config my_key_config[] = {{1.45f, 1.55f,}, // 按键1
-//                                            {1.95f, 2.10f,}, // 按键2
-//                                            {0.00f, 0.15f,}, // 按键3
-//                                            {0.85f, 1.10f,}, // 按键4
-//                                            {2.30f, 2.55f,}, // 按键5
-//                                            {0.25f, 0.45f,}, // 按键6
-//                                            };
 static const key_config my_key_config[] = { {0.00f, 0.15f,}, // 按键1
                                             {0.25f, 0.45f,}, // 按键2
                                             {0.85f, 1.10f,}, // 按键3
@@ -42,8 +36,10 @@ static const key_config my_key_config[] = { {0.00f, 0.15f,}, // 按键1
                                             };                         
 typedef struct
 {
-    bool key_status;
-    bool led_w_status;
+    bool key_status;        // 按键状态
+    bool led_w_status;      // 白灯状态
+    bool key_long_perss;    // 长按状态
+    uint32_t key_long_bumber;  // 长按计数
 }panel_stats;
 static panel_stats my_panel_status[KEY_NUMBER_COUNT] = {0};
 
@@ -52,12 +48,11 @@ static panel_stats my_panel_status[KEY_NUMBER_COUNT] = {0};
 void panel_gpio_init(void);
 void panel_ctrl_led(uint8_t led_num, bool led_state);
 void panel_adc_cb(float adc_value);
-uint8_t rx_buffer[512] = {0};
 
 void panel_key6_init(void)
 {
     panel_gpio_init();
-    app_adc_init(2);
+    app_adc_init(1);
     app_adc_callback(panel_adc_cb);     // 注册ADC回调函数
     app_slow_ctrl_led(PA8, 10, true);
     
@@ -83,14 +78,16 @@ void panel_gpio_init(void)
     gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_15);
 
 }
+
 void panel_adc_cb(float adc_value)
 {
     for (int i = 0; i < KEY_NUMBER_COUNT; i++) 
     {
         if (adc_value >= my_key_config[i].min && adc_value <= my_key_config[i].max) 
         {
-            adc_value_buffer[adc_index++] = adc_value;
-            
+            // 填充满buffer才会执行下面的代码，故此行执行10次才执行下面的代码
+            adc_value_buffer[adc_index++] = adc_value;  
+
             if (adc_index >= ADC_VALUE_COUNT) 
             {
                 adc_index = 0;
@@ -101,61 +98,74 @@ void panel_adc_cb(float adc_value)
                 {
                     if(my_panel_status[i].key_status == false)
                     {
-                        APP_PRINTF("key [%d] down\n", i + 1);
                         my_panel_status[i].led_w_status = !my_panel_status[i].led_w_status;
-                        panel_ctrl_led(i + 1, my_panel_status[i].led_w_status);
-                        my_panel_status[i].key_status = true; // 标记为已按下
+                        panel_ctrl_led(i, my_panel_status[i].led_w_status);
+                        my_panel_status[i].key_status = true;       // 短按标记为按下
+                        my_panel_status[i].key_long_perss = true;   // 长按标记为按下
+                        my_panel_status[i].key_long_bumber = 0;
+                    }
+                    else if(my_panel_status[i].key_long_perss == true)
+                    {
+                        my_panel_status[i].key_long_bumber ++;
+                        if(my_panel_status[i].key_long_bumber >= 500)   // 实际延时 5s
+                        {
+                            // 长按到时间
+                            APP_PRINTF("long press \r\n"); //在此可以做长按到时间的处理(进入配置模式)
+                            my_panel_status[i].key_long_perss = false;
+                        }
                     }
                 }
             }
         }
         else
         {
-            my_panel_status[i].key_status = false; // 标记为未按下
+            my_panel_status[i].key_status = false;  // 标记为未按下
+            my_panel_status[i].key_long_bumber = 0; // 重置长按计数
         }
     }
 }
-
 void panel_ctrl_led(uint8_t led_num, bool led_state)
 {
-    // 在此将按键号和 led 与 eraly 的 gpio 绑定
     GPIO_PinTypeDef led_gpio = GPIO_DEFAULT;
     GPIO_PinTypeDef eraly_gpio = GPIO_DEFAULT;
+    
+    // 统一处理 LED 控制命令
+    uint8_t cmd = led_state ? 0x01 : 0x00;
+    app_panel_send_cmd(led_num, cmd);
+
+    // 根据 LED 编号设置 GPIO
     switch (led_num)
     {
-        case 1: 
+        case 0: 
             led_gpio = PA15;
             eraly_gpio = PB12;
-            const char *cmd = "AT+SEND=FFFFFFFFFFFF,16,\"F10E010000002100\",1\r\n"; 
-             
-            app_usart0_send_string(cmd);
-            APP_PRINTF("cmd:%s", cmd);
             break;
-        case 2: 
+        case 1: 
             led_gpio = PB3;
             eraly_gpio = PB13;
             break;
-        case 3: 
+        case 2: 
             led_gpio = PB4;
             eraly_gpio = PB14;
             break;
-        case 4: 
+        case 3: 
             led_gpio = PB5;
             eraly_gpio = PB15;
             break;
-        case 5: 
+        case 4: 
             led_gpio = PB6; 
             break;
-        case 6: 
+        case 5: 
             led_gpio = PB8; 
             break;
-            default: return;
+        default: 
+            return; // 无效 LED 编号直接返回
     }
+
+    // 控制 LED GPIO
     app_ctrl_gpio(led_gpio, led_state);
-    app_ctrl_gpio(eraly_gpio, led_state);
+    if(GPIO_IS_VALID(eraly_gpio))
+    {
+        app_ctrl_gpio(eraly_gpio, led_state);
+    }
 }
-
-
-
-
-
