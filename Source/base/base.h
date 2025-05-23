@@ -1,34 +1,26 @@
 #ifndef _BASE_H_
-#define _BASE_H_ 
+#define _BASE_H_
 #include "../gpio/gpio.h"
 #include <stdio.h>
-/* 
+/*
     2025.5.16 舒东升
     本模块用于各种通用接口
 */
 
 // 一个简单的延时函数,避免使用systick的中断延时函数delay_1ms()
-#define APP_DELAY_1MS() \
-        do { \
-            for (volatile uint32_t i = 0; i < (1000); i++) { \
-                __NOP(); /* 插入空指令防止编译器优化 */ \
-            } \
-        } while (0)
+#define APP_DELAY_1MS()                                  \
+    do {                                                 \
+        for (volatile uint32_t i = 0; i < (1000); i++) { \
+            __NOP(); /* 插入空指令防止编译器优化 */      \
+        }                                                \
+    } while (0)
 
 // 将连续的2个十六进制字符转为1个字节的 uint8_t 值(在协议解析时用到)
-#define HEX_TO_BYTE(ptr) \
+#define HEX_TO_BYTE(ptr)                                             \
     (((*(ptr) >= 'A') ? (*(ptr) - 'A' + 10) : (*(ptr) - '0')) << 4 | \
      ((*(ptr + 1) >= 'A') ? (*(ptr + 1) - 'A' + 10) : (*(ptr + 1) - '0')))
 
 
-typedef struct
-{
-    uint8_t timer_1;
-    uint8_t timer_2;
-    uint8_t timer_3;
-    uint8_t timer_4;
-}timer_id;
-extern timer_id my_timer_id;
 
 typedef struct
 {
@@ -42,13 +34,13 @@ typedef struct
     uint8_t func_5;
     uint8_t group_5;
     uint8_t area_5;
-    uint8_t crc;            // 校验
-    uint8_t default_value;  // 缺省
+    uint8_t crc;           // 校验
+    uint8_t default_value; // 缺省
     uint8_t perm_5;
     uint8_t scene_group_5;
 
     uint8_t func_6;
-    uint8_t gruop_6;
+    uint8_t group_6;
     uint8_t area_6;
     uint8_t perm_6;
     uint8_t scene_group_6;
@@ -58,25 +50,22 @@ typedef struct
     uint8_t reco_l;
     uint8_t channel;
     uint8_t cate;
-} dev_config;
+} dev_config_t;
 
 // 参考:https://docs.qq.com/doc/DVE1YdEhNWXlXa2lC?u=01de59d25c614f2886192fca680d7f21&nlc=1
-extern dev_config my_dev_config;
-
+extern dev_config_t my_dev_config;
 
 /// @brief 用于求一组数据的平均数
 /// @param buffer 传入数组
 /// @param count  数组长度
-/// @return 
+/// @return
 float app_calculate_average(const float *buffer, uint16_t count);
-
 
 /// @brief 控制一个gpio口模拟pwm输出
 /// @param gpio       输出的gpio口
 /// @param pwm_cycle  周期
 /// @param status     输出状态
-void app_slow_ctrl_led(GPIO_PinTypeDef gpio, uint8_t pwm_cycle, bool status);
-
+void app_slow_ctrl_led(gpio_pin_typedef_t gpio, uint8_t pwm_cycle, bool status);
 
 /**
  * @brief 将 uint8_t 数组打包为 uint32_t 数组(小端序)
@@ -87,7 +76,7 @@ void app_slow_ctrl_led(GPIO_PinTypeDef gpio, uint8_t pwm_cycle, bool status);
  * @return true  成功
  * @return false 失败(参数无效或空间不足)
  */
-bool app_uint8_to_uint32(const uint8_t* input, size_t input_count, uint32_t* output, size_t output_count);
+bool app_uint8_to_uint32(const uint8_t *input, size_t input_count, uint32_t *output, size_t output_count);
 
 /**
  * @brief 将 uint32_t 数组解包为 uint8_t 数组(小端序)
@@ -98,6 +87,6 @@ bool app_uint8_to_uint32(const uint8_t* input, size_t input_count, uint32_t* out
  * @return true  成功
  * @return false 失败(参数无效或空间不足)
  */
-bool app_uint32_to_uint8(const uint32_t* input, size_t input_count, uint8_t* output, size_t output_count);
+bool app_uint32_to_uint8(const uint32_t *input, size_t input_count, uint8_t *output, size_t output_count);
 
 #endif

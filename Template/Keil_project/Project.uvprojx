@@ -714,6 +714,16 @@
               <FileType>5</FileType>
               <FilePath>..\..\Source\flash\flash.h</FilePath>
             </File>
+            <File>
+              <FileName>eventbus.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Source\eventbus\eventbus.c</FilePath>
+            </File>
+            <File>
+              <FileName>eventbus.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\Source\eventbus\eventbus.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

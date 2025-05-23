@@ -1,6 +1,5 @@
 #ifndef _UART_H_
-#define _UART_H_ 
-
+#define _UART_H_
 
 typedef struct {
     uint8_t buffer[512];
@@ -8,7 +7,6 @@ typedef struct {
 } uart_rx_buffer_t;
 
 static uart_rx_buffer_t rx_buffer = {0};
-
 
 typedef void (*usart_rx_callback_t)(uint8_t *data, uint16_t length);
 

@@ -9,4 +9,3 @@ void app_jump_device_init(void)
 
 #endif
 }
-
