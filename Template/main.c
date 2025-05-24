@@ -15,7 +15,8 @@
 
 void app_test(void *arg)
 {
-    APP_PRINTF("app_test\r\n");
+    uint8_t new_data = *(uint8_t  *)arg;
+    APP_PRINTF("new_data:%d\n", new_data);
 }
 int main(void)
 {
@@ -33,15 +34,16 @@ int main(void)
     app_jump_device_init();
     app_load_config();
 
-    APP_PRINTF("my_dev_config.head = %02x\n", my_dev_config.head);
-    APP_PRINTF("my_dev_config.channel = %02x\n", my_dev_config.channel);
-    APP_PRINTF("my_dev_config.cate = %02x\n", my_dev_config.cate);
-    app_timer_start(1000, app_test, true, NULL, "test_timer");
-
+    // APP_PRINTF("my_dev_config.head = %02x\n", my_dev_config.head);
+    // APP_PRINTF("my_dev_config.channel = %02x\n", my_dev_config.channel);
+    // APP_PRINTF("my_dev_config.cate = %02x\n", my_dev_config.cate);
+    uint8_t data = 100;
+    // app_timer_start(1000, app_test, true, &data, "test_timer");
+    
     while (1) {
         app_timer_poll();
         app_usart_poll();
         app_eventbus_poll();
-        APP_DELAY_1MS();
+        // APP_DELAY_1MS();
     }
 }

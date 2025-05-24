@@ -655,16 +655,6 @@
               <FilePath>..\..\Source\uart\uart.h</FilePath>
             </File>
             <File>
-              <FileName>led.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\Source\switch\led.c</FilePath>
-            </File>
-            <File>
-              <FileName>led.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\..\Source\switch\led.h</FilePath>
-            </File>
-            <File>
               <FileName>adc.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\Source\adc\adc.c</FilePath>
@@ -724,6 +714,16 @@
               <FileType>5</FileType>
               <FilePath>..\..\Source\eventbus\eventbus.h</FilePath>
             </File>
+            <File>
+              <FileName>pwm.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Source\pwm\pwm.c</FilePath>
+            </File>
+            <File>
+              <FileName>pwm.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\Source\pwm\pwm.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -753,6 +753,16 @@
               <FileName>device_manager.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\..\Source\device\device_manager.h</FilePath>
+            </File>
+            <File>
+              <FileName>quick_box.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Source\device\quick_box.c</FilePath>
+            </File>
+            <File>
+              <FileName>quick_box.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\Source\device\quick_box.h</FilePath>
             </File>
           </Files>
         </Group>

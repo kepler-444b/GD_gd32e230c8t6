@@ -1,4 +1,5 @@
 #include "panel_key6.h"
+#include "device_manager.h"
 #include <float.h>
 #include "gd32e23x.h"
 #include "systick.h"
@@ -12,6 +13,9 @@
 #include "../base/panel_base.h"
 #include "../eventbus/eventbus.h"
 #include "../protocol/protocol.h"
+#include "../pwm/pwm.h"
+
+#if defined PANEL_KEY6
 
 #define KEY_NUMBER_COUNT (sizeof(my_key_config) / sizeof(my_key_config[0])) // 按键数量
 #define ADC_VALUE_COUNT  10                                                 // 电压值缓冲区数量
@@ -73,16 +77,20 @@ void panel_gpio_init(void);
 void panel_ctrl_status(uint8_t led_num, bool led_state);
 void panel_adc_cb(float adc_value);
 void panel_ctrl_led_all(bool led_state);
-void app_panel_event_handler(event_type_e event, void *params);
-void app_panel_data_cb(valid_data_t *data);
+void panel_event_handler(event_type_e event, void *params);
+void panel_data_cb(valid_data_t *data);
 
 void panel_key6_init(void)
 {
     panel_gpio_init();
     app_adc_init(1);
-    app_adc_callback(panel_adc_cb);             // 注册ADC回调函数
-    app_valid_data_callback(app_panel_data_cb); // 注册有效数据回调函数
-    app_slow_ctrl_led(PA8, 10, true);
+    app_adc_callback(panel_adc_cb);         // 注册ADC回调函数
+    app_valid_data_callback(panel_data_cb); // 注册有效数据回调函数
+    app_pwm_init();
+    set_pwm_duty(30);
+    // pwm_set_duty(250);
+    // pwm_set_duty(0, 1000);
+    app_eventbus_subscribe(panel_event_handler);
 }
 
 void panel_gpio_init(void)
@@ -103,8 +111,6 @@ void panel_gpio_init(void)
     gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_13);
     gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_14);
     gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_15);
-
-    app_eventbus_subscribe(app_panel_event_handler);
 }
 
 void panel_adc_cb(float adc_value)
@@ -149,7 +155,7 @@ void panel_adc_cb(float adc_value)
     }
 }
 
-void app_panel_data_cb(valid_data_t *data)
+void panel_data_cb(valid_data_t *data)
 {
     switch (data->data[1]) {
         case 0x0E: { // 灯控模式
@@ -221,7 +227,7 @@ void panel_ctrl_led_all(bool led_state)
     }
 }
 
-void app_panel_event_handler(event_type_e event, void *params)
+void panel_event_handler(event_type_e event, void *params)
 {
     switch (event) {
         case EVENT_ENTER_CONFIG: {
@@ -236,3 +242,6 @@ void app_panel_event_handler(event_type_e event, void *params)
             return;
     }
 }
+
+
+#endif

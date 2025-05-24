@@ -8,4 +8,9 @@ void app_jump_device_init(void)
     panel_key6_init();
 
 #endif
+
+#if defined QUICK_BOX
+#include "quick_box.h"
+    quick_box_init();
+#endif
 }

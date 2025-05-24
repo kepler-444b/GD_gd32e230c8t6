@@ -3,9 +3,10 @@
 #include "gd32e23x.h"
 #include "gd32e23x_timer.h"
 #include "../base/debug.h"
+#include "../gpio/gpio.h"
 
 #define SYSTEM_CLOCK_FREQ 72000000 ///< 系统时钟频率
-#define TIMER_PERIOD      998      ///< 定时器周期(1ms中断)
+#define TIMER_PERIOD      999      ///< 定时器周期(1ms中断)
 
 static soft_timer_t my_soft_timer[MAX_SOFT_TIMERS]; ///< 软定时器数组
 static volatile uint32_t system_ticks = 0;          ///< 系统基准时间(毫秒),定时时间不得超过49.7天
@@ -56,7 +57,6 @@ void app_timer_init(void)
 
     rcu_periph_clock_enable(RCU_TIMER14); // 开启 TIMER14 时钟
     timer_deinit(TIMER14);                // 复位 TIMER14 时钟
-
     // 配置定时器为1ms中断
     timer_initpara.prescaler        = (SYSTEM_CLOCK_FREQ / 1000000) - 1; // 分频到1MHz
     timer_initpara.alignedmode      = TIMER_COUNTER_EDGE;
@@ -64,13 +64,11 @@ void app_timer_init(void)
     timer_initpara.period           = TIMER_PERIOD; // 1000次计数 = 1ms
     timer_initpara.clockdivision    = TIMER_CKDIV_DIV1;
     timer_init(TIMER14, &timer_initpara);
-
     // 使能中断
     timer_interrupt_flag_clear(TIMER14, TIMER_INT_FLAG_UP);
     timer_interrupt_enable(TIMER14, TIMER_INT_UP);
     timer_enable(TIMER14);
-
-    nvic_irq_enable(TIMER14_IRQn, 1); // 配置NVIC,优先级1
+    nvic_irq_enable(TIMER14_IRQn, 2); // 配置NVIC,优先级1
 }
 
 void TIMER14_IRQHandler(void)

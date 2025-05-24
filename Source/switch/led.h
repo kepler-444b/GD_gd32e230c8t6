@@ -1,6 +1,6 @@
-#ifndef _LED_H_
-#define _LED_H_
-#include "../gpio/gpio.h"
-#include <stdbool.h>
+#ifndef _PWM_H_
+#define _PWM_H_
 
+
+// void app_set_led_brightness(uint8_t brightness, uint16_t transition_ms);
 #endif
