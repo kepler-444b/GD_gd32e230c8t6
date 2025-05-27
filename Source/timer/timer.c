@@ -62,7 +62,7 @@ void app_timer_init(void)
     timer_initpara.alignedmode      = TIMER_COUNTER_EDGE;
     timer_initpara.counterdirection = TIMER_COUNTER_UP;
     timer_initpara.period           = TIMER_PERIOD; // 1000次计数 = 1ms
-    timer_initpara.clockdivision    = TIMER_CKDIV_DIV1;
+    timer_initpara.clockdivision    = TIMER_CKDIV_DIV2;
     timer_init(TIMER14, &timer_initpara);
     // 使能中断
     timer_interrupt_flag_clear(TIMER14, TIMER_INT_FLAG_UP);

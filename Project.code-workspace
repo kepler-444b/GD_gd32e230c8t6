@@ -25,7 +25,8 @@
             "limits": "c",
             "ratio": "c",
             "string": "c",
-            "string_view": "c"
+            "string_view": "c",
+            "initializer_list": "c"
         },
         "[yaml]": {
             "editor.insertSpaces": true,

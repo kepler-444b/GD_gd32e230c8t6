@@ -9,6 +9,9 @@ typedef enum {
     EVENT_ENTER_CONFIG, // 进入配置模式
     EVENT_EXIT_CONFIG,  // 退出配置模式
 
+    EVENT_SEND_CMD,     // 面板发送命令
+    EVENT_RECEIVE_CMD,  // 模块接收命令
+
     // 添加更多事件类型...
     EVENT_COUNT // 自动计算事件数量
 } event_type_e;

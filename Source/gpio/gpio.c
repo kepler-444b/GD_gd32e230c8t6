@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include "gd32e23x.h"
 
+gpio_pin_typedef_t DEFAULT = {0, 0};
 gpio_pin_typedef_t PA0  = {GPIOA, GPIO_PIN_0};
 gpio_pin_typedef_t PA1  = {GPIOA, GPIO_PIN_1};
 gpio_pin_typedef_t PA2  = {GPIOA, GPIO_PIN_2};

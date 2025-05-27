@@ -4,15 +4,30 @@
 #include "../timer/timer.h"
 #include "../gpio/gpio.h"
 #include "../base/debug.h"
+#include "../uart/uart.h"
+#include "../protocol/protocol.h"
+#include "../pwm/pwm.h"
 
 #if defined QUICK_BOX
+
+typedef struct {
+    bool key_status;
+    uint16_t lum;
+    bool mode;
+} quick_box_t;
+static quick_box_t my_quick_box = {0};
+
 void quick_box_gpio_init(void);
-void quick_box_test(void *arg);
+void quick_box_key_det(void *arg);
+void quick_box_data_cb(valid_data_t *data);
 
 void quick_box_init(void)
 {
     quick_box_gpio_init();
-    app_timer_start(1000, quick_box_test, true, NULL, "quick_box_test");
+    app_valid_data_callback(quick_box_data_cb); // 注册有效数据回调函数
+    app_timer_start(1, quick_box_key_det, true, NULL, "quick_box_key");
+
+    app_pwm_init(PB7, PB6, PB5, DEFAULT); //  初始化PWM
 }
 
 void quick_box_gpio_init(void)
@@ -20,8 +35,8 @@ void quick_box_gpio_init(void)
     rcu_periph_clock_enable(RCU_GPIOA);
     rcu_periph_clock_enable(RCU_GPIOB);
 
-    gpio_mode_set(GPIOA, GPIO_MODE_INPUT, GPIO_PUPD_NONE, GPIO_PIN_0);  // KEY
-    gpio_mode_set(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_1); // D1
+    gpio_mode_set(GPIOA, GPIO_MODE_INPUT, GPIO_PUPD_PULLUP, GPIO_PIN_0); // KEY
+    gpio_mode_set(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_1);  // D1
     // gpio_mode_set(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_2); // D2 调试阶段用作 usart1_tx
     // gpio_mode_set(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_3); // D3 调试阶段用作 usart1_rx
     gpio_mode_set(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_4); // CSN
@@ -33,19 +48,91 @@ void quick_box_gpio_init(void)
     gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_1); // LD2
     gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_2); // CE
 
-    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_5);  // OUT13
-    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_6);  // OUT12
-    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_7);  // OUT11
+    // 3路PWM调光
+    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_PULLUP, GPIO_PIN_5); // OUT13
+    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_PULLUP, GPIO_PIN_6); // OUT12
+    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_PULLUP, GPIO_PIN_7); // OUT11
+
     gpio_mode_set(GPIOB, GPIO_MODE_INPUT, GPIO_PUPD_NONE, GPIO_PIN_11);  // DET0 过零点检测
     gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_13); // OUT9
     gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_14); // OUT8
     gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_15); // OUT7
+
+    app_ctrl_gpio(PB5, true);
+    app_ctrl_gpio(PB6, true);
+    app_ctrl_gpio(PB7, true);
 }
-bool status = false;
-void quick_box_test(void *arg)
+
+// 按键检测
+void quick_box_key_det(void *arg)
 {
-    status = !status;
-    app_ctrl_gpio(PB15, status);
-    // APP_PRINTF("test%d\n", status);
+    if (app_get_gpio(PA0) == RESET && my_quick_box.key_status == false) {
+        if (my_quick_box.mode == false) {
+            APP_PRINTF("key press\n");
+            // if (my_quick_box.lum <= 500) {
+            //     my_quick_box.lum += 500;
+            //     app_set_pwm_fade(0, my_quick_box.lum, 5000);
+            //     app_set_pwm_fade(1, my_quick_box.lum, 5000);
+            //     app_set_pwm_fade(2, my_quick_box.lum, 5000);
+            //     if (my_quick_box.lum == 500) {
+            //         my_quick_box.mode = true;
+            //     }
+            // }
+        } else {
+            APP_PRINTF("key up\n");
+            // if (my_quick_box.lum >= 0) {
+            //     my_quick_box.lum -= 500;
+            //     app_set_pwm_fade(0, my_quick_box.lum, 5000);
+            //     app_set_pwm_fade(1, my_quick_box.lum, 5000);
+            //     app_set_pwm_fade(2, my_quick_box.lum, 5000);
+            //     if (my_quick_box.lum == 0) {
+            //         my_quick_box.mode = false;
+            //     }
+            // }
+        }
+
+        my_quick_box.key_status = true;
+    } else if (app_get_gpio(PA0) == SET) {
+        my_quick_box.key_status = false;
+    }
+
+    // APP_PRINTF("PB5:%d\n", app_get_gpio(PB5));
+    // APP_PRINTF("PB6:%d\n", app_get_gpio(PB6));
+    // APP_PRINTF("PB7:%d\n", app_get_gpio(PB6));
+}
+
+void quick_box_data_cb(valid_data_t *data)
+{
+    APP_PRINTF_BUF("data:", data->data, data->length);
+    if(data->data[1] == 0x0d)
+    {
+        switch (data->data[7]) // 按键分组
+    {
+        // case 0x00: // 总关
+        // {
+        //     app_set_pwm_fade(0, 0, 1000);
+        //     app_set_pwm_fade(1, 0, 1000);
+        //     app_set_pwm_fade(2, 0, 1000);
+        // } break;
+        case 0x01: // 明亮
+        {
+            app_set_pwm_fade(0, 500, 1000);
+            app_set_pwm_fade(1, 500, 1000);
+            app_set_pwm_fade(2, 500, 1000);
+        } break;
+        case 0x08: // 温馨
+        {
+            app_set_pwm_fade(0, 100, 1000);
+            app_set_pwm_fade(1, 100, 1000);
+            app_set_pwm_fade(2, 100, 1000);
+        } break;
+    }
+    }
+    else if(data->data[1] == 0x00)
+    {
+        app_set_pwm_fade(0, 0, 1000);
+        app_set_pwm_fade(1, 0, 1000);
+        app_set_pwm_fade(2, 0, 1000);
+    }
 }
 #endif

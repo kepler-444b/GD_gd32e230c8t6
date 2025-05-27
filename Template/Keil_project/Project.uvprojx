@@ -724,6 +724,11 @@
               <FileType>5</FileType>
               <FilePath>..\..\Source\pwm\pwm.h</FilePath>
             </File>
+            <File>
+              <FileName>curve_table.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\Source\pwm\curve_table.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

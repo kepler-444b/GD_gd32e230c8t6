@@ -34,64 +34,6 @@ float app_calculate_average(const float *buffer, uint16_t count)
     return (count != 0) ? (sum / (float)count) : FLT_MAX;
 }
 
-void app_slow_ctrl_led(gpio_pin_typedef_t gpio, uint8_t pwm_cycle, bool status)
-{
-    my_pwm_state.pwm_cycle = pwm_cycle;
-    my_pwm_state.gpio      = gpio;
-    if (status) {
-
-        if (app_timer_start(1, app_start_open_led, true, NULL, "open_led_timer") != TIMER_ERR_SUCCESS) {
-            APP_ERROR("open_led");
-        }
-    } else {
-        if (app_timer_start(1, app_start_close_led, true, NULL, "close_led_timer") != TIMER_ERR_SUCCESS) {
-            APP_ERROR("close_led");
-        };
-    }
-}
-
-void app_start_open_led(void *arg)
-{
-    my_pwm_state.pwm_counter++;
-    if (my_pwm_state.pwm_counter >= my_pwm_state.pwm_cycle) {
-        my_pwm_state.pwm_counter = 0;
-        if (my_pwm_state.pwm_duty < 100) {
-            my_pwm_state.pwm_duty++;
-        }
-        if (my_pwm_state.pwm_duty >= 100) {
-            app_timer_stop("open_led_timer");
-        }
-    }
-
-    // 抖动算法：通过累加占空比，分散亮灭脉冲
-    my_pwm_state.dither_accumulator += my_pwm_state.pwm_duty;
-    bool led_on = (my_pwm_state.dither_accumulator >= 100);
-    if (led_on) my_pwm_state.dither_accumulator -= 100;
-
-    app_ctrl_gpio(PA8, led_on);
-}
-
-void app_start_close_led(void *arg)
-{
-    my_pwm_state.pwm_counter++;
-    if (my_pwm_state.pwm_counter >= my_pwm_state.pwm_cycle) {
-        my_pwm_state.pwm_counter = 0;
-        if (my_pwm_state.pwm_duty > 0) {
-            my_pwm_state.pwm_duty--; // 每个周期减少占空比
-        }
-        if(my_pwm_state.pwm_duty <= 0)
-        {
-            app_timer_stop("close_led_timer");
-        }
-    }
-
-    // 抖动算法：通过累加占空比，分散亮灭脉冲
-    my_pwm_state.dither_accumulator += my_pwm_state.pwm_duty;
-    bool led_on = (my_pwm_state.dither_accumulator >= 100);
-    if (led_on) my_pwm_state.dither_accumulator -= 100;
-
-    app_ctrl_gpio(PA8, led_on);
-}
 
 bool app_uint8_to_uint32(const uint8_t *input, size_t input_count, uint32_t *output, size_t output_count)
 {
@@ -126,3 +68,5 @@ bool app_uint32_to_uint8(const uint32_t *input, size_t input_count, uint8_t *out
     }
     return true;
 }
+
+

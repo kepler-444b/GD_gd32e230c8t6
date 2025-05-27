@@ -18,11 +18,14 @@ bool enter_config = false;
 void app_proto_check(uint8_t *data, uint16_t length);
 void app_save_config(valid_data_t *boj);
 uint8_t calcrc_data(uint8_t *rxbuf, uint8_t len);
+void app_eventbus_poll2(event_type_e event, void *params);
 
 static ValidDataCallback valid_data_callback = NULL;
 void app_proto_init(void)
 {
     app_usart0_rx_callback(app_proto_check);
+    app_eventbus_subscribe(app_eventbus_poll2);
+
 }
 
 void app_valid_data_callback(ValidDataCallback callback)
@@ -58,9 +61,10 @@ void app_proto_check(uint8_t *data, uint16_t length)
     switch (my_valid_data.data[0]) {
         case 0xF1: // 收到其他设备的AT指令
             if (my_valid_data.data[5] == calcrc_data(my_valid_data.data, 5)) {
-                if (valid_data_callback != NULL) {
-                    valid_data_callback(&my_valid_data);
-                }
+                app_eventbus_publish(EVENT_RECEIVE_CMD, &my_valid_data);
+                // if (valid_data_callback != NULL) {
+                //     valid_data_callback(&my_valid_data);
+                // }
             }
             break;
 
@@ -187,4 +191,17 @@ uint8_t calcrc_data(uint8_t *rxbuf, uint8_t len)
     uint8_t i, sum = 0;
     for (i = 0; i < len; i++) sum = sum + rxbuf[i];
     return (0xff - sum + 1);
+}
+
+void app_eventbus_poll2(event_type_e event, void *params)
+{
+    bool key_status = *(bool *)params;
+    APP_PRINTF("cmd:%d\n", key_status);
+    switch (event) {
+        case EVENT_SEND_CMD: {
+            app_panel_send_cmd(0, key_status, 0XF1);
+        } break;
+        default:
+            return;
+    }
 }

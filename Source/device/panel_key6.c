@@ -26,33 +26,45 @@ static uint8_t buffer_full = 0; // 标记缓冲区是否已满
 // 此结构体用于配置每个按键对应的电压范围
 typedef struct
 {
-    float min;
-    float max;
+    uint16_t min;
+    uint16_t max;
 } key_config_t;
 static const key_config_t my_key_config[] = {
     {
-        0.00f,
-        0.15f,
+        // 0.00f,
+        // 0.15f,
+        0,
+        15,
     }, // 按键1
     {
-        0.25f,
-        0.45f,
+        // 0.25f,
+        // 0.45f,
+        25,
+        45,
     }, // 按键2
     {
-        0.85f,
-        1.10f,
+        // 0.85f,
+        // 1.10f,
+        85,
+        110,
     }, // 按键3
     {
-        1.45f,
-        1.55f,
+        // 1.45f,
+        // 1.55f,
+        145,
+        155,
     }, // 按键4
     {
-        1.95f,
-        2.10f,
+        // 1.95f,
+        // 2.10f,
+        195,
+        210,
     }, // 按键5
     {
-        2.30f,
-        2.55f,
+        // 2.30f,
+        // 2.55f,
+        230,
+        255,
     }, // 按键6
 };
 typedef struct
@@ -75,7 +87,7 @@ static long_press_t my_long_press;
 // 函数声明
 void panel_gpio_init(void);
 void panel_ctrl_status(uint8_t led_num, bool led_state);
-void panel_adc_cb(float adc_value);
+void panel_adc_cb(uint16_t adc_value);
 void panel_ctrl_led_all(bool led_state);
 void panel_event_handler(event_type_e event, void *params);
 void panel_data_cb(valid_data_t *data);
@@ -84,12 +96,12 @@ void panel_key6_init(void)
 {
     panel_gpio_init();
     app_adc_init(1);
+    app_pwm_init(PA8, DEFAULT, DEFAULT, DEFAULT);
+    // app_pwm_init(PB7, PB6, PB5, DEFAULT);   //  初始化PWM
     app_adc_callback(panel_adc_cb);         // 注册ADC回调函数
     app_valid_data_callback(panel_data_cb); // 注册有效数据回调函数
-    app_pwm_init();
-    set_pwm_duty(30);
-    // pwm_set_duty(250);
-    // pwm_set_duty(0, 1000);
+    
+    app_set_pwm_fade(0, 500, 3000);
     app_eventbus_subscribe(panel_event_handler);
 }
 
@@ -113,7 +125,7 @@ void panel_gpio_init(void)
     gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_15);
 }
 
-void panel_adc_cb(float adc_value)
+void panel_adc_cb(uint16_t adc_value)
 {
     for (int i = 0; i < KEY_NUMBER_COUNT; i++) {
         if (adc_value >= my_key_config[i].min && adc_value <= my_key_config[i].max) {
@@ -129,8 +141,12 @@ void panel_adc_cb(float adc_value)
                     if (my_panel_status[i].key_status == false) {
                         if (my_long_press.enter_config == false) // 如果进入了配置模式，则禁用按键操作
                         {
+                            APP_PRINTF("key_down\n");
                             my_panel_status[i].led_w_status = !my_panel_status[i].led_w_status;
-                            app_panel_send_cmd(i, my_panel_status[i].led_w_status, 0XF1); // 此处只发送命令，不处理led和继电器
+                            static bool key_status = false;
+                            key_status = !key_status;
+                            app_eventbus_publish(EVENT_SEND_CMD, &key_status);    // 通过 event_bus 发送命令
+                            // app_panel_send_cmd(i, my_panel_status[i].led_w_status, 0XF1); // 此处只发送命令，不处理led和继电器
                             my_panel_status[i].key_status = true;                         // 短按标记为按下
                         }
                         my_long_press.key_long_perss  = true;        // 长按标记为按下
@@ -154,9 +170,10 @@ void panel_adc_cb(float adc_value)
         }
     }
 }
-
 void panel_data_cb(valid_data_t *data)
 {
+    #if 0
+    APP_PRINTF_BUF("panel_data_cb", data->data, data->length);
     switch (data->data[1]) {
         case 0x0E: { // 灯控模式
             for (uint8_t i = 0; i < 4; i++) {
@@ -176,11 +193,12 @@ void panel_data_cb(valid_data_t *data)
 
         } break;
     }
+    #endif
 }
 void panel_ctrl_status(uint8_t led_num, bool led_state)
 {
-    gpio_pin_typedef_t led_gpio   = GPIO_DEFAULT;
-    gpio_pin_typedef_t eraly_gpio = GPIO_DEFAULT;
+    gpio_pin_typedef_t led_gpio   = DEFAULT;
+    gpio_pin_typedef_t eraly_gpio = DEFAULT;
 
     // 根据 LED 编号设置 GPIO
     switch (led_num) {
@@ -238,6 +256,11 @@ void panel_event_handler(event_type_e event, void *params)
             panel_ctrl_led_all(false);
             my_long_press.enter_config = false;
         } break;
+        case EVENT_RECEIVE_CMD:
+        {
+            valid_data_t* valid_data = (valid_data_t*)params;
+            panel_data_cb(valid_data);
+        }
         default:
             return;
     }

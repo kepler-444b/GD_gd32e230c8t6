@@ -1,9 +1,10 @@
 #include "gd32e23x.h"
 #include <stdio.h>
 #include "eventbus.h"
+#include "../base/debug.h"
 
 #define MAX_EVENT_HANDLERS 8 // 最大事件处理器数量
-#define EVENT_QUEUE_SIZE   8 // 事件队列大小
+#define EVENT_QUEUE_SIZE   16 // 事件队列大小
 
 // 事件处理器数组
 static EventHandler eventHandlers[MAX_EVENT_HANDLERS];

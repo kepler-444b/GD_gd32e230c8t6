@@ -61,12 +61,6 @@ extern dev_config_t my_dev_config;
 /// @return
 float app_calculate_average(const float *buffer, uint16_t count);
 
-/// @brief 控制一个gpio口模拟pwm输出
-/// @param gpio       输出的gpio口
-/// @param pwm_cycle  周期
-/// @param status     输出状态
-void app_slow_ctrl_led(gpio_pin_typedef_t gpio, uint8_t pwm_cycle, bool status);
-
 /**
  * @brief 将 uint8_t 数组打包为 uint32_t 数组(小端序)
  * @param input         输入数组(uint8_t* 类型)

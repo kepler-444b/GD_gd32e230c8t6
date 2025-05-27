@@ -13,6 +13,7 @@ typedef struct
     uint32_t pin;
 } gpio_pin_typedef_t;
 
+extern gpio_pin_typedef_t DEFAULT;
 extern gpio_pin_typedef_t PA0;
 extern gpio_pin_typedef_t PA1;
 extern gpio_pin_typedef_t PA2;
@@ -51,5 +52,10 @@ static inline void app_ctrl_gpio(gpio_pin_typedef_t gpio, bool status)
     if (gpio.port != -1 && gpio.pin != -1) {
         status ? gpio_bit_set(gpio.port, gpio.pin) : gpio_bit_reset(gpio.port, gpio.pin);
     }
+}
+
+static inline FlagStatus app_get_gpio(gpio_pin_typedef_t gpio)
+{
+    return gpio_input_bit_get(gpio.port, gpio.pin);
 }
 #endif

@@ -8,7 +8,7 @@
 
 uint8_t app_adc_init(uint8_t adc_channel);
 
-typedef void (*adc_voltage_callback_t)(float voltage);
+typedef void (*adc_voltage_callback_t)(uint16_t voltage);
 
 void app_adc_callback(adc_voltage_callback_t callback);
 #endif

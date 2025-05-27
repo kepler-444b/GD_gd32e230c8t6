@@ -12,6 +12,7 @@
 #include "../Source/protocol/protocol.h"
 #include "../Source/flash/flash.h"
 #include "../Source/eventbus/eventbus.h"
+#include "../Source/pwm/pwm.h"
 
 void app_test(void *arg)
 {
@@ -28,8 +29,9 @@ int main(void)
     app_usart_init(0, 115200); // 初始化业务串口
     app_usart_init(1, 115200); // 初始化调试串口
 
-    app_proto_init(); // 协议层初始化
-    app_eventbus_init();
+    app_eventbus_init();       // 初始化事件总线
+    app_proto_init();          // 协议层初始化
+    
 
     app_jump_device_init();
     app_load_config();
@@ -44,6 +46,7 @@ int main(void)
         app_timer_poll();
         app_usart_poll();
         app_eventbus_poll();
+        app_pwm_poll();
         // APP_DELAY_1MS();
     }
 }

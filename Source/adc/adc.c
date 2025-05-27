@@ -76,7 +76,7 @@ static inline void app_get_value(void *arg)
 {
     adc_software_trigger_enable(ADC_INSERTED_CHANNEL);
 
-    float vref_value = (ADC_IDATA0 * 3.3 / 4096);
+    uint16_t vref_value = (ADC_IDATA0 * 330 / 4096);
 
     if (voltage_callback != NULL) // 电压值回调到子设备中处理
     {
