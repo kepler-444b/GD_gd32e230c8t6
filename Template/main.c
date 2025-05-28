@@ -3,7 +3,9 @@
 #include <stdio.h>
 #include <string.h>
 #include "main.h"
-
+#include "FreeRTOS.h"
+#include "task.h"
+#include "timers.h"
 #include "../Source/uart/uart.h"
 #include "../Source/base/debug.h"
 #include "../Source/base/base.h"
@@ -14,39 +16,34 @@
 #include "../Source/eventbus/eventbus.h"
 #include "../Source/pwm/pwm.h"
 
-void app_test(void *arg)
+StackType_t app_init_task_stack[125];
+StaticTask_t app_init_task_cb;
+
+// FreeRTOS 检测堆栈溢出的钩子函数,在这里实现
+void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
 {
-    uint8_t new_data = *(uint8_t  *)arg;
-    APP_PRINTF("new_data:%d\n", new_data);
+    (void)xTask; // 避免未使用变量警告
+    APP_ERROR("ERROR: Stack overflow in task %s\n", pcTaskName);
+    while (1); // 死循环，便于调试
+}
+
+void app_serve_task(void *pvParameters)
+{
+    app_usart_init(0, 115200); // 初始化业务串口
+    app_usart_init(1, 115200); // 初始化调试串口
+    app_eventbus_init();       // 初始化事件总线
+    app_proto_init();          // 协议层初始化
+
+    app_jump_device_init();
+    app_load_config();
+
+    vTaskDelete(NULL);         // 删除初始化任务
 }
 int main(void)
 {
     systick_config(); // 配置系统定时器
 
-    delay_1ms(1000);  // 初始化定时器前一定要添加延时
-    app_timer_init(); // 初始化定时器
-
-    app_usart_init(0, 115200); // 初始化业务串口
-    app_usart_init(1, 115200); // 初始化调试串口
-
-    app_eventbus_init();       // 初始化事件总线
-    app_proto_init();          // 协议层初始化
     
-
-    app_jump_device_init();
-    app_load_config();
-
-    // APP_PRINTF("my_dev_config.head = %02x\n", my_dev_config.head);
-    // APP_PRINTF("my_dev_config.channel = %02x\n", my_dev_config.channel);
-    // APP_PRINTF("my_dev_config.cate = %02x\n", my_dev_config.cate);
-    uint8_t data = 100;
-    // app_timer_start(1000, app_test, true, &data, "test_timer");
-    
-    while (1) {
-        app_timer_poll();
-        app_usart_poll();
-        app_eventbus_poll();
-        app_pwm_poll();
-        // APP_DELAY_1MS();
-    }
+    TaskHandle_t vAppIniatTask = xTaskCreateStatic(app_serve_task, "app_init_task", 125, NULL, 1, app_init_task_stack, &app_init_task_cb);
+    vTaskStartScheduler();  // 启动实时操作系统内核调度器
 }

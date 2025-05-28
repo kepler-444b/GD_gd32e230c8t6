@@ -2,7 +2,9 @@
 #include "device_manager.h"
 #include <float.h>
 #include "gd32e23x.h"
-#include "systick.h"
+#include "FreeRTOS.h"
+#include "task.h"
+
 #include "../base/debug.h"
 #include "../base/base.h"
 #include "../switch/led.h"
@@ -91,18 +93,31 @@ void panel_adc_cb(uint16_t adc_value);
 void panel_ctrl_led_all(bool led_state);
 void panel_event_handler(event_type_e event, void *params);
 void panel_data_cb(valid_data_t *data);
+void app_panel_task(void *pvParameters);
 
 void panel_key6_init(void)
 {
     panel_gpio_init();
     app_adc_init(1);
     app_pwm_init(PA8, DEFAULT, DEFAULT, DEFAULT);
-    // app_pwm_init(PB7, PB6, PB5, DEFAULT);   //  初始化PWM
-    app_adc_callback(panel_adc_cb);         // 注册ADC回调函数
+    // app_adc_callback(panel_adc_cb);         // 注册ADC回调函数
     app_valid_data_callback(panel_data_cb); // 注册有效数据回调函数
-    
+
     app_set_pwm_fade(0, 500, 3000);
     app_eventbus_subscribe(panel_event_handler);
+
+    // 创建一个任务读取ADC的值
+    static StackType_t app_panel_task_stack[128];
+    static StaticTask_t app_panel_task_cb;
+    TaskHandle_t vAppPanelTask = xTaskCreateStatic(
+        app_panel_task,       // 任务函数
+        "app_panel_task",     // 任务名称(调试用)
+        128,                  // 栈大小(单位:字)
+        NULL,                 // 传递给任务的参数
+        tskIDLE_PRIORITY + 1, // 优先级(比空闲任务高)
+        app_panel_task_stack, // 静态栈空间
+        &app_panel_task_cb    // 静态TCB
+    );
 }
 
 void panel_gpio_init(void)
@@ -125,8 +140,21 @@ void panel_gpio_init(void)
     gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_15);
 }
 
+void app_panel_task(void *pvParameters)
+{
+    while (1) {
+        // APP_PRINTF("app_panel_task\n");
+        adc_value_t adc_val;
+        if (app_adc_get_value(&adc_val, portMAX_DELAY)) {
+            uint16_t voltage = adc_val.voltage * 330 / 4096;
+            panel_adc_cb(voltage);
+        }
+    }
+}
 void panel_adc_cb(uint16_t adc_value)
 {
+// APP_PRINTF("adc_value: %d\n", adc_value);
+#if 1
     for (int i = 0; i < KEY_NUMBER_COUNT; i++) {
         if (adc_value >= my_key_config[i].min && adc_value <= my_key_config[i].max) {
             // 填充满buffer才会执行下面的代码，故此行执行10次才执行下面的代码
@@ -143,11 +171,12 @@ void panel_adc_cb(uint16_t adc_value)
                         {
                             APP_PRINTF("key_down\n");
                             my_panel_status[i].led_w_status = !my_panel_status[i].led_w_status;
-                            static bool key_status = false;
-                            key_status = !key_status;
-                            app_eventbus_publish(EVENT_SEND_CMD, &key_status);    // 通过 event_bus 发送命令
+                            static bool key_status          = false;
+                            key_status                      = !key_status;
+                            // app_eventbus_publish(EVENT_SEND_CMD, &key_status); // 通过 event_bus 发送命令
                             // app_panel_send_cmd(i, my_panel_status[i].led_w_status, 0XF1); // 此处只发送命令，不处理led和继电器
-                            my_panel_status[i].key_status = true;                         // 短按标记为按下
+                            panel_ctrl_status(i, my_panel_status[i].led_w_status);
+                            my_panel_status[i].key_status = true; // 短按标记为按下
                         }
                         my_long_press.key_long_perss  = true;        // 长按标记为按下
                         my_long_press.key_long_bumber = 0;           // 长按计数器清零
@@ -156,7 +185,7 @@ void panel_adc_cb(uint16_t adc_value)
                         my_long_press.key_long_bumber++;
                         if (my_long_press.key_long_bumber >= 500) // 实际延时 5s
                         {
-                            app_panel_send_cmd(0, 0, 0xF8);
+                            // app_panel_send_cmd(0, 0, 0xF8);
                             my_long_press.key_long_perss = false;
                         }
                     }
@@ -169,10 +198,11 @@ void panel_adc_cb(uint16_t adc_value)
             my_long_press.key_long_bumber = 0;     // 重置长按计数
         }
     }
+#endif
 }
 void panel_data_cb(valid_data_t *data)
 {
-    #if 0
+#if 0
     APP_PRINTF_BUF("panel_data_cb", data->data, data->length);
     switch (data->data[1]) {
         case 0x0E: { // 灯控模式
@@ -193,7 +223,7 @@ void panel_data_cb(valid_data_t *data)
 
         } break;
     }
-    #endif
+#endif
 }
 void panel_ctrl_status(uint8_t led_num, bool led_state)
 {
@@ -256,15 +286,13 @@ void panel_event_handler(event_type_e event, void *params)
             panel_ctrl_led_all(false);
             my_long_press.enter_config = false;
         } break;
-        case EVENT_RECEIVE_CMD:
-        {
-            valid_data_t* valid_data = (valid_data_t*)params;
+        case EVENT_RECEIVE_CMD: {
+            valid_data_t *valid_data = (valid_data_t *)params;
             panel_data_cb(valid_data);
         }
         default:
             return;
     }
 }
-
 
 #endif

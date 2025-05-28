@@ -90,6 +90,7 @@ void app_set_pwm_duty(pwm_channel_t channel, uint16_t duty)
 
 void app_set_pwm_fade(pwm_channel_t channel, uint16_t duty, uint16_t fade_time_ms)
 {
+    APP_PRINTF("app_set_pwm_fade");
     if (channel >= PWM_CHANNEL_MAX) return;
 
     // 限制占空比范围
@@ -138,7 +139,7 @@ bool app_is_pwm_fading(pwm_channel_t channel)
 // 定时器中断处理函数
 void TIMER13_IRQHandler(void)
 {
-#if 1 // 在主循环中处理
+#if 0 // 在主循环中处理
     if (timer_interrupt_flag_get(TIMER13, TIMER_INT_FLAG_UP)) {
         timer_interrupt_flag_clear(TIMER13, TIMER_INT_FLAG_UP);
 
@@ -166,7 +167,7 @@ void TIMER13_IRQHandler(void)
         }
     }
 #endif
-#if 0 // 在中断中处理
+#if 1 // 在中断中处理
     static uint16_t pwm_counter = 0;
     static uint16_t fade_timer  = 0;
 
@@ -236,7 +237,7 @@ void TIMER13_IRQHandler(void)
 }
 
 // 在住循环中运行(由于速度不够快，暂时弃用)
-#if 1
+#if 0
 void app_pwm_poll(void)
 {
     if (pwm_update_flag) {
