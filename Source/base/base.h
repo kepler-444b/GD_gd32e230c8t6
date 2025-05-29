@@ -59,7 +59,7 @@ extern dev_config_t my_dev_config;
 /// @param buffer 传入数组
 /// @param count  数组长度
 /// @return
-float app_calculate_average(const float *buffer, uint16_t count);
+float app_calculate_average(const uint16_t *buffer, uint16_t count);
 
 /**
  * @brief 将 uint8_t 数组打包为 uint32_t 数组(小端序)

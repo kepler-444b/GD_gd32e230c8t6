@@ -10,7 +10,6 @@
 #include "../Source/base/debug.h"
 #include "../Source/base/base.h"
 #include "../Source/device/jump_device.h"
-#include "../Source/timer/timer.h"
 #include "../Source/protocol/protocol.h"
 #include "../Source/flash/flash.h"
 #include "../Source/eventbus/eventbus.h"
@@ -29,6 +28,14 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
 
 void app_serve_task(void *pvParameters)
 {
+    while (1) {
+        app_eventbus_poll();
+    }
+}
+int main(void)
+{
+    systick_config(); // 配置系统定时器
+
     app_usart_init(0, 115200); // 初始化业务串口
     app_usart_init(1, 115200); // 初始化调试串口
     app_eventbus_init();       // 初始化事件总线
@@ -36,14 +43,6 @@ void app_serve_task(void *pvParameters)
 
     app_jump_device_init();
     app_load_config();
-
-    vTaskDelete(NULL);         // 删除初始化任务
-}
-int main(void)
-{
-    systick_config(); // 配置系统定时器
-
-    
     TaskHandle_t vAppIniatTask = xTaskCreateStatic(app_serve_task, "app_init_task", 125, NULL, 1, app_init_task_stack, &app_init_task_cb);
-    vTaskStartScheduler();  // 启动实时操作系统内核调度器
+    vTaskStartScheduler(); // 启动实时操作系统内核调度器
 }

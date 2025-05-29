@@ -1,29 +1,23 @@
 #include "gd32e23x.h"
 #include <stdio.h>
+#include <string.h>
 #include "gd32e230c_eval.h"
 #include "gd32e23x_usart.h"
 #include "uart.h"
+
 #include "../base/debug.h"
-#include "../timer/timer.h"
 #include "../base/base.h"
 
-#define USART0_BAUDRATE 115200U
-#define USART1_BAUDRATE 115200U
-
 static usart_rx_callback_t rx_callback = NULL;
-void app_usart0_rx_callback(usart_rx_callback_t callback)
+void app_usart_rx_callback(usart_rx_callback_t callback)
 {
     rx_callback = callback;
 }
 
 void app_usart_init(uint8_t usart_num, uint32_t baudrate)
 {
-    /* 使能GPIO和USART时钟 */
     rcu_periph_clock_enable(RCU_GPIOA);
 
-    if (usart_num != 0 && usart_num != 1) {
-        APP_PRINTF("usart_num error!\n");
-    }
     if (usart_num == 0) {
         rcu_periph_clock_enable(RCU_USART0);
 
@@ -48,8 +42,8 @@ void app_usart_init(uint8_t usart_num, uint32_t baudrate)
 
         // USART0 作为业务口，需要配置中断
         usart_interrupt_enable(USART0, USART_INT_RBNE); // 接收缓冲区非空中断使能
-        // usart_interrupt_enable(USART0, USART_INT_IDLE);  // 空闲中断使能
-        nvic_irq_enable(USART0_IRQn, 3); // 配置 NVIC
+        usart_interrupt_enable(USART0, USART_INT_IDLE); // 空闲中断使能
+        nvic_irq_enable(USART0_IRQn, 3);                // 配置 NVIC
     } else if (usart_num == 1) {
         rcu_periph_clock_enable(RCU_USART1);
 
@@ -74,37 +68,30 @@ void app_usart_init(uint8_t usart_num, uint32_t baudrate)
     }
 }
 
-#if 1
 // USART0中断服务函数
 void USART0_IRQHandler(void)
 {
-    if (RESET != usart_interrupt_flag_get(USART0, USART_INT_FLAG_RBNE)) {
-        // 处理接收数据
+    // 侦听非空中断
+    if (usart_interrupt_flag_get(USART0, USART_INT_FLAG_RBNE) != RESET) {
+        usart_interrupt_flag_clear(USART0, USART_INT_FLAG_RBNE);
         uint8_t data = (uint8_t)usart_data_receive(USART0);
-        if (rx_buffer.length < 512) {
+        if (rx_buffer.length < UART_RECV_SIZE) {
             rx_buffer.buffer[rx_buffer.length++] = data;
         }
-        usart_interrupt_flag_clear(USART0, USART_INT_FLAG_RBNE);
     }
 
-    // 单独处理空闲中断
-    // if(usart_interrupt_flag_get(USART0, USART_INT_FLAG_IDLE))
-    // {
-    //     if (rx_buffer.length > 0 && rx_callback != NULL)
-    //     {
-    //         rx_callback(rx_buffer.buffer, rx_buffer.length);
-    //     }
-    //     rx_buffer.length = 0;
-    //     usart_data_receive(USART0);  // 清除空闲中断
-    //     usart_interrupt_flag_clear(USART0, USART_INT_FLAG_IDLE);
-    // }
+    // 侦听空闲中断
+    if (usart_interrupt_flag_get(USART0, USART_INT_FLAG_IDLE) != RESET) {
+        usart_interrupt_flag_clear(USART0, USART_INT_FLAG_IDLE);
+        if (rx_buffer.length > 0 && rx_callback != NULL) {
+            rx_callback(&rx_buffer);
+            memset(&rx_buffer, 0, sizeof(rx_buffer));
+        }
+    }
 }
 
-#endif
-
-#if 1
 // 发送一个字节
-void app_usart0_send_byte(uint8_t data)
+void app_usart_tx_byte(uint8_t data)
 {
     usart_data_transmit(USART0, data);
     while (RESET == usart_flag_get(USART0, USART_FLAG_TBE));
@@ -112,23 +99,22 @@ void app_usart0_send_byte(uint8_t data)
 }
 
 // 发送字符串
-void app_usart0_send_string(const char *str)
+void app_usart_tx_string(const char *str)
 {
     while (*str) {
-        app_usart0_send_byte(*str++);
+        app_usart_tx_byte(*str++);
     }
 }
 
 // 发送指定长度的数据
-void app_usart0_send_data(const uint8_t *data, uint16_t length)
+void app_usart_tx_data(const uint8_t *data, uint16_t length)
 {
     for (uint16_t i = 0; i < length; i++) {
-        app_usart0_send_byte(data[i]); // 复用单字节发送函数
+        app_usart_tx_byte(data[i]); // 复用单字节发送函数
     }
 }
-#endif
 
-#if 1
+#if 0
 void app_usart_poll(void)
 {
     // 检测空闲状态标志
@@ -145,6 +131,7 @@ void app_usart_poll(void)
     }
 }
 #endif
+
 // printf 重定向到 USART1
 int fputc(int ch, FILE *f)
 {

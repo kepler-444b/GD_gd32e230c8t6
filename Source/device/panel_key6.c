@@ -3,13 +3,12 @@
 #include <float.h>
 #include "gd32e23x.h"
 #include "FreeRTOS.h"
-#include "task.h"
+#include "timers.h"
 
 #include "../base/debug.h"
 #include "../base/base.h"
 #include "../switch/led.h"
 #include "../adc/adc.h"
-#include "../timer/timer.h"
 #include "../gpio/gpio.h"
 #include "../uart/uart.h"
 #include "../base/panel_base.h"
@@ -19,9 +18,11 @@
 
 #if defined PANEL_KEY6
 
-#define KEY_NUMBER_COUNT (sizeof(my_key_config) / sizeof(my_key_config[0])) // 按键数量
-#define ADC_VALUE_COUNT  10                                                 // 电压值缓冲区数量
-static float adc_value_buffer[ADC_VALUE_COUNT];
+#define ADC_TO_VOLTAGE(adc_val) ((adc_val) * 330 / 4096) // adc值转电压
+#define KEY_NUMBER_COUNT        6                        // 按键数量
+#define ADC_VALUE_COUNT         10                       // 电压值缓冲区数量
+
+static uint16_t adc_value_buffer[ADC_VALUE_COUNT];
 static uint8_t adc_index   = 0;
 static uint8_t buffer_full = 0; // 标记缓冲区是否已满
 
@@ -31,40 +32,28 @@ typedef struct
     uint16_t min;
     uint16_t max;
 } key_config_t;
-static const key_config_t my_key_config[] = {
+static const key_config_t my_key_config[KEY_NUMBER_COUNT] = {
     {
-        // 0.00f,
-        // 0.15f,
         0,
         15,
     }, // 按键1
     {
-        // 0.25f,
-        // 0.45f,
         25,
         45,
     }, // 按键2
     {
-        // 0.85f,
-        // 1.10f,
         85,
         110,
     }, // 按键3
     {
-        // 1.45f,
-        // 1.55f,
         145,
         155,
     }, // 按键4
     {
-        // 1.95f,
-        // 2.10f,
         195,
         210,
     }, // 按键5
     {
-        // 2.30f,
-        // 2.55f,
         230,
         255,
     }, // 按键6
@@ -89,35 +78,42 @@ static long_press_t my_long_press;
 // 函数声明
 void panel_gpio_init(void);
 void panel_ctrl_status(uint8_t led_num, bool led_state);
-void panel_adc_cb(uint16_t adc_value);
+void app_panel_read_adc(TimerHandle_t xTimer);
 void panel_ctrl_led_all(bool led_state);
 void panel_event_handler(event_type_e event, void *params);
 void panel_data_cb(valid_data_t *data);
-void app_panel_task(void *pvParameters);
 
+static TaskHandle_t appPanelTaskHandle = NULL;
 void panel_key6_init(void)
 {
     panel_gpio_init();
-    app_adc_init(1);
+    adc_channel_t my_adc_channel;
+    my_adc_channel.adc_channel_0 = true; // 只使用0通道
+
+    app_adc_init(&my_adc_channel);
     app_pwm_init(PA8, DEFAULT, DEFAULT, DEFAULT);
-    // app_adc_callback(panel_adc_cb);         // 注册ADC回调函数
-    app_valid_data_callback(panel_data_cb); // 注册有效数据回调函数
 
     app_set_pwm_fade(0, 500, 3000);
+    
+    // 订阅事件总线
     app_eventbus_subscribe(panel_event_handler);
 
-    // 创建一个任务读取ADC的值
-    static StackType_t app_panel_task_stack[128];
-    static StaticTask_t app_panel_task_cb;
-    TaskHandle_t vAppPanelTask = xTaskCreateStatic(
-        app_panel_task,       // 任务函数
-        "app_panel_task",     // 任务名称(调试用)
-        128,                  // 栈大小(单位:字)
-        NULL,                 // 传递给任务的参数
-        tskIDLE_PRIORITY + 1, // 优先级(比空闲任务高)
-        app_panel_task_stack, // 静态栈空间
-        &app_panel_task_cb    // 静态TCB
+    static StaticTimer_t ReadAdcTimerBuffer;
+    static TimerHandle_t ReadAdcTimerHandle = NULL;
+
+    ReadAdcTimerHandle = xTimerCreateStatic(
+        "ReadAdcTimer",     // 定时器名称(调试用)
+        pdMS_TO_TICKS(1),   // 定时周期(1ms)
+        pdTRUE,             // 自动重载(TRUE=周期性，FALSE=单次)
+        NULL,               // 定时器ID(可用于传递参数)
+        app_panel_read_adc, // 回调函数
+        &ReadAdcTimerBuffer // 静态内存缓冲区
+
     );
+    // 启动定时器(0表示不阻塞)
+    if (xTimerStart(ReadAdcTimerHandle, 0) != pdPASS) {
+        APP_ERROR("ReadAdcTimerHandle error");
+    }
 }
 
 void panel_gpio_init(void)
@@ -140,21 +136,10 @@ void panel_gpio_init(void)
     gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_15);
 }
 
-void app_panel_task(void *pvParameters)
+void app_panel_read_adc(TimerHandle_t xTimer)
 {
-    while (1) {
-        // APP_PRINTF("app_panel_task\n");
-        adc_value_t adc_val;
-        if (app_adc_get_value(&adc_val, portMAX_DELAY)) {
-            uint16_t voltage = adc_val.voltage * 330 / 4096;
-            panel_adc_cb(voltage);
-        }
-    }
-}
-void panel_adc_cb(uint16_t adc_value)
-{
-// APP_PRINTF("adc_value: %d\n", adc_value);
-#if 1
+
+    uint16_t adc_value = ADC_TO_VOLTAGE(app_get_adc_value()[0]);
     for (int i = 0; i < KEY_NUMBER_COUNT; i++) {
         if (adc_value >= my_key_config[i].min && adc_value <= my_key_config[i].max) {
             // 填充满buffer才会执行下面的代码，故此行执行10次才执行下面的代码
@@ -164,7 +149,7 @@ void panel_adc_cb(uint16_t adc_value)
                 adc_index   = 0;
                 buffer_full = 1;
 
-                float new_value = app_calculate_average(adc_value_buffer, ADC_VALUE_COUNT);
+                uint16_t new_value = app_calculate_average(adc_value_buffer, ADC_VALUE_COUNT);
                 if (new_value >= my_key_config[i].min && new_value <= my_key_config[i].max) {
                     if (my_panel_status[i].key_status == false) {
                         if (my_long_press.enter_config == false) // 如果进入了配置模式，则禁用按键操作
@@ -173,9 +158,8 @@ void panel_adc_cb(uint16_t adc_value)
                             my_panel_status[i].led_w_status = !my_panel_status[i].led_w_status;
                             static bool key_status          = false;
                             key_status                      = !key_status;
-                            // app_eventbus_publish(EVENT_SEND_CMD, &key_status); // 通过 event_bus 发送命令
-                            // app_panel_send_cmd(i, my_panel_status[i].led_w_status, 0XF1); // 此处只发送命令，不处理led和继电器
-                            panel_ctrl_status(i, my_panel_status[i].led_w_status);
+                            app_panel_send_cmd(i, my_panel_status[i].led_w_status, 0XF1); // 此处只发送命令，不处理led和继电器
+
                             my_panel_status[i].key_status = true; // 短按标记为按下
                         }
                         my_long_press.key_long_perss  = true;        // 长按标记为按下
@@ -185,7 +169,7 @@ void panel_adc_cb(uint16_t adc_value)
                         my_long_press.key_long_bumber++;
                         if (my_long_press.key_long_bumber >= 500) // 实际延时 5s
                         {
-                            // app_panel_send_cmd(0, 0, 0xF8);
+                            app_panel_send_cmd(0, 0, 0xF8);
                             my_long_press.key_long_perss = false;
                         }
                     }
@@ -198,12 +182,10 @@ void panel_adc_cb(uint16_t adc_value)
             my_long_press.key_long_bumber = 0;     // 重置长按计数
         }
     }
-#endif
 }
 void panel_data_cb(valid_data_t *data)
 {
-#if 0
-    APP_PRINTF_BUF("panel_data_cb", data->data, data->length);
+    // APP_PRINTF_BUF("panel_data_cb", data->data, data->length);
     switch (data->data[1]) {
         case 0x0E: { // 灯控模式
             for (uint8_t i = 0; i < 4; i++) {
@@ -223,7 +205,6 @@ void panel_data_cb(valid_data_t *data)
 
         } break;
     }
-#endif
 }
 void panel_ctrl_status(uint8_t led_num, bool led_state)
 {
@@ -277,6 +258,7 @@ void panel_ctrl_led_all(bool led_state)
 
 void panel_event_handler(event_type_e event, void *params)
 {
+    APP_PRINTF("event:%d\n", event);
     switch (event) {
         case EVENT_ENTER_CONFIG: {
             panel_ctrl_led_all(true);

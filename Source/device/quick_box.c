@@ -1,7 +1,6 @@
 #include "gd32e23x.h"
 #include "quick_box.h"
 #include "device_manager.h"
-#include "../timer/timer.h"
 #include "../gpio/gpio.h"
 #include "../base/debug.h"
 #include "../uart/uart.h"
@@ -18,14 +17,11 @@ typedef struct {
 static quick_box_t my_quick_box = {0};
 
 void quick_box_gpio_init(void);
-void quick_box_key_det(void *arg);
 void quick_box_data_cb(valid_data_t *data);
 
 void quick_box_init(void)
 {
     quick_box_gpio_init();
-    app_valid_data_callback(quick_box_data_cb); // 注册有效数据回调函数
-    app_timer_start(1, quick_box_key_det, true, NULL, "quick_box_key");
 
     app_pwm_init(PB7, PB6, PB5, DEFAULT); //  初始化PWM
 }
@@ -61,44 +57,6 @@ void quick_box_gpio_init(void)
     app_ctrl_gpio(PB5, true);
     app_ctrl_gpio(PB6, true);
     app_ctrl_gpio(PB7, true);
-}
-
-// 按键检测
-void quick_box_key_det(void *arg)
-{
-    if (app_get_gpio(PA0) == RESET && my_quick_box.key_status == false) {
-        if (my_quick_box.mode == false) {
-            APP_PRINTF("key press\n");
-            // if (my_quick_box.lum <= 500) {
-            //     my_quick_box.lum += 500;
-            //     app_set_pwm_fade(0, my_quick_box.lum, 5000);
-            //     app_set_pwm_fade(1, my_quick_box.lum, 5000);
-            //     app_set_pwm_fade(2, my_quick_box.lum, 5000);
-            //     if (my_quick_box.lum == 500) {
-            //         my_quick_box.mode = true;
-            //     }
-            // }
-        } else {
-            APP_PRINTF("key up\n");
-            // if (my_quick_box.lum >= 0) {
-            //     my_quick_box.lum -= 500;
-            //     app_set_pwm_fade(0, my_quick_box.lum, 5000);
-            //     app_set_pwm_fade(1, my_quick_box.lum, 5000);
-            //     app_set_pwm_fade(2, my_quick_box.lum, 5000);
-            //     if (my_quick_box.lum == 0) {
-            //         my_quick_box.mode = false;
-            //     }
-            // }
-        }
-
-        my_quick_box.key_status = true;
-    } else if (app_get_gpio(PA0) == SET) {
-        my_quick_box.key_status = false;
-    }
-
-    // APP_PRINTF("PB5:%d\n", app_get_gpio(PB5));
-    // APP_PRINTF("PB6:%d\n", app_get_gpio(PB6));
-    // APP_PRINTF("PB7:%d\n", app_get_gpio(PB6));
 }
 
 void quick_box_data_cb(valid_data_t *data)

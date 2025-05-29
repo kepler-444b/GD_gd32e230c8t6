@@ -10,7 +10,13 @@
             "timers.h": "c",
             "panel_key6.h": "c",
             "jump_device.h": "c",
-            "timer.h": "c"
+            "timer.h": "c",
+            "base.h": "c",
+            "__config": "c",
+            "algorithm": "c",
+            "string": "c",
+            "vector": "c",
+            "__locale": "c"
         }
     },
     "extensions": {}

@@ -23,7 +23,7 @@ void app_eventbus_init(void)
     queueHead = queueTail = queueSize = 0;
 }
 
-// 订阅所有事件（只需调用一次）
+// 订阅所有事件(只需调用一次)
 void app_eventbus_subscribe(EventHandler handler)
 {
     if (handlerCount >= MAX_EVENT_HANDLERS) {
@@ -32,7 +32,7 @@ void app_eventbus_subscribe(EventHandler handler)
     eventHandlers[handlerCount++] = handler;
 }
 
-// 发布事件（带参数）
+// 发布事件(带参数)
 void app_eventbus_publish(event_type_e event, void *params)
 {
     if (event >= EVENT_COUNT) return;
@@ -43,7 +43,7 @@ void app_eventbus_publish(event_type_e event, void *params)
     queueSize++;
 }
 
-// 处理事件（在主循环中调用）
+// 处理事件(在主循环中调用)
 void app_eventbus_poll(void)
 {
     while (queueSize > 0) {

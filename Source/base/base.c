@@ -2,7 +2,6 @@
 #include "base.h"
 #include <stdio.h>
 #include <float.h>
-#include "../timer/timer.h"
 
 dev_config_t my_dev_config = {0};
 
@@ -18,7 +17,7 @@ static pwm_state my_pwm_state;
 
 void app_start_close_led(void *arg);
 void app_start_open_led(void *arg);
-float app_calculate_average(const float *buffer, uint16_t count)
+float app_calculate_average(const uint16_t *buffer, uint16_t count)
 {
     // 参数检查
     if (buffer == NULL || count == 0) {
