@@ -9,17 +9,17 @@ typedef enum {
     EVENT_ENTER_CONFIG, // 进入配置模式
     EVENT_EXIT_CONFIG,  // 退出配置模式
 
-    EVENT_SEND_CMD,     // 面板发送命令
-    EVENT_RECEIVE_CMD,  // 模块接收命令
+    EVENT_SEND_CMD,    // 面板发送命令
+    EVENT_RECEIVE_CMD, // 模块接收命令
 
     // 添加更多事件类型...
     EVENT_COUNT // 自动计算事件数量
 } event_type_e;
 
-// 事件回调函数类型（带事件类型和参数）
+// 事件回调函数类型(带事件类型和参数)
 typedef void (*EventHandler)(event_type_e event, void *params);
 
-// 事件结构体（包含事件类型和参数）
+// 事件结构体(包含事件类型和参数)
 typedef struct
 {
     event_type_e type;
@@ -29,12 +29,12 @@ typedef struct
 // 初始化事件总线
 void app_eventbus_init(void);
 
-// 订阅所有事件（只需调用一次）
+// 订阅所有事件(只需调用一次)
 void app_eventbus_subscribe(EventHandler handler);
 
-// 发布事件（带参数）
+// 发布事件(带参数)
 void app_eventbus_publish(event_type_e event, void *params);
 
-// 处理事件（在主循环中调用）
+// 处理事件(在主循环中调用)
 void app_eventbus_poll(void);
 #endif

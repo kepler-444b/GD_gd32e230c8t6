@@ -8,8 +8,7 @@
 #include "gd32e23x_dbg.h"
 #include "../gpio/gpio.h"
 
-// #define PWM_DIR           // pwm 方向(开启次宏为反,关闭为正)
-
+// #define PWM_DIR                    // pwm 方向(开启次宏为反,关闭为正)
 #define SYSTEM_CLOCK_FREQ 72000000 // 系统时钟频率(72MHz)
 #define TIMER_PERIOD      14       // 定时器周期(15us中断,不可再低)
 #define PWM_RESOLUTION    500      // PWM分辨率(500)

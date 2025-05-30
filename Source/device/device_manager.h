@@ -6,7 +6,7 @@
     在此管理每个设备的初始化
 */
 
-// #define PANEL_KEY6 // 6键面板
-#define QUICK_BOX  // 快装盒子
+#define PANEL_KEY // 灯控面板
+// #define QUICK_BOX  // 快装盒子
 
 #endif

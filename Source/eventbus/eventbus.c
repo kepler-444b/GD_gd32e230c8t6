@@ -3,8 +3,8 @@
 #include "eventbus.h"
 #include "../base/debug.h"
 
-#define MAX_EVENT_HANDLERS 8 // 最大事件处理器数量
-#define EVENT_QUEUE_SIZE   16 // 事件队列大小
+#define MAX_EVENT_HANDLERS 8  // 最大事件处理器数量(最多有8个模块/组件订阅事件)
+#define EVENT_QUEUE_SIZE   16 // 事件队列大小(最多能缓存16个待处理的事件)
 
 // 事件处理器数组
 static EventHandler eventHandlers[MAX_EVENT_HANDLERS];

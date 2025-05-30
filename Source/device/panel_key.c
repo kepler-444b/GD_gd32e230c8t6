@@ -1,4 +1,4 @@
-#include "panel_key6.h"
+#include "panel_key.h"
 #include "device_manager.h"
 #include <float.h>
 #include "gd32e23x.h"
@@ -7,7 +7,6 @@
 
 #include "../base/debug.h"
 #include "../base/base.h"
-#include "../switch/led.h"
 #include "../adc/adc.h"
 #include "../gpio/gpio.h"
 #include "../uart/uart.h"
@@ -16,11 +15,14 @@
 #include "../protocol/protocol.h"
 #include "../pwm/pwm.h"
 
-#if defined PANEL_KEY6
+#if defined PANEL_KEY
 
 #define ADC_TO_VOLTAGE(adc_val) ((adc_val) * 330 / 4096) // adc值转电压
 #define KEY_NUMBER_COUNT        6                        // 按键数量
 #define ADC_VALUE_COUNT         10                       // 电压值缓冲区数量
+
+#define DEFAULT_MIN_VALUE       329 // 无按键按下时的最小电压值
+#define DEFAULT_MAX_VALUE       330 // 无按键按下时的最大电压值
 
 static uint16_t adc_value_buffer[ADC_VALUE_COUNT];
 static uint8_t adc_index   = 0;
@@ -33,31 +35,15 @@ typedef struct
     uint16_t max;
 } key_config_t;
 static const key_config_t my_key_config[KEY_NUMBER_COUNT] = {
-    {
-        0,
-        15,
-    }, // 按键1
-    {
-        25,
-        45,
-    }, // 按键2
-    {
-        85,
-        110,
-    }, // 按键3
-    {
-        145,
-        155,
-    }, // 按键4
-    {
-        195,
-        210,
-    }, // 按键5
-    {
-        230,
-        255,
-    }, // 按键6
+
+    [0] = {.min = 0, .max = 15},
+    [1] = {.min = 25, .max = 45},
+    [2] = {.min = 85, .max = 110},
+    [3] = {.min = 145, .max = 155},
+    [4] = {.min = 195, .max = 210},
+    [5] = {.min = 230, .max = 255},
 };
+
 typedef struct
 {
     bool key_status;   // 按键状态
@@ -78,14 +64,15 @@ static long_press_t my_long_press;
 // 函数声明
 void panel_gpio_init(void);
 void panel_ctrl_status(uint8_t led_num, bool led_state);
-void app_panel_read_adc(TimerHandle_t xTimer);
+void panel_read_adc(TimerHandle_t xTimer);
 void panel_ctrl_led_all(bool led_state);
 void panel_event_handler(event_type_e event, void *params);
 void panel_data_cb(valid_data_t *data);
 
-static TaskHandle_t appPanelTaskHandle = NULL;
-void panel_key6_init(void)
+void panel_key_init(void)
 {
+
+    APP_PRINTF("panel_key_init\n");
     panel_gpio_init();
     adc_channel_t my_adc_channel;
     my_adc_channel.adc_channel_0 = true; // 只使用0通道
@@ -94,20 +81,21 @@ void panel_key6_init(void)
     app_pwm_init(PA8, DEFAULT, DEFAULT, DEFAULT);
 
     app_set_pwm_fade(0, 500, 3000);
-    
+
     // 订阅事件总线
     app_eventbus_subscribe(panel_event_handler);
 
-    static StaticTimer_t ReadAdcTimerBuffer;
+    // 初始化一个静态定时器,用于读取adc值
+    static StaticTimer_t ReadAdcStaticBuffer;
     static TimerHandle_t ReadAdcTimerHandle = NULL;
 
     ReadAdcTimerHandle = xTimerCreateStatic(
-        "ReadAdcTimer",     // 定时器名称(调试用)
-        pdMS_TO_TICKS(1),   // 定时周期(1ms)
-        pdTRUE,             // 自动重载(TRUE=周期性，FALSE=单次)
-        NULL,               // 定时器ID(可用于传递参数)
-        app_panel_read_adc, // 回调函数
-        &ReadAdcTimerBuffer // 静态内存缓冲区
+        "ReadAdcTimer",      // 定时器名称(调试用)
+        pdMS_TO_TICKS(1),    // 定时周期(1ms)
+        pdTRUE,              // 自动重载(TRUE=周期性，FALSE=单次)
+        NULL,                // 定时器ID(可用于传递参数)
+        panel_read_adc,      // 回调函数
+        &ReadAdcStaticBuffer // 静态内存缓冲区
 
     );
     // 启动定时器(0表示不阻塞)
@@ -136,10 +124,10 @@ void panel_gpio_init(void)
     gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_15);
 }
 
-void app_panel_read_adc(TimerHandle_t xTimer)
+void panel_read_adc(TimerHandle_t xTimer)
 {
-
     uint16_t adc_value = ADC_TO_VOLTAGE(app_get_adc_value()[0]);
+    // APP_PRINTF("adc_value:%d\n", adc_value);
     for (int i = 0; i < KEY_NUMBER_COUNT; i++) {
         if (adc_value >= my_key_config[i].min && adc_value <= my_key_config[i].max) {
             // 填充满buffer才会执行下面的代码，故此行执行10次才执行下面的代码
@@ -148,7 +136,6 @@ void app_panel_read_adc(TimerHandle_t xTimer)
             if (adc_index >= ADC_VALUE_COUNT) {
                 adc_index   = 0;
                 buffer_full = 1;
-
                 uint16_t new_value = app_calculate_average(adc_value_buffer, ADC_VALUE_COUNT);
                 if (new_value >= my_key_config[i].min && new_value <= my_key_config[i].max) {
                     if (my_panel_status[i].key_status == false) {
@@ -185,7 +172,6 @@ void app_panel_read_adc(TimerHandle_t xTimer)
 }
 void panel_data_cb(valid_data_t *data)
 {
-    // APP_PRINTF_BUF("panel_data_cb", data->data, data->length);
     switch (data->data[1]) {
         case 0x0E: { // 灯控模式
             for (uint8_t i = 0; i < 4; i++) {

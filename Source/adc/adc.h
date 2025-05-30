@@ -3,6 +3,12 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+/* 
+    2025.5.26 舒东升
+    adc采集电流,支持四路adc通道,
+    采用DMA传输采集的电压值
+*/
+
 typedef struct {
     uint16_t voltage; // 原始电压值
 } adc_value_t;
@@ -14,10 +20,11 @@ typedef struct {
     bool adc_channel_2;
     bool adc_channel_3;
 } adc_channel_t;
+
 // 初始化函数
 void app_adc_init(adc_channel_t *adc_channel);
 
-// 新增的获取ADC值的函数
+// 获取ADC值的函数
 uint16_t *app_get_adc_value(void);
 
 #endif

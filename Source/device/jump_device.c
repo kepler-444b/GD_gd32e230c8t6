@@ -1,16 +1,23 @@
 #include <stdio.h>
 #include "device_manager.h"
 #include "jump_device.h"
-void app_jump_device_init(void)
-{
-#if defined PANEL_KEY6
-#include "panel_key6.h"
-    panel_key6_init();
 
+#if defined PANEL_KEY
+#include "panel_key.h"
 #endif
 
 #if defined QUICK_BOX
 #include "quick_box.h"
+#endif
+void app_jump_device_init(void)
+{
+
+#if defined PANEL_KEY
+    panel_key_init();
+
+#endif
+
+#if defined QUICK_BOX
     quick_box_init();
 #endif
 }

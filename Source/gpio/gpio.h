@@ -47,15 +47,15 @@ extern gpio_pin_typedef_t PB13;
 extern gpio_pin_typedef_t PB14;
 extern gpio_pin_typedef_t PB15;
 
-static inline void app_ctrl_gpio(gpio_pin_typedef_t gpio, bool status)
-{
+
+inline void app_ctrl_gpio(gpio_pin_typedef_t gpio, bool status) {
     if (gpio.port != -1 && gpio.pin != -1) {
         status ? gpio_bit_set(gpio.port, gpio.pin) : gpio_bit_reset(gpio.port, gpio.pin);
     }
 }
-
-static inline FlagStatus app_get_gpio(gpio_pin_typedef_t gpio)
+inline FlagStatus app_get_gpio(gpio_pin_typedef_t gpio)
 {
     return gpio_input_bit_get(gpio.port, gpio.pin);
 }
+
 #endif

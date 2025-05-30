@@ -37,3 +37,5 @@ gpio_pin_typedef_t PB12 = {GPIOB, GPIO_PIN_12};
 gpio_pin_typedef_t PB13 = {GPIOB, GPIO_PIN_13};
 gpio_pin_typedef_t PB14 = {GPIOB, GPIO_PIN_14};
 gpio_pin_typedef_t PB15 = {GPIOB, GPIO_PIN_15};
+
+

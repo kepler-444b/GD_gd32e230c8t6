@@ -10,6 +10,7 @@
       <TargetName>GD32E23x</TargetName>
       <ToolsetNumber>0x4</ToolsetNumber>
       <ToolsetName>ARM-ADS</ToolsetName>
+      <pArmCC>6220000::V6.22::ARMCLANG</pArmCC>
       <pCCUsed>6220000::V6.22::ARMCLANG</pCCUsed>
       <uAC6>1</uAC6>
       <TargetOption>
@@ -314,7 +315,7 @@
           </ArmAdsMisc>
           <Cads>
             <interw>1</interw>
-            <Optim>2</Optim>
+            <Optim>3</Optim>
             <oTime>0</oTime>
             <SplitLS>0</SplitLS>
             <OneElfS>1</OneElfS>
@@ -403,6 +404,11 @@
               <FileName>FreeRTOSConfig.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\..\Source\FreeRTOS\FreeRTOSConfig.h</FilePath>
+            </File>
+            <File>
+              <FileName>main.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\main.h</FilePath>
             </File>
           </Files>
         </Group>
@@ -724,21 +730,21 @@
               <FileType>5</FileType>
               <FilePath>..\..\Source\pwm\curve_table.h</FilePath>
             </File>
+            <File>
+              <FileName>watchdog.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Source\watchdog\watchdog.c</FilePath>
+            </File>
+            <File>
+              <FileName>watchdog.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\Source\watchdog\watchdog.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
           <GroupName>device</GroupName>
           <Files>
-            <File>
-              <FileName>panel_key6.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\Source\device\panel_key6.c</FilePath>
-            </File>
-            <File>
-              <FileName>panel_key6.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\..\Source\device\panel_key6.h</FilePath>
-            </File>
             <File>
               <FileName>jump_device.c</FileName>
               <FileType>1</FileType>
@@ -763,6 +769,16 @@
               <FileName>quick_box.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\..\Source\device\quick_box.h</FilePath>
+            </File>
+            <File>
+              <FileName>panel_key.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Source\device\panel_key.c</FilePath>
+            </File>
+            <File>
+              <FileName>panel_key.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\Source\device\panel_key.h</FilePath>
             </File>
           </Files>
         </Group>
