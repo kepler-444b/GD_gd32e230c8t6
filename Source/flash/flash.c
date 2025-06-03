@@ -206,24 +206,20 @@ fmc_state_enum app_flash_program(uint32_t address, uint32_t *data, uint32_t leng
 bool app_load_config(void)
 {
     uint32_t read_data[32] = {0};
-
     if (app_flash_read(CONFIG_START_ADDR, read_data, sizeof(read_data)) != FMC_READY) {
-        APP_PRINTF("app_flash_read failed\n");
+        APP_ERROR("app_flash_read failed\n");
         return false;
     }
-
     uint8_t new_data[128] = {0};
     if (app_uint32_to_uint8(read_data, sizeof(read_data) / sizeof(read_data[0]), new_data, sizeof(new_data)) != true) {
-        APP_PRINTF("app_uint32_to_uint8 error\n");
+        APP_ERROR("app_uint32_to_uint8 error\n");
         return false;
     }
-
     if (sizeof(my_dev_config) > sizeof(new_data)) {
-        APP_PRINTF("Destination buffer too small\n");
+        APP_ERROR("Destination buffer too small\n");
         return false;
     }
 
     memcpy(&my_dev_config, new_data, sizeof(my_dev_config));
-
     return true;
 }

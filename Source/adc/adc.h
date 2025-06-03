@@ -9,9 +9,7 @@
     采用DMA传输采集的电压值
 */
 
-typedef struct {
-    uint16_t voltage; // 原始电压值
-} adc_value_t;
+
 
 // 用于配置adc通道的结构体
 typedef struct {

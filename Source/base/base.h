@@ -20,8 +20,6 @@
     (((*(ptr) >= 'A') ? (*(ptr) - 'A' + 10) : (*(ptr) - '0')) << 4 | \
      ((*(ptr + 1) >= 'A') ? (*(ptr + 1) - 'A' + 10) : (*(ptr + 1) - '0')))
 
-
-
 typedef struct
 {
     uint8_t head;
@@ -46,9 +44,9 @@ typedef struct
     uint8_t scene_group_6;
 
     uint8_t sum_crc;
-    uint8_t reco_h;
-    uint8_t reco_l;
-    uint8_t channel;
+    uint8_t reco_h;  // 用于按键1,2所控制的继电器(低四位为1,高四位为2)
+    uint8_t reco_l;  // 用于按键3,4所控制的继电器(低四位为3,高四位为4)
+    uint8_t channel; // 用于按键5,6所控制的继电器(低四位为5,高四位为6)
     uint8_t cate;
 } dev_config_t;
 

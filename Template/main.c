@@ -57,12 +57,12 @@ int main(void)
 
     TaskHandle_t AppInitTaskHandle = xTaskCreateStatic(
         app_serve_task,           // 主任务
-        "app_init_task",          // 
+        "app_init_task",          //
         256,                      // 任务堆栈大小(256个word)
         NULL,                     // 任务参数(可传递给任务函数的void指针)
-        configMAX_PRIORITIES - 1, // 
-        AppInitStackBuffer,      // 静态分配的堆栈空间数组
-        &AppInitStaticBuffer);       
+        configMAX_PRIORITIES - 1, //
+        AppInitStackBuffer,       // 静态分配的堆栈空间数组
+        &AppInitStaticBuffer);
 
     vTaskStartScheduler(); // 启动实时操作系统内核调度器(RTOS内核接管控制权)
 }
