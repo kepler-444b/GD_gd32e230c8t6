@@ -22,5 +22,5 @@ typedef void (*ValidDataCallback)(valid_data_t *data);
 
 void app_proto_init(void);
 void app_at_send(at_frame_t *at_frame_t);
-void app_panel_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t cmd);
+void app_panel_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t cmd, uint8_t func);
 #endif

@@ -15,7 +15,7 @@
 #include "../Source/eventbus/eventbus.h"
 #include "../Source/pwm/pwm.h"
 #include "../Source/watchdog/watchdog.h"
-
+	
 StackType_t AppInitStackBuffer[256]; // 分配256字(word)的栈空间
 StaticTask_t AppInitStaticBuffer;
 

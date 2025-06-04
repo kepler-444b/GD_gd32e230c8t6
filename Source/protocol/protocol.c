@@ -141,6 +141,7 @@ void app_save_config(valid_data_t *boj)
         }
         __enable_irq();
     }
+    app_eventbus_publish(EVENT_SAVE_SUCCESS, NULL);
 }
 
 // 构造发送 AT 帧
@@ -159,51 +160,60 @@ void app_at_send(at_frame_t *my_at_frame)
 }
 
 // 构造 panel 命令
-void app_panel_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t cmd)
+void app_panel_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t cmd, uint8_t func)
 {
-    static at_frame_t my_at_frame = {NULL};
+    static at_frame_t my_at_frame = {0};
 
     switch (cmd) {
-        case 0xF1: { // 发送给通信帧
-            my_at_frame.data[0] = 0XF1;
+        case 0xF1: { // 发送通信帧
+            my_at_frame.data[0] = 0xF1;
 
-            if (key_number <= 3) { // 前4个按键
-                my_at_frame.data[1] = my_dev_config.func[key_number];
-                my_at_frame.data[2] = key_status;
-                my_at_frame.data[3] = my_dev_config.group[key_number];
-                my_at_frame.data[4] = my_dev_config.area[key_number];
-                my_at_frame.data[6] = my_dev_config.perm[key_number];
-                my_at_frame.data[7] = my_dev_config.scene_group[key_number];
-            } else if (key_number == 4) {
-                my_at_frame.data[1] = my_dev_config.func_5;
-                my_at_frame.data[2] = key_status;
-                my_at_frame.data[3] = my_dev_config.group_5;
-                my_at_frame.data[4] = my_dev_config.area_5;
-                my_at_frame.data[6] = my_dev_config.perm_5;
-                my_at_frame.data[7] = my_dev_config.scene_group_5;
-            } else if (key_number == 5) {
-                my_at_frame.data[1] = my_dev_config.func_6;
-                my_at_frame.data[2] = key_status;
-                my_at_frame.data[3] = my_dev_config.group_6;
-                my_at_frame.data[4] = my_dev_config.area_6;
-                my_at_frame.data[6] = my_dev_config.perm_6;
-                my_at_frame.data[7] = my_dev_config.scene_group_6;
-            } else {
-                APP_ERROR("key_number");
+            // 验证按键编号有效性
+            if (key_number > 5) {
+                APP_ERROR("无效的按键编号: %d", key_number);
                 return;
             }
+
+            // 设置功能码和按键状态
+            if (func == 0x62) {
+                my_at_frame.data[1] = 0x62;
+                my_at_frame.data[2] = 0x00;
+            } else if (func == 0x00) {
+                // 根据按键编号获取对应的功能配置
+                uint8_t func_value  = (key_number < 4) ? my_dev_config.func[key_number] : (key_number == 4) ? my_dev_config.func_5
+                                                                                                            : my_dev_config.func_6;
+                my_at_frame.data[1] = func_value;
+                my_at_frame.data[2] = key_status;
+            }
+
+            // 设置分组、区域、权限和场景组信息
+            my_at_frame.data[3] = (key_number < 4) ? my_dev_config.group[key_number] : (key_number == 4) ? my_dev_config.group_5
+                                                                                                         : my_dev_config.group_6;
+
+            my_at_frame.data[4] = (key_number < 4) ? my_dev_config.area[key_number] : (key_number == 4) ? my_dev_config.area_5
+                                                                                                        : my_dev_config.area_6;
+
+            my_at_frame.data[6] = (key_number < 4) ? my_dev_config.perm[key_number] : (key_number == 4) ? my_dev_config.perm_5
+                                                                                                        : my_dev_config.perm_6;
+
+            my_at_frame.data[7] = (key_number < 4) ? my_dev_config.scene_group[key_number] : (key_number == 4) ? my_dev_config.scene_group_5
+                                                                                                               : my_dev_config.scene_group_6;
+
+            // 计算并设置CRC校验
             my_at_frame.data[5] = calcrc_data(my_at_frame.data, 5);
             my_at_frame.length  = 8;
             app_at_send(&my_at_frame);
         } break;
+
         case 0xF8: { // 进入设置模式
-            my_at_frame.data[0] = 0XF8;
+            my_at_frame.data[0] = 0xF8;
             my_at_frame.data[1] = 0x01;
             my_at_frame.data[2] = 0x07;
             my_at_frame.length  = 3;
             app_at_send(&my_at_frame);
-            my_apply.apply_cmd = true; // 标记为发送了配置申请
-        }
+            my_apply.apply_cmd = true; // 标记已发送配置申请
+        } break;
+
         default:
             return;
     }

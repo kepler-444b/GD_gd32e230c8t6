@@ -15,8 +15,6 @@ typedef struct
 } pwm_state;
 static pwm_state my_pwm_state;
 
-void app_start_close_led(void *arg);
-void app_start_open_led(void *arg);
 float app_calculate_average(const uint16_t *buffer, uint16_t count)
 {
     // 参数检查
