@@ -43,7 +43,8 @@ void app_proto_init(void)
 // usart 接收到数据首先回调在这里处理
 void app_proto_check(uart_rx_buffer_t *my_uart_rx_buffer)
 {
-    APP_PRINTF("[RECV]:%s\n", my_uart_rx_buffer->buffer);
+    APP_PRINTF("1\n");
+    APP_PRINTF_BUF("recv", my_uart_rx_buffer->buffer, my_uart_rx_buffer->length);
     memset(&my_valid_data, 0, sizeof(my_valid_data));
 
     // 检查协议头
@@ -75,7 +76,7 @@ void app_proto_check(uart_rx_buffer_t *my_uart_rx_buffer)
     for (uint16_t i = 0; i < my_valid_data.length; i++) {
         my_valid_data.data[i] = HEX_TO_BYTE(start_ptr + 1 + i * 2);
     }
-
+    APP_PRINTF_BUF("[RECV]", my_valid_data.data, my_valid_data.length);
     // 根据命令类型处理
     switch (my_valid_data.data[0]) {
         case 0xF1: // 收到其他设备的AT指令
@@ -155,7 +156,7 @@ void app_at_send(at_frame_t *my_at_frame)
     }
 
     snprintf(at_frame, sizeof(at_frame), "%s,%d,\"%s\",1\r\n", AT_HEAD, my_at_frame->length * 2, hex_buffer);
-    APP_PRINTF("[send]:%s\n", at_frame);
+    // APP_PRINTF("[send]:%s\n", at_frame);
     app_usart_tx_string(at_frame);
 }
 
@@ -170,16 +171,14 @@ void app_panel_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t cmd, uin
 
             // 验证按键编号有效性
             if (key_number > 5) {
-                APP_ERROR("无效的按键编号: %d", key_number);
+                APP_ERROR("key_number error: %d", key_number);
                 return;
             }
 
-            // 设置功能码和按键状态
-            if (func == 0x62) {
+            if (func == 0x62) { // 特殊命令(窗帘开关)
                 my_at_frame.data[1] = 0x62;
                 my_at_frame.data[2] = 0x00;
-            } else if (func == 0x00) {
-                // 根据按键编号获取对应的功能配置
+            } else if (func == 0x00) { // 通用命令
                 uint8_t func_value  = (key_number < 4) ? my_dev_config.func[key_number] : (key_number == 4) ? my_dev_config.func_5
                                                                                                             : my_dev_config.func_6;
                 my_at_frame.data[1] = func_value;

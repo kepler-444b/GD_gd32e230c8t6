@@ -17,12 +17,25 @@
 
 #if defined PANEL_KEY
 
+#define PANEL_6KEY
+// #define PANEL_8KEY
+
+#if defined PANEL_6KEY
+#define KEY_NUMBER_COUNT 6 // 按键数量
+#endif
+
+#if defined PANEL_8KEY
+#define KEY_NUMBER_COUNT 8 // 按键数量
+#endif
+
 #define ADC_TO_VOLTAGE(adc_val) ((adc_val) * 330 / 4096) // adc值转电压
-#define KEY_NUMBER_COUNT        6                        // 按键数量
 #define ADC_VALUE_COUNT         10                       // 电压值缓冲区数量
 
 #define DEFAULT_MIN_VALUE       329 // 无按键按下时的最小电压值
 #define DEFAULT_MAX_VALUE       330 // 无按键按下时的最大电压值
+
+#define SHORT_TIME_LED          50    // 短亮时间
+#define SHORT_TIME_RELAY        30000 // 继电器导通时间
 
 // 此结构体用于处理 adc 数据
 typedef struct
@@ -51,10 +64,16 @@ static const key_config_t my_key_config[KEY_NUMBER_COUNT] = {
 
 typedef struct
 {
-    bool key_press;  // 按键状态
-    bool led_open;   // 白灯状态
-    bool relay_open; // 继电状态
-    bool led_short;  // 启用短亮(窗帘开关)
+    bool key_press;  // 按键按下
+    bool key_status; // 按键状态
+
+    bool led_open;  // 白灯状态
+    bool led_short; // 启用短亮(窗帘开关)
+    bool led_last;
+
+    bool relay_open;  // 继电状态
+    bool relay_short; // 继电器短开
+    bool relay_last;
 
     uint16_t led_filck_count;  // 短亮计数器
     uint32_t relay_open_count; // 继电器导通计数器
@@ -95,12 +114,26 @@ void panel_key_init(void)
     APP_PRINTF("panel_key_init\n");
     panel_gpio_init();
     adc_channel_t my_adc_channel;
-    my_adc_channel.adc_channel_0 = true; // 只使用0通道
 
+#if defined PANEL_6KEY
+    my_adc_channel.adc_channel_0 = true; // 只使用0通道
     app_adc_init(&my_adc_channel);
     app_pwm_init(PA8, DEFAULT, DEFAULT, DEFAULT);
-
     app_set_pwm_fade(0, 500, 3000);
+#endif
+
+#if defined PANEL_8KEY
+    my_adc_channel.adc_channel_0 = true; // 只使用0通道
+    my_adc_channel.adc_channel_1 = true; // 只使用0通道
+    app_adc_init(&my_adc_channel);
+    app_pwm_init(PB6, PB7, DEFAULT, DEFAULT);
+    app_set_pwm_fade(0, 500, 3000);
+    app_set_pwm_fade(1, 500, 3000);
+    app_ctrl_gpio(PB7, true);
+    app_panel_send_cmd(0, 0x00, 0xF1, 0x62);
+
+#endif
+
     panel_get_key_info();
     // 订阅事件总线
     app_eventbus_subscribe(panel_event_handler);
@@ -146,6 +179,7 @@ void panel_gpio_init(void)
     rcu_periph_clock_enable(RCU_GPIOA);
     rcu_periph_clock_enable(RCU_GPIOB);
 
+#if defined PANEL_6KEY
     gpio_mode_set(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_8); // 背光灯 GPIOA8
 
     gpio_mode_set(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_15); // 6个白灯
@@ -159,11 +193,25 @@ void panel_gpio_init(void)
     gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_13);
     gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_14);
     gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_15);
+#endif
+
+#if defined PANEL_8KEY
+    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_6); // 背光灯 PB6
+    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_7); // 背光灯 PB7
+
+    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_0); // 8个白灯
+    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_1);
+    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_2);
+    gpio_mode_set(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_8);
+    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_11);
+    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_10);
+    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_9);
+    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_8);
+#endif
 }
 
 void panel_get_key_info(void)
 {
-
     for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
         my_panel_status[i].key_func        = (i < 4) ? my_dev_config.func[i] : (i == 4) ? my_dev_config.func_5
                                                                                         : my_dev_config.func_6;
@@ -210,17 +258,15 @@ void panel_read_adc(TimerHandle_t xTimer)
                 uint16_t new_value        = app_calculate_average(my_adc_value.adc_value_buffer, ADC_VALUE_COUNT);
                 if (new_value >= my_key_config[i].min && new_value <= my_key_config[i].max) {
                     if (my_panel_status[i].key_press == false) {
-                        if (my_long_press.enter_config == false) {
-                            // 如果进入了配置模式，则禁用按键操作
-                            my_panel_status[i].led_open = !my_panel_status[i].led_open;
-                            static bool key_status      = false;
-                            key_status                  = !key_status;
+                        if (my_long_press.enter_config == false) { // 如果进入了配置模式，则禁用按键操作
 
-                            if (my_panel_status[i].relay_open_count != 0) { // 窗帘正在动作,则按下暂停
+                            my_panel_status[i].key_status = !my_panel_status[i].key_status;
+                            if (my_panel_status[i].relay_short != false) { // 继电器在导通过程中
                                 app_panel_send_cmd(i, 0x00, 0xF1, 0x62);
                             } else {
-                                app_panel_send_cmd(i, my_panel_status[i].led_open, 0XF1, 0x00); // 此处只发送命令，不处理led和继电器
+                                app_panel_send_cmd(i, my_panel_status[i].key_status, 0xF1, 0x00);
                             }
+
                             my_panel_status[i].key_press = true; // 短按标记为按下
                         }
                         my_long_press.key_long_perss = true; // 长按标记为按下
@@ -261,54 +307,99 @@ void panel_proce_cmd(TimerHandle_t xTimer)
 {
     for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
 
-        if (my_panel_status[i].led_short == true) { // 短亮
+        if (my_panel_status[i].led_short) {
             if (my_panel_status[i].led_filck_count == 0) {
-                app_ctrl_gpio(my_panel_status[i].key_led, true);
+                my_panel_status[i].led_open = true;
             }
             my_panel_status[i].led_filck_count++;
-            if (my_panel_status[i].led_filck_count >= 50) {
-                app_ctrl_gpio(my_panel_status[i].key_led, false);
+            if (my_panel_status[i].led_filck_count >= SHORT_TIME_LED) {
+                my_panel_status[i].led_open        = false;
                 my_panel_status[i].led_short       = false;
                 my_panel_status[i].led_filck_count = 0;
             }
         }
 
-        if (my_panel_status[i].relay_open == true) { // 继电器导通30s
+        if (my_panel_status[i].relay_short == true) {
             if (my_panel_status[i].relay_open_count == 0) {
-                app_ctrl_gpio(my_panel_status[i].key_relay, true);
-                APP_PRINTF("relay[%d] open\n", i);
+                my_panel_status[i].relay_open = true;
             }
             my_panel_status[i].relay_open_count++;
-            if (my_panel_status[i].relay_open_count >= 30000) {
-                app_ctrl_gpio(my_panel_status[i].key_relay, false);
-                my_panel_status[i].relay_open = false;
-            }
-        }
-        if (my_panel_status[i].relay_open == false) { // 继电器关闭
-            if (my_panel_status[i].relay_open_count != 0) {
-                APP_PRINTF("relay[%d] close\n", i);
-                app_ctrl_gpio(my_panel_status[i].key_relay, false);
+            if (my_panel_status[i].relay_open_count >= SHORT_TIME_RELAY) {
+                my_panel_status[i].relay_open       = false;
+                my_panel_status[i].relay_short      = false;
                 my_panel_status[i].relay_open_count = 0;
             }
+        }
+
+        if (my_panel_status[i].led_open != my_panel_status[i].led_last) {
+            app_ctrl_gpio(my_panel_status[i].key_led, my_panel_status[i].led_open);
+            my_panel_status[i].led_last = my_panel_status[i].led_open;
+        }
+        if (my_panel_status[i].relay_open != my_panel_status[i].relay_last) {
+            app_ctrl_gpio(my_panel_status[i].key_relay, my_panel_status[i].relay_open);
+            my_panel_status[i].relay_last = my_panel_status[i].relay_open;
+
+            my_panel_status[i].relay_open_count = 0;
         }
     }
 }
 
 void panel_data_cb(valid_data_t *data)
-{   
-    APP_PRINTF("func:%02X\n", data->data[1]);
+{
+    APP_PRINTF("1\n");
     switch (data->data[1]) {
-        
+
         case 0x00: { // 总关
-            for (uint8_t i = 0; i < ADC_VALUE_COUNT; i++) {
-                APP_PRINTF("2\n");
-                if (my_panel_status[i].key_perm == 0x01) {
-                    app_ctrl_gpio(my_panel_status[i].key_led, false);
-                    app_ctrl_gpio(my_panel_status[i].key_relay, false);
+            for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
+                if (((my_panel_status[i].key_area >> 4) & 0x0F) == ((data->data[4] >> 4) & 0x0F)) { // 匹配有"总开关"权限的按键
+                    if (my_panel_status[i].key_func == 0x0F) {
+                        // 匹配到夜灯,打开
+                        my_panel_status[i].key_status = data->data[2];
+                        my_panel_status[i].led_open   = data->data[2];
+                        my_panel_status[i].relay_open = data->data[2];
+                    } else {
+                        // 匹配到其他,关闭
+                        my_panel_status[i].key_status = false;
+                        my_panel_status[i].led_open   = false;
+                        my_panel_status[i].relay_open = false;
+                    }
+                }
+                if (data->data[1] == my_panel_status[i].key_func) {
+                    // 匹配双控
+                    my_panel_status[i].led_short  = true;
+                    my_panel_status[i].relay_open = data->data[2];
+                    my_panel_status[i].key_status = data->data[2];
                 }
             }
         } break;
         case 0x01: { // 总开关
+            for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
+                if (((my_panel_status[i].key_area >> 4) & 0x0F) == ((data->data[4] >> 4) & 0x0F)) { // 匹配有"总开关"权限的按键
+                    if (my_panel_status[i].key_func == 0x0F) {
+                        // 匹配到夜灯,打开
+                        my_panel_status[i].key_status = !data->data[2];
+                        my_panel_status[i].led_open   = !data->data[2];
+                        my_panel_status[i].relay_open = !data->data[2];
+                    } else {
+                        // 匹配到其他,关闭
+                        my_panel_status[i].key_status = data->data[2];
+                        my_panel_status[i].led_open   = data->data[2];
+                        my_panel_status[i].relay_open = data->data[2];
+                    }
+                    if (my_panel_status[i].key_func == 0x00) {
+                        // 匹配到总关,短亮
+                        my_panel_status[i].led_short  = true;
+                        my_panel_status[i].relay_open = data->data[2];
+                        my_panel_status[i].key_status = data->data[2];
+                    }
+                    if (data->data[1] == my_panel_status[i].key_func) {
+                        // 匹配双控
+                        my_panel_status[i].led_open   = data->data[2];
+                        my_panel_status[i].relay_open = data->data[2];
+                        my_panel_status[i].key_status = data->data[2];
+                    }
+                }
+            }
 
         } break;
         case 0x02: { // 清理房间
@@ -330,34 +421,34 @@ void panel_data_cb(valid_data_t *data)
 
         } break;
         case 0x10: { // 窗帘开
-            for (uint8_t i = 0; i < ADC_VALUE_COUNT; i++) {
+            for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
                 // 检查功能匹配和分组匹配
                 if (data->data[1] == my_panel_status[i].key_func &&
                     data->data[3] == my_panel_status[i].key_group) {
-                    for (uint8_t j = 0; j < ADC_VALUE_COUNT; j++) {
+                    for (uint8_t j = 0; j < KEY_NUMBER_COUNT; j++) {
                         // 关闭同分组的"窗帘关"
                         if (my_panel_status[j].key_func == 0x11) {
-                            my_panel_status[j].relay_open = false;
+                            my_panel_status[j].relay_short = false;
                         }
                     }
-                    my_panel_status[i].led_short  = true; // 短亮
-                    my_panel_status[i].relay_open = true; // 继电器导通 30s
+                    my_panel_status[i].led_short   = true; // 短亮
+                    my_panel_status[i].relay_short = true; // 继电器导通 30s
                 }
             }
         } break;
         case 0x11: { // 窗帘关
-            for (uint8_t i = 0; i < ADC_VALUE_COUNT; i++) {
+            for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
                 // 检查功能匹配和分组匹配
                 if (data->data[1] == my_panel_status[i].key_func &&
                     data->data[3] == my_panel_status[i].key_group) {
-                    for (uint8_t j = 0; j < ADC_VALUE_COUNT; j++) {
+                    for (uint8_t j = 0; j < KEY_NUMBER_COUNT; j++) {
                         // 关闭同分组的"窗帘开"
                         if (my_panel_status[j].key_func == 0x10) {
-                            my_panel_status[j].relay_open = false;
+                            my_panel_status[j].relay_short = false;
                         }
                     }
-                    my_panel_status[i].led_short  = true;
-                    my_panel_status[i].relay_open = true;
+                    my_panel_status[i].led_short   = true;
+                    my_panel_status[i].relay_short = true;
                 }
             }
         } break;
@@ -366,16 +457,25 @@ void panel_data_cb(valid_data_t *data)
 
         } break;
         case 0x0E: { // 灯控模式
-            for (uint8_t i = 0; i < ADC_VALUE_COUNT; i++) {
+            for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
                 if (data->data[1] == my_panel_status[i].key_func &&
                     data->data[3] == my_panel_status[i].key_group) {
-                    app_ctrl_gpio(my_panel_status[i].key_led, data->data[2]);
-                    my_panel_status[i].led_open = data->data[2];
+
+                    my_panel_status[i].led_open   = data->data[2];
+                    my_panel_status[i].relay_open = data->data[2];
                 }
             }
 
         } break;
         case 0x0F: { // 夜灯
+            for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
+                if (data->data[1] == my_panel_status[i].key_func &&
+                    data->data[3] == my_panel_status[i].key_group) {
+                    my_panel_status[i].led_open   = data->data[2];
+                    my_panel_status[i].relay_open = data->data[2];
+                    my_panel_status[i].key_status = data->data[2];
+                }
+            }
 
         } break;
         case 0x18: { // 调光上键
@@ -397,12 +497,13 @@ void panel_data_cb(valid_data_t *data)
 
         } break;
         case 0x62: { // 窗帘停
-            for (uint8_t i = 0; i < ADC_VALUE_COUNT; i++) {
-                // 匹配分组后如果该继电器正在动作才能触发暂停
+            for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
                 if (data->data[3] == my_panel_status[i].key_group &&
-                    my_panel_status[i].relay_open_count != 0) {
-                    my_panel_status[i].led_short  = true;
-                    my_panel_status[i].relay_open = false;
+                    my_panel_status[i].relay_short == true) { // 匹配分组后如果该继电器正在动作才能触发暂停
+
+                    my_panel_status[i].led_short   = true;
+                    my_panel_status[i].relay_short = false;
+                    my_panel_status[i].relay_open  = false;
                 }
             }
         } break;
@@ -424,7 +525,7 @@ void panel_data_cb(valid_data_t *data)
 void panel_ctrl_led_all(bool led_state)
 {
     for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
-        app_ctrl_gpio(my_panel_status[i].key_led, led_state);
+        my_panel_status[i].led_open = led_state;
     }
 }
 
@@ -441,6 +542,7 @@ void panel_event_handler(event_type_e event, void *params)
         } break;
         case EVENT_SAVE_SUCCESS: {
             my_long_press.led_filck = true;
+            panel_get_key_info();
         } break;
         case EVENT_RECEIVE_CMD: {
             valid_data_t *valid_data = (valid_data_t *)params;

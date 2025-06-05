@@ -77,6 +77,7 @@ void app_pwm_init(gpio_pin_typedef_t c1, gpio_pin_typedef_t c2, gpio_pin_typedef
     timer_interrupt_enable(TIMER13, TIMER_INT_UP);
     timer_enable(TIMER13);
     nvic_irq_enable(TIMER13_IRQn, 1); // 配置NVIC,优先级1
+    // APP_PRINTF("app_pwm_init\n");
 }
 
 void app_set_pwm_duty(pwm_channel_t channel, uint16_t duty)
