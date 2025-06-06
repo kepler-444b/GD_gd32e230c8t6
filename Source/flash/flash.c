@@ -6,6 +6,7 @@
 #include "../base/debug.h"
 #include "../base/base.h"
 
+
 fmc_state_enum app_flash_read(uint32_t address, uint32_t *data, uint32_t length)
 {
     fmc_state_enum state = FMC_READY;
@@ -202,24 +203,3 @@ fmc_state_enum app_flash_program(uint32_t address, uint32_t *data, uint32_t leng
     return app_flash_write_word(address, data, length);
 }
 
-// 加载 flash 里的配置信息到结构体
-bool app_load_config(void)
-{
-    uint32_t read_data[32] = {0};
-    if (app_flash_read(CONFIG_START_ADDR, read_data, sizeof(read_data)) != FMC_READY) {
-        APP_ERROR("app_flash_read failed\n");
-        return false;
-    }
-    uint8_t new_data[128] = {0};
-    if (app_uint32_to_uint8(read_data, sizeof(read_data) / sizeof(read_data[0]), new_data, sizeof(new_data)) != true) {
-        APP_ERROR("app_uint32_to_uint8 error\n");
-        return false;
-    }
-    if (sizeof(my_dev_config) > sizeof(new_data)) {
-        APP_ERROR("Destination buffer too small\n");
-        return false;
-    }
-
-    memcpy(&my_dev_config, new_data, sizeof(my_dev_config));
-    return true;
-}

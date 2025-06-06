@@ -20,38 +20,6 @@
     (((*(ptr) >= 'A') ? (*(ptr) - 'A' + 10) : (*(ptr) - '0')) << 4 | \
      ((*(ptr + 1) >= 'A') ? (*(ptr + 1) - 'A' + 10) : (*(ptr + 1) - '0')))
 
-typedef struct
-{
-    uint8_t head;
-    uint8_t func[4];        // 按键功能
-    uint8_t group[4];       // 按键分组
-    uint8_t area[4];        // 按键区域
-    uint8_t perm[4];        // 按键权限
-    uint8_t scene_group[4]; // 按键场景分组
-
-    uint8_t func_5;
-    uint8_t group_5;
-    uint8_t area_5;
-    uint8_t crc;           // 校验
-    uint8_t default_value; // 缺省
-    uint8_t perm_5;
-    uint8_t scene_group_5;
-
-    uint8_t func_6;
-    uint8_t group_6;
-    uint8_t area_6;
-    uint8_t perm_6;
-    uint8_t scene_group_6;
-
-    uint8_t sum_crc;
-    uint8_t reco_h;  // 用于按键1,2所控制的继电器(低四位为1,高四位为2)
-    uint8_t reco_l;  // 用于按键3,4所控制的继电器(低四位为3,高四位为4)
-    uint8_t channel; // 用于按键5,6所控制的继电器(低四位为5,高四位为6)
-    uint8_t cate;
-} dev_config_t;
-
-// 参考:https://docs.qq.com/doc/DVE1YdEhNWXlXa2lC?u=01de59d25c614f2886192fca680d7f21&nlc=1
-extern dev_config_t my_dev_config;
 
 /// @brief 用于求一组数据的平均数
 /// @param buffer 传入数组

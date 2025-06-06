@@ -780,6 +780,16 @@
               <FileType>5</FileType>
               <FilePath>..\..\Source\device\panel_key.h</FilePath>
             </File>
+            <File>
+              <FileName>config.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Source\config\config.c</FilePath>
+            </File>
+            <File>
+              <FileName>config.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\Source\config\config.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

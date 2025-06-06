@@ -15,6 +15,7 @@ void adc_config(adc_channel_t *channel_num);
 static uint16_t adc_value[4] = {0};
 void app_adc_init(adc_channel_t *adc_channel)
 {
+    // APP_PRINTF("%d %d %d %d\n", adc_channel->adc_channel_0, adc_channel->adc_channel_1, adc_channel->adc_channel_2, adc_channel->adc_channel_3);
     rcu_config();
     dma_config(adc_channel);
     adc_config(adc_channel);
@@ -68,7 +69,7 @@ void adc_config(adc_channel_t *channel_num)
                               channel_num->adc_channel_1 +
                               channel_num->adc_channel_2 +
                               channel_num->adc_channel_3;
-
+    // APP_PRINTF("active_channels:%d\n", active_channels);
     adc_channel_length_config(ADC_REGULAR_CHANNEL, active_channels);
     if (channel_num->adc_channel_0) {
         adc_regular_channel_config(0, ADC_CHANNEL_0, ADC_SAMPLETIME_55POINT5);

@@ -11,11 +11,13 @@
 #include "../Source/base/base.h"
 #include "../Source/device/jump_device.h"
 #include "../Source/protocol/protocol.h"
-#include "../Source/flash/flash.h"
+#include "../Source/config/config.h"
 #include "../Source/eventbus/eventbus.h"
 #include "../Source/pwm/pwm.h"
 #include "../Source/watchdog/watchdog.h"
-	
+#include "../device/device_manager.h"
+
+
 StackType_t AppInitStackBuffer[256]; // 分配256字(word)的栈空间
 StaticTask_t AppInitStaticBuffer;
 

@@ -3,8 +3,6 @@
 #include <stdio.h>
 #include <float.h>
 
-dev_config_t my_dev_config = {0};
-
 typedef struct
 {
     uint8_t pwm_counter;
@@ -30,7 +28,6 @@ float app_calculate_average(const uint16_t *buffer, uint16_t count)
     // 避免除以零（虽然前面已检查 count>0）
     return (count != 0) ? (sum / (float)count) : FLT_MAX;
 }
-
 
 bool app_uint8_to_uint32(const uint8_t *input, size_t input_count, uint32_t *output, size_t output_count)
 {
@@ -65,5 +62,3 @@ bool app_uint32_to_uint8(const uint32_t *input, size_t input_count, uint8_t *out
     }
     return true;
 }
-
-

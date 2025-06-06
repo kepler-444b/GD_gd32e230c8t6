@@ -1,36 +1,21 @@
-#if 0
 #ifndef _CONFIG_H_
 #define _CONFIG_H_
 
-typedef struct __attribute__((aligned(4)))
+#include "../gpio/gpio.h"
+#include "../device/device_manager.h"
+// 用于panel类型的信息存储
+typedef struct
 {
-    uint8_t head;
-    uint8_t func[4];
-    uint8_t group[4];
-    uint8_t area[4];
-    uint8_t perm[4];
-    uint8_t scene_group[4];
+    uint8_t key_func;             // 按键功能
+    uint8_t key_group;            // 按键分组
+    uint8_t key_area;             // 按键区域
+    uint8_t key_perm;             // 按键权限
+    uint8_t key_scene_group;      // 场景分组
+    gpio_pin_typedef_t key_relay; // 按键所控继电器
+    gpio_pin_typedef_t key_led;   // 按键所控led
+} panel_cfg_t;
 
-    uint8_t func_5;
-    uint8_t group_5;
-    uint8_t area_5;
-    uint8_t perm_5;
-    uint8_t scene_group_5;
+bool app_load_config(void);
+const panel_cfg_t* app_get_dev_cfg(void);
 
-    uint8_t func_6;
-    uint8_t gruop_6;
-    uint8_t area_6;
-    uint8_t perm_6;
-    uint8_t scene_group_6;
-
-    uint8_t crc;
-    uint8_t reco_h;
-    uint8_t reco_l;
-    uint8_t channel;
-    uint8_t cate;
-} dev_config;
-
-extern dev_config my_dev_config;
-
-#endif
 #endif

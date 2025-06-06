@@ -8,6 +8,8 @@
 #include "../flash/flash.h"
 #include "../base/base.h"
 #include "../eventbus/eventbus.h"
+#include "../config/config.h"
+#include "../device/device_manager.h"
 
 #define CALC_CRC(rxbuf, len) ({                                 \
     uint8_t _sum = 0;                                           \
@@ -43,8 +45,6 @@ void app_proto_init(void)
 // usart 接收到数据首先回调在这里处理
 void app_proto_check(uart_rx_buffer_t *my_uart_rx_buffer)
 {
-    APP_PRINTF("1\n");
-    APP_PRINTF_BUF("recv", my_uart_rx_buffer->buffer, my_uart_rx_buffer->length);
     memset(&my_valid_data, 0, sizeof(my_valid_data));
 
     // 检查协议头
@@ -163,6 +163,7 @@ void app_at_send(at_frame_t *my_at_frame)
 // 构造 panel 命令
 void app_panel_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t cmd, uint8_t func)
 {
+    const panel_cfg_t *temp_cfg   = app_get_dev_cfg();
     static at_frame_t my_at_frame = {0};
 
     switch (cmd) {
@@ -170,7 +171,7 @@ void app_panel_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t cmd, uin
             my_at_frame.data[0] = 0xF1;
 
             // 验证按键编号有效性
-            if (key_number > 5) {
+            if (key_number > KEY_NUMBER_COUNT) {
                 APP_ERROR("key_number error: %d", key_number);
                 return;
             }
@@ -179,24 +180,16 @@ void app_panel_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t cmd, uin
                 my_at_frame.data[1] = 0x62;
                 my_at_frame.data[2] = 0x00;
             } else if (func == 0x00) { // 通用命令
-                uint8_t func_value  = (key_number < 4) ? my_dev_config.func[key_number] : (key_number == 4) ? my_dev_config.func_5
-                                                                                                            : my_dev_config.func_6;
+                uint8_t func_value  = temp_cfg[key_number].key_func;
                 my_at_frame.data[1] = func_value;
                 my_at_frame.data[2] = key_status;
             }
 
             // 设置分组、区域、权限和场景组信息
-            my_at_frame.data[3] = (key_number < 4) ? my_dev_config.group[key_number] : (key_number == 4) ? my_dev_config.group_5
-                                                                                                         : my_dev_config.group_6;
-
-            my_at_frame.data[4] = (key_number < 4) ? my_dev_config.area[key_number] : (key_number == 4) ? my_dev_config.area_5
-                                                                                                        : my_dev_config.area_6;
-
-            my_at_frame.data[6] = (key_number < 4) ? my_dev_config.perm[key_number] : (key_number == 4) ? my_dev_config.perm_5
-                                                                                                        : my_dev_config.perm_6;
-
-            my_at_frame.data[7] = (key_number < 4) ? my_dev_config.scene_group[key_number] : (key_number == 4) ? my_dev_config.scene_group_5
-                                                                                                               : my_dev_config.scene_group_6;
+            my_at_frame.data[3] = temp_cfg[key_number].key_group;
+            my_at_frame.data[4] = temp_cfg[key_number].key_area;
+            my_at_frame.data[6] = temp_cfg[key_number].key_perm;
+            my_at_frame.data[7] = temp_cfg[key_number].key_scene_group;
 
             // 计算并设置CRC校验
             my_at_frame.data[5] = calcrc_data(my_at_frame.data, 5);

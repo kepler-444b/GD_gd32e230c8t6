@@ -40,33 +40,26 @@ gpio_pin_typedef_t PB15 = {GPIOB, GPIO_PIN_15};
 
 const char *app_get_gpio_name(gpio_pin_typedef_t gpio)
 {
-    static char buffer[5]; // 存储 "PX15" + '\0'
+    // 预定义所有可能的 GPIO 名称字符串表
+    static const char *const gpio_names[] = {
+        "PA0", "PA1", "PA2", "PA3", "PA4", "PA5", "PA6", "PA7",
+        "PA8", "PA9", "PA10", "PA11", "PA12", "PA13", "PA14", "PA15",
+        "PB0", "PB1", "PB2", "PB3", "PB4", "PB5", "PB6", "PB7",
+        "PB8", "PB9", "PB10", "PB11", "PB12", "PB13", "PB14", "PB15"};
 
+    // 快速检查无效 GPIO
     if (!GPIO_IS_VALID(gpio)) {
         return "DEFAULT";
     }
 
-    // 端口字母映射表(支持扩展更多端口)
-    static const char port_chars[] = {'A', 'B'}; // 可扩展为 {'A', 'B', 'C', ...}
-    size_t port_index              = (gpio.port == GPIOA) ? 0 : (gpio.port == GPIOB) ? 1
-                                                                                     : SIZE_MAX;
+    // 使用位运算快速计算索引
+    uint32_t port_offset = (gpio.port == GPIOB) ? 16 : 0;
+    uint32_t pin_num     = __builtin_ctz(gpio.pin); // 计算引脚号(0-15)
 
-    if (port_index >= sizeof(port_chars)) {
-        return "unknown_port";
+    // 边界检查
+    if (pin_num > 15 || (gpio.port != GPIOA && gpio.port != GPIOB)) {
+        return "INVALID";
     }
 
-    // 检查引脚号是否合法(0~15)
-    uint32_t pin_mask = gpio.pin;
-    if ((pin_mask & (pin_mask - 1)) != 0 || pin_mask > GPIO_PIN_15) {
-        return "unknown_pin"; // 非单引脚或超出范围
-    }
-
-    // 计算引脚号(利用CTZ指令优化，避免switch-case)
-    int pin_num = __builtin_ctz(pin_mask); // GCC/Clang内置函数
-    // 若无CTZ，可用查表法：
-    // static const uint8_t pin_to_num[] = {0,1,2,...,15};
-    // int pin_num = pin_to_num[pin_mask >> 1];
-
-    snprintf(buffer, sizeof(buffer), "P%c%d", port_chars[port_index], pin_num);
-    return buffer;
+    return gpio_names[port_offset + pin_num];
 }
