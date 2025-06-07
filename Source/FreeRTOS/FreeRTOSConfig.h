@@ -51,12 +51,12 @@
 //  <o>Minimal stack size [words] <0-65535>
 //  <i> Stack for idle task and default task stack in words.
 //  <i> Default: 128
-#define configMINIMAL_STACK_SIZE                  ((uint16_t)(128))
+#define configMINIMAL_STACK_SIZE                  ((uint16_t)(64))
 
 //  <o>Total heap size [bytes] <0-0xFFFFFFFF>
 //  <i> Heap memory size in bytes.
 //  <i> Default: 8192
-#define configTOTAL_HEAP_SIZE                     ((size_t)6 * 1024)
+#define configTOTAL_HEAP_SIZE                     ((size_t)8 * 1024)
 
 //  <o>Kernel tick frequency [Hz] <0-0xFFFFFFFF>
 //  <i> Kernel tick rate in Hz.
@@ -71,7 +71,7 @@
 //  <o>Timer task priority <0-56>
 //  <i> Timer task priority.
 //  <i> Default: 40 (High)
-#define configTIMER_TASK_PRIORITY                 40
+#define configTIMER_TASK_PRIORITY                 4
 
 //  <o>Timer queue length <0-1024>
 //  <i> Timer command queue length.
@@ -104,7 +104,7 @@
 //  <i> Enable or disable stack overflow checking.
 //  <i> Callback function vApplicationStackOverflowHook implementation is required when stack checking is enabled.
 //  <i> Default: 0
-#define configCHECK_FOR_STACK_OVERFLOW            2
+#define configCHECK_FOR_STACK_OVERFLOW           2
 
 //  <q>Use idle hook
 //  <i> Enable callback function call on each idle task iteration.
@@ -337,7 +337,7 @@
 #define configUSE_TRACE_FACILITY                  1
 #define configUSE_16_BIT_TICKS                    0
 #define configUSE_PORT_OPTIMISED_TASK_SELECTION   0
-#define configMAX_PRIORITIES                      56
+#define configMAX_PRIORITIES                      5
 #define configKERNEL_INTERRUPT_PRIORITY           255
 
 /* Defines that include FreeRTOS functions which implement CMSIS RTOS2 API. Do not change! */

@@ -7,8 +7,8 @@
 #include "curve_table.h"
 #include "gd32e23x_dbg.h"
 #include "../gpio/gpio.h"
+#include "../device/device_manager.h"
 
-// #define PWM_DIR                    // pwm 方向(开启次宏为反,关闭为正)
 #define SYSTEM_CLOCK_FREQ 72000000 // 系统时钟频率(72MHz)
 #define TIMER_PERIOD      14       // 定时器周期(15us中断,不可再低)
 #define PWM_RESOLUTION    500      // PWM分辨率(500)
@@ -53,7 +53,7 @@ void app_pwm_init(gpio_pin_typedef_t *pwm_channel_pins, uint8_t channel_count)
         pwm_channels[i].is_fading    = false;
         pwm_channels[i].gpio         = pwm_channel_pins[i];
 
-        app_ctrl_gpio(pwm_channels[i].gpio, true); // 初始状态关闭
+        APP_SET_GPIO(pwm_channels[i].gpio, true); // 初始状态关闭
     }
     active_channel_count = MIN(channel_count, PWM_CHANNEL_MAX);
 
@@ -175,9 +175,9 @@ void TIMER13_IRQHandler(void)
         pwm_counter = (pwm_counter + 1) % PWM_RESOLUTION;
 
         // 更新所有通道的输出状态
-        for (uint8_t i = 0; i < (active_channel_count); i++) {
+        for (uint8_t i = 0; i < (active_channel_count); i++) { // 只轮询活跃的PWM
             bool pwm_output = (pwm_counter < pwm_channels[i].current_duty);
-            app_ctrl_gpio(pwm_channels[i].gpio,
+            APP_SET_GPIO(pwm_channels[i].gpio,
 #if defined PWM_DIR
                           !pwm_output
 #else
@@ -188,7 +188,7 @@ void TIMER13_IRQHandler(void)
 
         // 渐变处理逻辑(每10ms调整一次占空比)
         if ((fade_timer = (fade_timer + 1) % 660) == 0) {
-            for (int i = 0; i < (active_channel_count); i++) {
+            for (int i = 0; i < (active_channel_count); i++) { // 只轮询活跃的PWM
                 if (!pwm_channels[i].is_fading) continue;
 
                 pwm_channels[i].fade_counter++;

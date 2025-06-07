@@ -13,20 +13,20 @@ typedef struct
 } pwm_state;
 static pwm_state my_pwm_state;
 
-float app_calculate_average(const uint16_t *buffer, uint16_t count)
+uint16_t app_calculate_average(const uint16_t *buffer, uint16_t count)
 {
     // 参数检查
     if (buffer == NULL || count == 0) {
-        return FLT_MAX; // 或返回 0.0f，根据需求决定
+        return 0; // 或返回 UINT16_MAX 表示错误
     }
 
-    float sum = 0.0f;
+    uint32_t sum = 0; // 使用 uint32_t 防止溢出
     for (uint16_t i = 0; i < count; i++) {
         sum += buffer[i];
     }
 
-    // 避免除以零（虽然前面已检查 count>0）
-    return (count != 0) ? (sum / (float)count) : FLT_MAX;
+    // 整数除法(自动截断小数部分)
+    return (uint16_t)(sum / count);
 }
 
 bool app_uint8_to_uint32(const uint8_t *input, size_t input_count, uint32_t *output, size_t output_count)

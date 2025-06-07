@@ -4,60 +4,62 @@
 #include <stdbool.h>
 #include "../base/debug.h"
 
-#define GPIO_DEFAULT        {0, 0}                                // 0 表示未初始化或无效引脚
-#define GPIO_IS_VALID(gpio) ((gpio).pin != 0 || (gpio).port != 0) // 检查GPIO是否有效
+// 检查GPIO是否有效
+#define GPIO_IS_VALID(obj) \
+    ((obj).pin != 0 || (obj).port != 0)
 
-typedef struct
-{
+// 设置GPIO
+#define APP_SET_GPIO(obj, status) \
+    ((status) ? (GPIO_BOP((obj).port) = (uint32_t)(obj).pin) : (GPIO_BC((obj).port) = (uint32_t)(obj).pin))
+
+// 获取GPIO
+#define APP_GET_GPIO(obj) \
+    (((uint32_t)RESET != (GPIO_ISTAT((obj).port) & ((obj).pin))) ? SET : RESET)
+
+typedef struct {
     uint32_t port;
     uint32_t pin;
 } gpio_pin_typedef_t;
 
-extern gpio_pin_typedef_t DEFAULT;
-extern gpio_pin_typedef_t PA0;
-extern gpio_pin_typedef_t PA1;
-extern gpio_pin_typedef_t PA2;
-extern gpio_pin_typedef_t PA3;
-extern gpio_pin_typedef_t PA4;
-extern gpio_pin_typedef_t PA5;
-extern gpio_pin_typedef_t PA6;
-extern gpio_pin_typedef_t PA7;
-extern gpio_pin_typedef_t PA8;
-extern gpio_pin_typedef_t PA9;
-extern gpio_pin_typedef_t PA10;
-extern gpio_pin_typedef_t PA11;
-extern gpio_pin_typedef_t PA12;
-extern gpio_pin_typedef_t PA13;
-extern gpio_pin_typedef_t PA14;
-extern gpio_pin_typedef_t PA15;
-extern gpio_pin_typedef_t PB0;
-extern gpio_pin_typedef_t PB1;
-extern gpio_pin_typedef_t PB2;
-extern gpio_pin_typedef_t PB3;
-extern gpio_pin_typedef_t PB4;
-extern gpio_pin_typedef_t PB5;
-extern gpio_pin_typedef_t PB6;
-extern gpio_pin_typedef_t PB7;
-extern gpio_pin_typedef_t PB8;
-extern gpio_pin_typedef_t PB9;
-extern gpio_pin_typedef_t PB10;
-extern gpio_pin_typedef_t PB11;
-extern gpio_pin_typedef_t PB12;
-extern gpio_pin_typedef_t PB13;
-extern gpio_pin_typedef_t PB14;
-extern gpio_pin_typedef_t PB15;
-
-inline void app_ctrl_gpio(gpio_pin_typedef_t gpio, bool status)
-{
-    if (gpio.port != -1 && gpio.pin != -1) {
-        status ? gpio_bit_set(gpio.port, gpio.pin) : gpio_bit_reset(gpio.port, gpio.pin);
-    }
-}
-inline FlagStatus app_get_gpio(gpio_pin_typedef_t gpio)
-{
-    return gpio_input_bit_get(gpio.port, gpio.pin);
-}
 
 const char *app_get_gpio_name(gpio_pin_typedef_t gpio);
+
+// 通用GPIO宏定义
+#define DEFINE_GPIO(port, pin) ((gpio_pin_typedef_t){port, pin})
+
+// 默认无效引脚
+#define DEFAULT DEFINE_GPIO(0, 0)
+#define PA0     DEFINE_GPIO(GPIOA, GPIO_PIN_0)
+#define PA1     DEFINE_GPIO(GPIOA, GPIO_PIN_1)
+#define PA2     DEFINE_GPIO(GPIOA, GPIO_PIN_2)
+#define PA3     DEFINE_GPIO(GPIOA, GPIO_PIN_3)
+#define PA4     DEFINE_GPIO(GPIOA, GPIO_PIN_4)
+#define PA5     DEFINE_GPIO(GPIOA, GPIO_PIN_5)
+#define PA6     DEFINE_GPIO(GPIOA, GPIO_PIN_6)
+#define PA7     DEFINE_GPIO(GPIOA, GPIO_PIN_7)
+#define PA8     DEFINE_GPIO(GPIOA, GPIO_PIN_8)
+#define PA9     DEFINE_GPIO(GPIOA, GPIO_PIN_9)
+#define PA10    DEFINE_GPIO(GPIOA, GPIO_PIN_10)
+#define PA11    DEFINE_GPIO(GPIOA, GPIO_PIN_11)
+#define PA12    DEFINE_GPIO(GPIOA, GPIO_PIN_12)
+#define PA13    DEFINE_GPIO(GPIOA, GPIO_PIN_13)
+#define PA14    DEFINE_GPIO(GPIOA, GPIO_PIN_14)
+#define PA15    DEFINE_GPIO(GPIOA, GPIO_PIN_15)
+#define PB0     DEFINE_GPIO(GPIOB, GPIO_PIN_0)
+#define PB1     DEFINE_GPIO(GPIOB, GPIO_PIN_1)
+#define PB2     DEFINE_GPIO(GPIOB, GPIO_PIN_2)
+#define PB3     DEFINE_GPIO(GPIOB, GPIO_PIN_3)
+#define PB4     DEFINE_GPIO(GPIOB, GPIO_PIN_4)
+#define PB5     DEFINE_GPIO(GPIOB, GPIO_PIN_5)
+#define PB6     DEFINE_GPIO(GPIOB, GPIO_PIN_6)
+#define PB7     DEFINE_GPIO(GPIOB, GPIO_PIN_7)
+#define PB8     DEFINE_GPIO(GPIOB, GPIO_PIN_8)
+#define PB9     DEFINE_GPIO(GPIOB, GPIO_PIN_9)
+#define PB10    DEFINE_GPIO(GPIOB, GPIO_PIN_10)
+#define PB11    DEFINE_GPIO(GPIOB, GPIO_PIN_11)
+#define PB12    DEFINE_GPIO(GPIOB, GPIO_PIN_12)
+#define PB13    DEFINE_GPIO(GPIOB, GPIO_PIN_13)
+#define PB14    DEFINE_GPIO(GPIOB, GPIO_PIN_14)
+#define PB15    DEFINE_GPIO(GPIOB, GPIO_PIN_15)
 
 #endif

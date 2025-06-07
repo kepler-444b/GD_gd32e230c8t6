@@ -9,8 +9,10 @@
 #define PANEL_KEY // 灯控面板
 
 #if defined PANEL_KEY
-// #define PANEL_6KEY
-#define PANEL_8KEY
+
+// 面板类型多选一
+#define PANEL_6KEY
+// #define PANEL_8KEY
 
 #if defined PANEL_6KEY
 #define KEY_NUMBER_COUNT 6
@@ -21,5 +23,10 @@
 #endif
 
 // #define QUICK_BOX  // 快装盒子
+#if defined QUICK_BOX
+
+#define PWM_DIR // pwm 方向(开启为反,关闭为正)
 
 #endif
+
+#endif //_DEVICE_MANAGER_H_

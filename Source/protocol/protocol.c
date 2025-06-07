@@ -133,10 +133,6 @@ void app_save_config(valid_data_t *boj)
 
         __disable_irq(); // flash 写操作,需要关闭中断
         if (app_flash_program(CONFIG_START_ADDR, output, sizeof(output), true) == FMC_READY) {
-
-            if (app_load_config() != true) {
-                APP_ERROR("app_load_config");
-            }
         } else {
             APP_ERROR("app_flash_program");
         }

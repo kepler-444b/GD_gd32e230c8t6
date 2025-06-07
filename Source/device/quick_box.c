@@ -140,7 +140,7 @@ void quick_event_handler(event_type_e event, void *params)
 // 用于检测交流电的零点
 void quick_box_zero(TimerHandle_t xTimer)
 {
-    FlagStatus status = app_get_gpio(PB11);
+    FlagStatus status = APP_GET_GPIO(PB11);
     // APP_PRINTF("status:%d\n", status);
 }
 #endif

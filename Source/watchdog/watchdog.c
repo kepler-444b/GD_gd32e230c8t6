@@ -27,7 +27,7 @@ void app_watchdog_init(void)
     // 看门狗配置
     rcu_osci_on(RCU_IRC40K);             // 使能看门狗独立时钟源
     rcu_osci_stab_wait(RCU_IRC40K);      // 等待时钟稳定
-    fwdgt_config(1875, FWDGT_PSC_DIV64); // 3s 溢出一次
+    fwdgt_config(1875, FWDGT_PSC_DIV64); // 3s 溢出一次(触发中断服务函数)
     fwdgt_enable();
 }
 

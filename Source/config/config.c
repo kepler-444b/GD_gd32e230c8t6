@@ -1,20 +1,27 @@
 #include "gd32e23x.h"
 #include "config.h"
 #include <stdio.h>
+#include <string.h>
 #include "../flash/flash.h"
 #include "../base/base.h"
 
-gpio_pin_typedef_t app_panel_get_relay_num(uint8_t key_num, uint8_t *data);
+// 预定义继电器GPIO配置
+static const gpio_pin_typedef_t RELAY_GPIO_MAP[] = {PB12, PB13, PB14, PB15};
+
+// 函数声明
+void app_panel_get_relay_num(void);
+static void app_set_key_relay(panel_cfg_t *panel_cfg, uint8_t relay_val);
+
 static panel_cfg_t my_panel_cfg[KEY_NUMBER_COUNT] = {0};
 
+static uint32_t read_data[32] = {0};
+static uint8_t new_data[128]  = {0};
 bool app_load_config(void)
 {
-    uint32_t read_data[32] = {0};
     if (app_flash_read(CONFIG_START_ADDR, read_data, sizeof(read_data)) != FMC_READY) {
         APP_ERROR("app_flash_read failed\n");
         return false;
     }
-    uint8_t new_data[128] = {0};
     if (app_uint32_to_uint8(read_data, sizeof(read_data) / sizeof(read_data[0]), new_data, sizeof(new_data)) != true) {
         APP_ERROR("app_uint32_to_uint8 error\n");
         return false;
@@ -43,7 +50,6 @@ bool app_load_config(void)
                 my_panel_cfg[i].key_perm        = new_data[31];
                 my_panel_cfg[i].key_scene_group = new_data[32];
             }
-            my_panel_cfg[i].key_relay = app_panel_get_relay_num(i, new_data);
         }
 
         my_panel_cfg[0].key_led = PA15;
@@ -52,13 +58,18 @@ bool app_load_config(void)
         my_panel_cfg[3].key_led = PB5;
         my_panel_cfg[4].key_led = PB6;
         my_panel_cfg[5].key_led = PB8;
+        app_panel_get_relay_num();
+
         for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
+            APP_PRINTF("[%d] ", i);
             APP_PRINTF("[%02X] ", my_panel_cfg[i].key_func);
             APP_PRINTF("[%02X] ", my_panel_cfg[i].key_group);
             APP_PRINTF("[%02X] ", my_panel_cfg[i].key_area);
             APP_PRINTF("[%02X] ", my_panel_cfg[i].key_perm);
-            APP_PRINTF("[%s] ", app_get_gpio_name(my_panel_cfg[i].key_relay));
             APP_PRINTF("[%s] ", app_get_gpio_name(my_panel_cfg[i].key_led));
+            for (uint8_t j = 0; j < 4; j++) {
+                APP_PRINTF("[%s] ", app_get_gpio_name(my_panel_cfg[i].key_relay[j]));
+            }
             APP_PRINTF("\n");
         }
     }
@@ -66,46 +77,24 @@ bool app_load_config(void)
     return true;
 }
 
-gpio_pin_typedef_t app_panel_get_relay_num(uint8_t key_num, uint8_t *data)
+void app_panel_get_relay_num(void)
 {
-    uint8_t value;
-    switch (key_num) {
-        case 0:
-            value = data[34] & 0x0F;
-            break;
-        case 1:
-            value = data[34] >> 4;
-            break;
-        case 2:
-            value = data[35] & 0x0F;
-            break;
-        case 3:
-            value = data[35] >> 4;
-            break;
-        case 4:
-            value = data[36] & 0x0F;
-            break;
-        case 5:
-            value = data[36] >> 4;
-            break;
-        default:
-            return DEFAULT;
-    }
+    const uint8_t base_offset = 34; // 偏移到(34,35,36 用于按键 12,34,56 所控制的继电器)
+    for (uint8_t i = 0; i < 6; i++) {
+        uint8_t byte_offset = base_offset + (i / 2); // 提取半字节
 
-    switch (value) {
-        case 1:
-            return PB12;
-        case 2:
-            return PB13;
-        case 4:
-            return PB14;
-        case 8:
-            return PB15;
-        default:
-            return DEFAULT;
+        // 奇数取字节的高4位,偶数取字节的低4位
+        uint8_t relay_num = (i % 2) ? (new_data[byte_offset] >> 4) : (new_data[byte_offset] & 0x0F);
+        app_set_key_relay(&my_panel_cfg[i], relay_num);
     }
 }
-
+static void app_set_key_relay(panel_cfg_t *panel_cfg, uint8_t relay_num)
+{
+    memset(panel_cfg->key_relay, 0, sizeof(panel_cfg->key_relay));
+    for (uint8_t i = 0; i < 4; i++) { // 只有4个继电器
+        panel_cfg->key_relay[i] = (relay_num & (1 << i)) ? RELAY_GPIO_MAP[i] : DEFAULT;
+    }
+}
 const panel_cfg_t *app_get_dev_cfg(void)
 {
     return my_panel_cfg;

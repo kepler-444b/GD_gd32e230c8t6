@@ -20,12 +20,11 @@
     (((*(ptr) >= 'A') ? (*(ptr) - 'A' + 10) : (*(ptr) - '0')) << 4 | \
      ((*(ptr + 1) >= 'A') ? (*(ptr + 1) - 'A' + 10) : (*(ptr + 1) - '0')))
 
-
 /// @brief 用于求一组数据的平均数
 /// @param buffer 传入数组
 /// @param count  数组长度
 /// @return
-float app_calculate_average(const uint16_t *buffer, uint16_t count);
+uint16_t app_calculate_average(const uint16_t *buffer, uint16_t count);
 
 /**
  * @brief 将 uint8_t 数组打包为 uint32_t 数组(小端序)

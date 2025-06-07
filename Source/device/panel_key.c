@@ -26,6 +26,7 @@
 
 #define SHORT_TIME_LED          50    // 短亮时间
 #define SHORT_TIME_RELAY        30000 // 继电器导通时间
+#define SHORT_TIME_BACK         5000  // 一定时间内背光变化
 
 // 此结构体用于处理 adc 数据
 typedef struct
@@ -59,27 +60,32 @@ typedef struct
 
     bool led_open;  // 白灯状态
     bool led_short; // 启用短亮(窗帘开关)
-    bool led_last;
+    bool led_last;  // 白灯上次状态
 
     bool relay_open;  // 继电状态
     bool relay_short; // 继电器短开
-    bool relay_last;
+    bool relay_last;  // 继电器上次状态
+
+    uint8_t back_open; // 背光灯状态(0:关闭,1:点亮,2:半亮)
 
     uint16_t led_filck_count;  // 短亮计数器
     uint32_t relay_open_count; // 继电器导通计数器
+    uint32_t back_open_count;  // 背光灯计数器
 
 } panel_status_t;
 static panel_status_t my_panel_status[KEY_NUMBER_COUNT] = {0};
 
 typedef struct
 {
-    bool led_filck;           // 闪烁
-    bool key_long_perss;      // 长按状态
-    bool enter_config;        // 进入配置状态
+    bool led_filck;      // 闪烁
+    bool key_long_perss; // 长按状态
+    bool enter_config;   // 进入配置状态
+    uint8_t back_status; // 所有背光灯状态(0:关闭,1:打开,2:低亮)
+    uint8_t back_status_last;
     uint16_t key_long_count;  // 长按计数
     uint32_t led_filck_count; // 闪烁计数
-} long_press_t;
-static long_press_t my_long_press;
+} common_panel_t;
+static common_panel_t my_common_panel;
 
 // 函数声明
 void panel_gpio_init(void);
@@ -88,6 +94,7 @@ void panel_proce_cmd(TimerHandle_t xTimer);
 void panel_ctrl_led_all(bool led_state);
 void panel_event_handler(event_type_e event, void *params);
 void panel_data_cb(valid_data_t *data);
+void panel_check_key_status(void);
 
 void panel_key_init(void)
 {
@@ -136,12 +143,12 @@ void panel_key_init(void)
     // app_ctrl_gpio(PB13, true);
     // app_ctrl_gpio(PB14, true);
     // app_ctrl_gpio(PB15, true);
-    APP_PRINTF("%d %d %d %d\n", app_get_gpio(PB12), app_get_gpio(PB13), app_get_gpio(PB14), app_get_gpio(PB15));
+    // APP_PRINTF("%d %d %d %d\n", APP_SET_GPIO(PB12), APP_SET_GPIO(PB13), APP_SET_GPIO(PB14), APP_SET_GPIO(PB15));
 
 #endif
     // 订阅事件总线
     app_eventbus_subscribe(panel_event_handler);
-
+#if 1
     // 初始化一个静态定时器,用于读取adc值
     static StaticTimer_t ReadAdcStaticBuffer;
     static TimerHandle_t ReadAdcTimerHandle = NULL;
@@ -176,6 +183,7 @@ void panel_key_init(void)
     if (xTimerStart(PanleTimerHandle, 0) != pdPASS) {
         APP_ERROR("PanleTimerHandle error");
     }
+#endif
 }
 
 void panel_gpio_init(void)
@@ -231,22 +239,19 @@ void panel_gpio_init(void)
 
 void panel_read_adc(TimerHandle_t xTimer)
 {
-    uint16_t adc_value  = ADC_TO_VOLTAGE(app_get_adc_value()[0]);
-    uint16_t adc_value1 = ADC_TO_VOLTAGE(app_get_adc_value()[1]);
-    // APP_PRINTF("%d :%d\n", adc_value, adc_value1);
+    uint16_t adc_value = ADC_TO_VOLTAGE(app_get_adc_value()[0]);
 
     for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
         if (adc_value >= my_key_config[i].min && adc_value <= my_key_config[i].max) {
             // 填充满buffer才会执行下面的代码，故此行执行10次才执行下面的代码
             my_adc_value.adc_value_buffer[my_adc_value.buffer_index++] = adc_value;
-
             if (my_adc_value.buffer_index >= ADC_VALUE_COUNT) {
                 my_adc_value.buffer_index = 0;
                 my_adc_value.buffer_full  = 1;
                 uint16_t new_value        = app_calculate_average(my_adc_value.adc_value_buffer, ADC_VALUE_COUNT);
                 if (new_value >= my_key_config[i].min && new_value <= my_key_config[i].max) {
                     if (my_panel_status[i].key_press == false) {
-                        if (my_long_press.enter_config == false) { // 如果进入了配置模式，则禁用按键操作
+                        if (my_common_panel.enter_config == false) { // 如果进入了配置模式，则禁用按键操作
 
                             my_panel_status[i].key_status = !my_panel_status[i].key_status;
                             if (my_panel_status[i].relay_short != false) { // 继电器在导通过程中
@@ -257,35 +262,35 @@ void panel_read_adc(TimerHandle_t xTimer)
 
                             my_panel_status[i].key_press = true; // 短按标记为按下
                         }
-                        my_long_press.key_long_perss = true; // 长按标记为按下
-                        my_long_press.key_long_count = 0;    // 长按计数器清零
-                    } else if (my_long_press.key_long_perss == true) {
+                        my_common_panel.key_long_perss = true; // 长按标记为按下
+                        my_common_panel.key_long_count = 0;    // 长按计数器清零
+                    } else if (my_common_panel.key_long_perss == true) {
                         // 进入长按延时阶段
-                        my_long_press.key_long_count++;
-                        if (my_long_press.key_long_count >= 500) {
+                        my_common_panel.key_long_count++;
+                        if (my_common_panel.key_long_count >= 500) {
                             // 实际延时 5s
                             app_panel_send_cmd(0, 0, 0xF8, 0x00);
-                            my_long_press.key_long_perss = false;
+                            my_common_panel.key_long_perss = false;
                         }
                     }
                 }
             }
         } else if (adc_value >= DEFAULT_MIN_VALUE && adc_value <= DEFAULT_MAX_VALUE) {
             // 没有按键按下时
-            my_panel_status[i].key_press = false; // 标记为未按下
-            my_long_press.key_long_perss = false; // 重置长按状态
-            my_long_press.key_long_count = 0;     // 重置长按计数
+            my_panel_status[i].key_press   = false; // 标记为未按下
+            my_common_panel.key_long_perss = false; // 重置长按状态
+            my_common_panel.key_long_count = 0;     // 重置长按计数
         }
     }
-    if (my_long_press.led_filck == true) {
-        my_long_press.led_filck_count++;
-        if (my_long_press.led_filck_count <= 500) {
+    if (my_common_panel.led_filck == true) {
+        my_common_panel.led_filck_count++;
+        if (my_common_panel.led_filck_count <= 500) {
             panel_ctrl_led_all(true);
-        } else if (my_long_press.led_filck_count <= 1000) {
+        } else if (my_common_panel.led_filck_count <= 1000) {
             panel_ctrl_led_all(false);
         } else {
-            my_long_press.led_filck_count = 0;     // 重置计数器
-            my_long_press.led_filck       = false; // 停止闪烁
+            my_common_panel.led_filck_count = 0;     // 重置计数器
+            my_common_panel.led_filck       = false; // 停止闪烁
             panel_ctrl_led_all(true);
         }
     }
@@ -296,7 +301,7 @@ void panel_proce_cmd(TimerHandle_t xTimer)
     const panel_cfg_t *temp_cfg = app_get_dev_cfg();
     for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
 
-        if (my_panel_status[i].led_short) {
+        if (my_panel_status[i].led_short) { // led 短亮
             if (my_panel_status[i].led_filck_count == 0) {
                 my_panel_status[i].led_open = true;
             }
@@ -308,7 +313,7 @@ void panel_proce_cmd(TimerHandle_t xTimer)
             }
         }
 
-        if (my_panel_status[i].relay_short == true) {
+        if (my_panel_status[i].relay_short == true) { // 继电器导通30s
             if (my_panel_status[i].relay_open_count == 0) {
                 my_panel_status[i].relay_open = true;
             }
@@ -320,17 +325,50 @@ void panel_proce_cmd(TimerHandle_t xTimer)
             }
         }
 
-        if (my_panel_status[i].led_open != my_panel_status[i].led_last) {
-            app_ctrl_gpio(temp_cfg[i].key_led, my_panel_status[i].led_open);
+        if (my_panel_status[i].led_open != my_panel_status[i].led_last) { // 开关led
+            APP_SET_GPIO(temp_cfg[i].key_led, my_panel_status[i].led_open);
             my_panel_status[i].led_last = my_panel_status[i].led_open;
+            panel_check_key_status(); // 每次led变化后都会检测一次
         }
-        if (my_panel_status[i].relay_open != my_panel_status[i].relay_last) {
-            app_ctrl_gpio(temp_cfg[i].key_relay, my_panel_status[i].relay_open);
+        if (my_panel_status[i].relay_open != my_panel_status[i].relay_last) { // 开关继电器
+            // 开关该按键所控的所有继电器
+            APP_SET_GPIO(temp_cfg[i].key_relay[0], my_panel_status[i].relay_open);
+            APP_SET_GPIO(temp_cfg[i].key_relay[1], my_panel_status[i].relay_open);
+            APP_SET_GPIO(temp_cfg[i].key_relay[2], my_panel_status[i].relay_open);
+            APP_SET_GPIO(temp_cfg[i].key_relay[3], my_panel_status[i].relay_open);
+            APP_PRINTF("%d%d%d%d\n", APP_GET_GPIO(PB12), APP_GET_GPIO(PB13), APP_GET_GPIO(PB14), APP_GET_GPIO(PB15));
             my_panel_status[i].relay_last = my_panel_status[i].relay_open;
 
             my_panel_status[i].relay_open_count = 0;
         }
+#if defined PANEL_6KEY // 6键面板与8键的背光灯开关逻辑不通,在此用宏定义隔开
+        if (my_common_panel.back_status != my_common_panel.back_status_last) {
+            if (my_common_panel.back_status == 0) {
+                app_set_pwm_fade(0, 0, 5000);
+            } else if (my_common_panel.back_status == 1) {
+                app_set_pwm_fade(0, 500, 1000);
+            } else if (my_common_panel.back_status == 2) {
+                app_set_pwm_fade(0, 50, 5000);
+            }
+            my_common_panel.back_status_last = my_common_panel.back_status;
+        }
+#endif
     }
+}
+
+void panel_check_key_status(void)
+{
+#if defined PANEL_6KEY
+    uint8_t all_key_status = 0;
+    for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
+        all_key_status += my_panel_status[i].key_status;
+    }
+    if (all_key_status == 0) {
+        my_common_panel.back_status = 2;
+    } else {
+        my_common_panel.back_status = 1;
+    }
+#endif
 }
 
 void panel_data_cb(valid_data_t *data)
@@ -352,12 +390,12 @@ void panel_data_cb(valid_data_t *data)
                         my_panel_status[i].led_open   = false;
                         my_panel_status[i].relay_open = false;
                     }
-                }
-                if (data->data[1] == temp_cfg[i].key_func) {
-                    // 匹配双控
-                    my_panel_status[i].led_short  = true;
-                    my_panel_status[i].relay_open = data->data[2];
-                    my_panel_status[i].key_status = data->data[2];
+                    if (data->data[1] == temp_cfg[i].key_func) {
+                        // 匹配双控
+                        my_panel_status[i].led_short  = true;
+                        my_panel_status[i].relay_open = data->data[2];
+                        my_panel_status[i].key_status = data->data[2];
+                    }
                 }
             }
         } break;
@@ -452,6 +490,7 @@ void panel_data_cb(valid_data_t *data)
 
                     my_panel_status[i].led_open   = data->data[2];
                     my_panel_status[i].relay_open = data->data[2];
+                    my_panel_status[i].key_status = data->data[2];
                 }
             }
 
@@ -523,21 +562,20 @@ void panel_event_handler(event_type_e event, void *params)
     switch (event) {
         case EVENT_ENTER_CONFIG: {
             panel_ctrl_led_all(true);
-            my_long_press.enter_config = true;
+            my_common_panel.enter_config = true;
         } break;
         case EVENT_EXIT_CONFIG: {
             panel_ctrl_led_all(false);
-            my_long_press.enter_config = false;
+            my_common_panel.enter_config = false;
         } break;
         case EVENT_SAVE_SUCCESS: {
-            my_long_press.led_filck = true;
-            // panel_get_key_info();
+            my_common_panel.led_filck = true;
+            app_load_config();
         } break;
         case EVENT_RECEIVE_CMD: {
             valid_data_t *valid_data = (valid_data_t *)params;
             panel_data_cb(valid_data);
         } break;
-
         default:
             return;
     }

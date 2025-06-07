@@ -34,7 +34,7 @@
           <SLE66CMisc></SLE66CMisc>
           <SLE66AMisc></SLE66AMisc>
           <SLE66LinkerMisc></SLE66LinkerMisc>
-          <SFDFile>$$Device:GD32E230C8$SVD\GD32E230.svd</SFDFile>
+          <SFDFile>D:\Keil\Arm\Packs\GigaDevice\GD32E23x_DFP\1.0.2\SVD\GD32E231.SFR</SFDFile>
           <bCustSvd>0</bCustSvd>
           <UseEnv>0</UseEnv>
           <BinPath></BinPath>
