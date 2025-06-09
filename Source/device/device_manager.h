@@ -6,7 +6,9 @@
     在此管理每个设备的初始化
 */
 
-#define PANEL_KEY // 灯控面板
+// 设备类型多选一
+// #define PANEL_KEY // 灯控面板
+#define QUICK_BOX // 快装盒子
 
 #if defined PANEL_KEY
 
@@ -22,10 +24,14 @@
 #endif
 #endif
 
-// #define QUICK_BOX  // 快装盒子
 #if defined QUICK_BOX
 
+#define QUICK_BOX_3LED
 #define PWM_DIR // pwm 方向(开启为反,关闭为正)
+#if defined QUICK_BOX_3LED
+#define LED_NUMBER_COUNT   3
+#define RELAY_NUMBER_COUNT 3
+#endif
 
 #endif
 

@@ -4,6 +4,7 @@
 #include <string.h>
 #include "../flash/flash.h"
 #include "../base/base.h"
+#include "../device/device_manager.h"
 
 // 预定义继电器GPIO配置
 static const gpio_pin_typedef_t RELAY_GPIO_MAP[] = {PB12, PB13, PB14, PB15};
@@ -12,7 +13,9 @@ static const gpio_pin_typedef_t RELAY_GPIO_MAP[] = {PB12, PB13, PB14, PB15};
 void app_panel_get_relay_num(void);
 static void app_set_key_relay(panel_cfg_t *panel_cfg, uint8_t relay_val);
 
+#if defined PANEL_KEY
 static panel_cfg_t my_panel_cfg[KEY_NUMBER_COUNT] = {0};
+#endif
 
 static uint32_t read_data[32] = {0};
 static uint8_t new_data[128]  = {0};
@@ -77,6 +80,7 @@ bool app_load_config(void)
     return true;
 }
 
+#if defined PANEL_KEY
 void app_panel_get_relay_num(void)
 {
     const uint8_t base_offset = 34; // 偏移到(34,35,36 用于按键 12,34,56 所控制的继电器)
@@ -88,6 +92,7 @@ void app_panel_get_relay_num(void)
         app_set_key_relay(&my_panel_cfg[i], relay_num);
     }
 }
+#endif
 static void app_set_key_relay(panel_cfg_t *panel_cfg, uint8_t relay_num)
 {
     memset(panel_cfg->key_relay, 0, sizeof(panel_cfg->key_relay));
@@ -97,5 +102,8 @@ static void app_set_key_relay(panel_cfg_t *panel_cfg, uint8_t relay_num)
 }
 const panel_cfg_t *app_get_dev_cfg(void)
 {
+#if defined PANEL_KEY
     return my_panel_cfg;
+#endif
+    return NULL;
 }

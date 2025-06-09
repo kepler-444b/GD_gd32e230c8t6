@@ -13,23 +13,72 @@
 #if defined QUICK_BOX
 
 typedef struct {
-    bool key_status;
-    uint16_t lum;
-    bool mode;
-} quick_box_t;
-static quick_box_t my_quick_box = {0};
+    bool key_status;     // 按键状态
+    bool led_filck;      // 闪烁
+    bool key_long_perss; // 长按状态
+    bool enter_config;   // 进入配置状态
+    uint8_t back_status; // 所有背光灯状态(0:关闭,1:打开,2:低亮)
+    uint8_t back_status_last;
+    uint16_t key_long_count;  // 长按计数
+    uint32_t led_filck_count; // 闪烁计数
+} common_quick_t;
+static common_quick_t my_common_quick = {0};
+
+typedef struct
+{ // 3路 led 状态
+    bool led_open;
+    bool led_last;
+} led_status_t;
+static led_status_t my_led_status[LED_NUMBER_COUNT];
+
+typedef struct
+{ // 3 路 relay 状态
+    bool relay_open;
+    bool relay_last;
+} relay_status_t;
+static relay_status_t my_relay_status[RELAY_NUMBER_COUNT];
 
 void quick_box_gpio_init(void);
 void quick_box_data_cb(valid_data_t *data);
 void quick_event_handler(event_type_e event, void *params);
-void quick_box_zero(TimerHandle_t xTimer);
+void quick_box_timer(TimerHandle_t xTimer);
+void quick_ctrl_led_all(bool status);
 
 void quick_box_init(void)
 {
     APP_PRINTF("quick_box_init\n");
     quick_box_gpio_init();
 
-    app_pwm_init(PB7, PB6, PB5, DEFAULT); //  初始化PWM
+    // 上电后,先关闭所有灯
+    APP_SET_GPIO(PB5, false);
+    APP_SET_GPIO(PB6, false);
+    APP_SET_GPIO(PB7, false);
+
+    // 订阅事件总线
+    app_eventbus_subscribe(quick_event_handler);
+
+    // 初始化一个静态定时器,用于检测值
+    static StaticTimer_t CheckZeroStaticBuffer;
+    static TimerHandle_t CheckZeroTimerHandle = NULL;
+
+    CheckZeroTimerHandle = xTimerCreateStatic(
+        "QuickTimer",          // 定时器名称(调试用)
+        pdMS_TO_TICKS(1),      // 定时周期(1ms)
+        pdTRUE,                // 自动重载(TRUE=周期性，FALSE=单次)
+        NULL,                  // 定时器ID(可用于传递参数)
+        quick_box_timer,       // 回调函数
+        &CheckZeroStaticBuffer // 静态内存缓冲区
+    );
+    // 启动定时器(0表示不阻塞)
+    if (xTimerStart(CheckZeroTimerHandle, 0) != pdPASS) {
+        APP_ERROR("CheckZeroTimerHandle error");
+    }
+
+    gpio_pin_typedef_t pins[3] = {PB7, PB6, PB5};
+    app_pwm_init(pins, 3);
+    app_set_pwm_fade(0, 500, 5000);
+    app_set_pwm_fade(1, 500, 5000);
+    app_set_pwm_fade(2, 500, 5000);
 }
 
 void quick_box_gpio_init(void)
@@ -59,32 +108,6 @@ void quick_box_gpio_init(void)
     gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_13); // OUT9
     gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_14); // OUT8
     gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_15); // OUT7
-
-    // 上电后,先关闭所有灯
-    app_ctrl_gpio(PB5, false);
-    app_ctrl_gpio(PB6, false);
-    app_ctrl_gpio(PB7, false);
-
-    // 订阅事件总线
-    app_eventbus_subscribe(quick_event_handler);
-
-    // 初始化一个静态定时器,用于检测值
-    static StaticTimer_t CheckZeroStaticBuffer;
-    static TimerHandle_t CheckZeroTimerHandle = NULL;
-
-    CheckZeroTimerHandle = xTimerCreateStatic(
-        "ReadAdcTimer",        // 定时器名称(调试用)
-        pdMS_TO_TICKS(1),      // 定时周期(1ms)
-        pdTRUE,                // 自动重载(TRUE=周期性，FALSE=单次)
-        NULL,                  // 定时器ID(可用于传递参数)
-        quick_box_zero,        // 回调函数
-        &CheckZeroStaticBuffer // 静态内存缓冲区
-
-    );
-    // 启动定时器(0表示不阻塞)
-    if (xTimerStart(CheckZeroTimerHandle, 0) != pdPASS) {
-        APP_ERROR("CheckZeroTimerHandle error");
-    }
 }
 
 void quick_box_data_cb(valid_data_t *data)
@@ -137,10 +160,52 @@ void quick_event_handler(event_type_e event, void *params)
     }
 }
 
-// 用于检测交流电的零点
-void quick_box_zero(TimerHandle_t xTimer)
+void quick_box_timer(TimerHandle_t xTimer)
 {
-    FlagStatus status = APP_GET_GPIO(PB11);
+    // FlagStatus status = APP_GET_GPIO(PB11);
     // APP_PRINTF("status:%d\n", status);
+    my_common_quick.key_status = APP_GET_GPIO(PA0);
+
+    if (my_common_quick.key_status == false) { // 按键按下
+        my_common_quick.key_long_count++;
+        if (my_common_quick.key_long_count >= 5000) { // 触发长按
+            app_send_cmd(0, 0, 0xF8, 0x00);
+            my_common_quick.key_long_count = 0;
+        }
+    } else {
+        my_common_quick.key_long_count = 0;
+    }
+
+    if (my_common_quick.led_filck == true) {
+        my_common_quick.led_filck_count++;
+        if (my_common_quick.led_filck_count <= 500) {
+            quick_ctrl_led_all(true);
+        } else if (my_common_quick.led_filck_count <= 1000) {
+            quick_ctrl_led_all(false);
+        } else {
+            my_common_quick.led_filck_count = 0;     // 重置计数器
+            my_common_quick.led_filck       = false; // 停止闪烁
+            quick_ctrl_led_all(true);
+        }
+    }
+}
+
+void quick_ctrl_led_all(bool status)
+{
+    if (status == true) {
+        APP_SET_GPIO(PB7, true);
+        APP_SET_GPIO(PB6, true);
+        APP_SET_GPIO(PB5, true);
+        app_set_pwm_duty(0, 500);
+        app_set_pwm_duty(1, 500);
+        app_set_pwm_duty(2, 500);
+    } else {
+        APP_SET_GPIO(PB7, false);
+        APP_SET_GPIO(PB6, false);
+        APP_SET_GPIO(PB5, false);
+        app_set_pwm_duty(0, 0);
+        app_set_pwm_duty(1, 500);
+        app_set_pwm_duty(2, 500);
+    }
 }
 #endif

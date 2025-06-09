@@ -156,14 +156,15 @@ void app_at_send(at_frame_t *my_at_frame)
     app_usart_tx_string(at_frame);
 }
 
-// 构造 panel 命令
-void app_panel_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t cmd, uint8_t func)
+// 构造命令
+void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t cmd, uint8_t func)
 {
     const panel_cfg_t *temp_cfg   = app_get_dev_cfg();
     static at_frame_t my_at_frame = {0};
 
     switch (cmd) {
-        case 0xF1: { // 发送通信帧
+#if defined PANEL_KEY
+        case 0xF1: { // 发送通信帧(panel产品用到)
             my_at_frame.data[0] = 0xF1;
 
             // 验证按键编号有效性
@@ -192,8 +193,8 @@ void app_panel_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t cmd, uin
             my_at_frame.length  = 8;
             app_at_send(&my_at_frame);
         } break;
-
-        case 0xF8: { // 进入设置模式
+#endif
+        case 0xF8: { // 进入设置模式(所有产品通用)
             my_at_frame.data[0] = 0xF8;
             my_at_frame.data[1] = 0x01;
             my_at_frame.data[2] = 0x07;
