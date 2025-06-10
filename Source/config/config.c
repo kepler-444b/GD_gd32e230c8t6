@@ -6,19 +6,24 @@
 #include "../base/base.h"
 #include "../device/device_manager.h"
 
+#if defined PANEL_KEY
+static panel_cfg_t my_panel_cfg[KEY_NUMBER_COUNT] = {0};
 // 预定义继电器GPIO配置
 static const gpio_pin_typedef_t RELAY_GPIO_MAP[] = {PB12, PB13, PB14, PB15};
 
 // 函数声明
 void app_panel_get_relay_num(void);
 static void app_set_key_relay(panel_cfg_t *panel_cfg, uint8_t relay_val);
-
-#if defined PANEL_KEY
-static panel_cfg_t my_panel_cfg[KEY_NUMBER_COUNT] = {0};
 #endif
 
-static uint32_t read_data[32] = {0};
-static uint8_t new_data[128]  = {0};
+#if defined QUICK_BOX
+static quick_ctg_t quick_cfg;                  // 分配内存
+static quick_ctg_t *my_quick_cfg = &quick_cfg; // 指针指向已分配的结构体
+#endif
+
+static uint32_t read_data[24] = {0};
+static uint8_t new_data[96]   = {0};
+
 bool app_load_config(void)
 {
     if (app_flash_read(CONFIG_START_ADDR, read_data, sizeof(read_data)) != FMC_READY) {
@@ -30,52 +35,70 @@ bool app_load_config(void)
         return false;
     }
 
-#if defined PANEL_KEY // panel 类型
+#if defined PANEL_KEY // 填充 my_panel_cfg 结构体
 
-    if (KEY_NUMBER_COUNT == 6) {
-        for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
-            if (i < 4) {
-                my_panel_cfg[i].key_func        = new_data[i + 1];
-                my_panel_cfg[i].key_group       = new_data[i + 5];
-                my_panel_cfg[i].key_area        = new_data[i + 9];
-                my_panel_cfg[i].key_perm        = new_data[i + 13];
-                my_panel_cfg[i].key_scene_group = new_data[i + 17];
-            } else if (i == 4) {
-                my_panel_cfg[i].key_func        = new_data[21];
-                my_panel_cfg[i].key_group       = new_data[22];
-                my_panel_cfg[i].key_area        = new_data[23];
-                my_panel_cfg[i].key_perm        = new_data[26];
-                my_panel_cfg[i].key_scene_group = new_data[27];
-            } else if (i == 5) {
-                my_panel_cfg[i].key_func        = new_data[28];
-                my_panel_cfg[i].key_group       = new_data[29];
-                my_panel_cfg[i].key_area        = new_data[30];
-                my_panel_cfg[i].key_perm        = new_data[31];
-                my_panel_cfg[i].key_scene_group = new_data[32];
-            }
-        }
-
-        my_panel_cfg[0].key_led = PA15;
-        my_panel_cfg[1].key_led = PB3;
-        my_panel_cfg[2].key_led = PB4;
-        my_panel_cfg[3].key_led = PB5;
-        my_panel_cfg[4].key_led = PB6;
-        my_panel_cfg[5].key_led = PB8;
-        app_panel_get_relay_num();
-
-        for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
-            APP_PRINTF("[%d] ", i);
-            APP_PRINTF("[%02X] ", my_panel_cfg[i].key_func);
-            APP_PRINTF("[%02X] ", my_panel_cfg[i].key_group);
-            APP_PRINTF("[%02X] ", my_panel_cfg[i].key_area);
-            APP_PRINTF("[%02X] ", my_panel_cfg[i].key_perm);
-            APP_PRINTF("[%s] ", app_get_gpio_name(my_panel_cfg[i].key_led));
-            for (uint8_t j = 0; j < 4; j++) {
-                APP_PRINTF("[%s] ", app_get_gpio_name(my_panel_cfg[i].key_relay[j]));
-            }
-            APP_PRINTF("\n");
+    for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
+        if (i < 4) {
+            my_panel_cfg[i].key_func        = new_data[i + 1];
+            my_panel_cfg[i].key_group       = new_data[i + 5];
+            my_panel_cfg[i].key_area        = new_data[i + 9];
+            my_panel_cfg[i].key_perm        = new_data[i + 13];
+            my_panel_cfg[i].key_scene_group = new_data[i + 17];
+        } else if (i == 4) {
+            my_panel_cfg[i].key_func        = new_data[21];
+            my_panel_cfg[i].key_group       = new_data[22];
+            my_panel_cfg[i].key_area        = new_data[23];
+            my_panel_cfg[i].key_perm        = new_data[26];
+            my_panel_cfg[i].key_scene_group = new_data[27];
+        } else if (i == 5) {
+            my_panel_cfg[i].key_func        = new_data[28];
+            my_panel_cfg[i].key_group       = new_data[29];
+            my_panel_cfg[i].key_area        = new_data[30];
+            my_panel_cfg[i].key_perm        = new_data[31];
+            my_panel_cfg[i].key_scene_group = new_data[32];
         }
     }
+
+    my_panel_cfg[0].key_led = PA15;
+    my_panel_cfg[1].key_led = PB3;
+    my_panel_cfg[2].key_led = PB4;
+    my_panel_cfg[3].key_led = PB5;
+    my_panel_cfg[4].key_led = PB6;
+    my_panel_cfg[5].key_led = PB8;
+    app_panel_get_relay_num();
+
+    for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
+        APP_PRINTF("[%d] ", i);
+        APP_PRINTF("[%02X] ", my_panel_cfg[i].key_func);
+        APP_PRINTF("[%02X] ", my_panel_cfg[i].key_group);
+        APP_PRINTF("[%02X] ", my_panel_cfg[i].key_area);
+        APP_PRINTF("[%02X] ", my_panel_cfg[i].key_perm);
+        APP_PRINTF("[%s] ", app_get_gpio_name(my_panel_cfg[i].key_led));
+        for (uint8_t j = 0; j < 4; j++) {
+            APP_PRINTF("[%s] ", app_get_gpio_name(my_panel_cfg[i].key_relay[j]));
+        }
+        APP_PRINTF("\n");
+    }
+#endif
+
+#if defined QUICK_BOX // 填充 my_quick_cfg 结构体
+
+    uint8_t packet_count = new_data[1];
+    my_quick_cfg->speed  = new_data[2];
+    for (uint8_t i = 0; i < packet_count; i++) {
+        memcpy(&my_quick_cfg->key_packet[i], &new_data[3 + (i * 11)], sizeof(packet));
+
+        APP_PRINTF("%02X %02X %02X %02X %02X  ", my_quick_cfg->key_packet[i].key_func,
+                   my_quick_cfg->key_packet[i].key_group,
+                   my_quick_cfg->key_packet[i].key_area,
+                   my_quick_cfg->key_packet[i].key_perm,
+                   my_quick_cfg->key_packet[i].key_scene);
+        for (uint8_t j = 0; j < 6; j++) {
+            APP_PRINTF("%02X ", my_quick_cfg->key_packet[i].target[j]);
+        }
+        APP_PRINTF("\n");
+    }
+
 #endif
     return true;
 }
@@ -92,7 +115,7 @@ void app_panel_get_relay_num(void)
         app_set_key_relay(&my_panel_cfg[i], relay_num);
     }
 }
-#endif
+
 static void app_set_key_relay(panel_cfg_t *panel_cfg, uint8_t relay_num)
 {
     memset(panel_cfg->key_relay, 0, sizeof(panel_cfg->key_relay));
@@ -100,10 +123,18 @@ static void app_set_key_relay(panel_cfg_t *panel_cfg, uint8_t relay_num)
         panel_cfg->key_relay[i] = (relay_num & (1 << i)) ? RELAY_GPIO_MAP[i] : DEFAULT;
     }
 }
-const panel_cfg_t *app_get_dev_cfg(void)
-{
-#if defined PANEL_KEY
-    return my_panel_cfg;
 #endif
-    return NULL;
+
+#if defined PANEL_KEY
+const panel_cfg_t *app_get_panel_cfg(void)
+{
+    return my_panel_cfg;
 }
+#endif
+
+#if defined QUICK_BOX
+const quick_ctg_t *app_get_quick_cfg(void)
+{
+    return my_quick_cfg;
+}
+#endif

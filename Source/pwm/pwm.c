@@ -179,9 +179,9 @@ void TIMER13_IRQHandler(void)
             bool pwm_output = (pwm_counter < pwm_channels[i].current_duty);
             APP_SET_GPIO(pwm_channels[i].gpio,
 #if defined PWM_DIR
-                          !pwm_output
+                         !pwm_output
 #else
-                          pwm_output
+                         pwm_output
 #endif
             );
         }

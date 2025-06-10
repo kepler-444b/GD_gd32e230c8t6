@@ -3,6 +3,8 @@
 
 #include "../gpio/gpio.h"
 #include "../device/device_manager.h"
+
+#if defined PANEL_KEY
 // 用于panel类型的信息存储
 typedef struct
 {
@@ -14,8 +16,29 @@ typedef struct
     gpio_pin_typedef_t key_relay[4]; // 按键所控继电器
     gpio_pin_typedef_t key_led;      // 按键所控led
 } panel_cfg_t;
+const panel_cfg_t *app_get_panel_cfg(void);
+#endif
+
+#if defined QUICK_BOX
+// 用于quick类型的信息存储
+typedef struct
+{
+    uint8_t key_func;  // 按键类型
+    uint8_t key_group; // 分组
+    uint8_t key_area;  // 权限
+    uint8_t key_perm;  // 总关/场景区域
+    uint8_t key_scene; // 场景
+    uint8_t target[6];
+} packet;
+
+typedef struct
+{
+    uint8_t speed;                       // 调光速率
+    packet key_packet[LED_NUMBER_COUNT]; // 数据包
+} quick_ctg_t;
+
+const quick_ctg_t *app_get_quick_cfg(void);
+#endif
 
 bool app_load_config(void);
-const panel_cfg_t *app_get_dev_cfg(void);
-
-#endif
+#endif // _CONFIG_H_

@@ -25,13 +25,8 @@
 #endif
 
 #if defined QUICK_BOX
-
-#define QUICK_BOX_3LED
-#define PWM_DIR // pwm 方向(开启为反,关闭为正)
-#if defined QUICK_BOX_3LED
-#define LED_NUMBER_COUNT   3
-#define RELAY_NUMBER_COUNT 3
-#endif
+#define LED_NUMBER_COUNT 6
+#define PWM_DIR          // pwm 方向(开启为反,关闭为正)
 
 #endif
 

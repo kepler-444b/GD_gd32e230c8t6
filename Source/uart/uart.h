@@ -1,7 +1,7 @@
 #ifndef _UART_H_
 #define _UART_H_
 
-#define UART_RECV_SIZE 512
+#define UART_RECV_SIZE 256
 typedef struct {
     uint8_t buffer[UART_RECV_SIZE];
     uint16_t length;

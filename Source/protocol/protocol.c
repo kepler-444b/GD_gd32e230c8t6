@@ -11,6 +11,7 @@
 #include "../config/config.h"
 #include "../device/device_manager.h"
 
+// 用于 panel 帧的校验
 #define CALC_CRC(rxbuf, len) ({                                 \
     uint8_t _sum = 0;                                           \
     for (uint8_t _i = 0; _i < (len); _i++) _sum += (rxbuf)[_i]; \
@@ -25,17 +26,13 @@ typedef struct
 {
     bool apply_cmd;   // 申请配置
     bool enter_apply; // 申请回应
-    bool exit_apply;  // 设置软件取消申请状态
 } apply_t;
 static apply_t my_apply;
-
-// bool send_config_cmd = false; // 向上位机发送请求配置命令
-// bool enter_config    = false; // 收到上位机的回复
 
 // 函数声明
 void app_proto_check(uart_rx_buffer_t *my_uart_rx_buffer);
 void app_save_config(valid_data_t *boj);
-uint8_t calcrc_data(uint8_t *rxbuf, uint8_t len);
+uint16_t calcrc_data_quick(uint8_t *rxbuf, uint8_t len);
 
 void app_proto_init(void)
 {
@@ -46,7 +43,6 @@ void app_proto_init(void)
 void app_proto_check(uart_rx_buffer_t *my_uart_rx_buffer)
 {
     memset(&my_valid_data, 0, sizeof(my_valid_data));
-
     // 检查协议头
     if (strncmp((char *)my_uart_rx_buffer->buffer, "+RECV:", 6) != 0) {
         return;
@@ -76,7 +72,7 @@ void app_proto_check(uart_rx_buffer_t *my_uart_rx_buffer)
     for (uint16_t i = 0; i < my_valid_data.length; i++) {
         my_valid_data.data[i] = HEX_TO_BYTE(start_ptr + 1 + i * 2);
     }
-    APP_PRINTF_BUF("[RECV]", my_valid_data.data, my_valid_data.length);
+    // APP_PRINTF_BUF("[RECV]", my_valid_data.data, my_valid_data.length);
     // 根据命令类型处理
     switch (my_valid_data.data[0]) {
         case 0xF1: // 收到其他设备的AT指令
@@ -84,8 +80,8 @@ void app_proto_check(uart_rx_buffer_t *my_uart_rx_buffer)
                 app_eventbus_publish(EVENT_RECEIVE_CMD, &my_valid_data);
             }
             break;
-        case 0xF2: // 单发串码(panel)
-            if (my_apply.enter_apply) {
+        case 0xF2: // panel 串码(单发)
+            if (my_apply.enter_apply == true) {
                 if (my_valid_data.data[24] == CALC_CRC(my_valid_data.data, 24)) {
                     memcpy(extend_data, &my_valid_data.data[25], 9);
                     if (extend_data[9] == CALC_CRC(extend_data, 9)) {
@@ -94,7 +90,7 @@ void app_proto_check(uart_rx_buffer_t *my_uart_rx_buffer)
                 }
             }
             break;
-        case 0xF3: // 群发串码(panel)
+        case 0xF3: // panel 串码(群发)
             if (my_valid_data.data[24] == CALC_CRC(my_valid_data.data, 24)) {
                 memcpy(extend_data, &my_valid_data.data[25], 9);
                 if (extend_data[9] == CALC_CRC(extend_data, 9)) {
@@ -102,16 +98,27 @@ void app_proto_check(uart_rx_buffer_t *my_uart_rx_buffer)
                 }
             }
             break;
-        case 0xF8: // 设置软件回复,若不是本设备发送的申请,则屏蔽软件的回复
-            if (my_apply.apply_cmd) {
+        case 0xE1: // quick 串码(单发)
+            if (my_apply.enter_apply == true) {
+                if ((my_valid_data.data[1] * 11 + 5) == my_valid_data.length) { // 确定长度
+                    uint16_t crc = (my_valid_data.data[my_valid_data.length - 2] << 8) | my_valid_data.data[my_valid_data.length - 1];
+                    if (crc == calcrc_data_quick(my_valid_data.data, my_valid_data.length - 2)) {
+                        app_save_config(&my_valid_data);
+                    }
+                }
+            }
+
+            break;
+        case 0xF8: // 设置软件回复(若不是本设备发送的申请,则屏蔽软件的回复)
+            if (my_apply.apply_cmd == true) {
                 if (my_valid_data.data[1] == 0x02 && my_valid_data.data[2] == 0x06) {
                     app_eventbus_publish(EVENT_ENTER_CONFIG, NULL);
                     my_apply.enter_apply = true;
                 }
             }
             break;
-        case 0xF9: // 退出配置模式
-            if (my_apply.enter_apply) {
+        case 0xF9: // 接收上位机发送退出命令
+            if (my_apply.enter_apply == true) {
                 if (my_valid_data.data[1] == 0x03 && my_valid_data.data[2] == 0x04) {
                     app_eventbus_publish(EVENT_EXIT_CONFIG, NULL);
                     my_apply.enter_apply = false;
@@ -126,9 +133,9 @@ void app_proto_check(uart_rx_buffer_t *my_uart_rx_buffer)
 
 void app_save_config(valid_data_t *boj)
 {
-    APP_PRINTF_BUF("config_data:", boj->data, boj->length);
+    // APP_PRINTF_BUF("config_data:", boj->data, boj->length);
 
-    static uint32_t output[16] = {0};
+    static uint32_t output[24] = {0};
     if (app_uint8_to_uint32(boj->data, boj->length, output, sizeof(output)) == true) {
 
         __disable_irq(); // flash 写操作,需要关闭中断
@@ -159,12 +166,14 @@ void app_at_send(at_frame_t *my_at_frame)
 // 构造命令
 void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t cmd, uint8_t func)
 {
-    const panel_cfg_t *temp_cfg   = app_get_dev_cfg();
+#if defined PANEL_KEY
+    const panel_cfg_t *temp_cfg = app_get_panel_cfg();
+#endif
     static at_frame_t my_at_frame = {0};
 
     switch (cmd) {
-#if defined PANEL_KEY
         case 0xF1: { // 发送通信帧(panel产品用到)
+#if defined PANEL_KEY
             my_at_frame.data[0] = 0xF1;
 
             // 验证按键编号有效性
@@ -189,11 +198,12 @@ void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t cmd, uint8_t f
             my_at_frame.data[7] = temp_cfg[key_number].key_scene_group;
 
             // 计算并设置CRC校验
-            my_at_frame.data[5] = calcrc_data(my_at_frame.data, 5);
+            my_at_frame.data[5] = CALC_CRC(my_at_frame.data, 5);
             my_at_frame.length  = 8;
             app_at_send(&my_at_frame);
-        } break;
 #endif
+        } break;
+
         case 0xF8: { // 进入设置模式(所有产品通用)
             my_at_frame.data[0] = 0xF8;
             my_at_frame.data[1] = 0x01;
@@ -202,15 +212,39 @@ void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t cmd, uint8_t f
             app_at_send(&my_at_frame);
             my_apply.apply_cmd = true; // 标记已发送配置申请
         } break;
-
         default:
             return;
     }
 }
 
-uint8_t calcrc_data(uint8_t *rxbuf, uint8_t len)
+// 用于快装盒子的校验
+uint16_t calcrc_data_quick(uint8_t *rxbuf, uint8_t len)
 {
-    uint8_t i, sum = 0;
-    for (i = 0; i < len; i++) sum = sum + rxbuf[i];
-    return (0xff - sum + 1);
+    uint16_t wcrc = 0XFFFF; // 16位crc寄存器预置
+    uint8_t temp;
+    uint8_t CRC_L; // 定义数组
+    uint8_t CRC_H;
+
+    uint16_t i = 0, j = 0;    // 计数
+    for (i = 0; i < len; i++) // 循环计算每个数据
+    {
+        temp = *rxbuf & 0X00FF; // 将八位数据与crc寄存器亦或
+        rxbuf++;                // 指针地址增加，指向下个数据
+        wcrc ^= temp;           // 将数据存入crc寄存器
+        for (j = 0; j < 8; j++) // 循环计算数据的
+        {
+            if (wcrc & 0X0001) // 判断右移出的是不是1，如果是1则与多项式进行异或。
+            {
+                wcrc >>= 1;     // 先将数据右移一位
+                wcrc ^= 0XA001; // 与上面的多项式进行异或
+            } else              // 如果不是1，则直接移出
+            {
+                wcrc >>= 1; // 直接移出
+            }
+        }
+    }
+
+    CRC_L = wcrc & 0xff; // crc的低八位
+    CRC_H = wcrc >> 8;   // crc的高八位
+    return ((CRC_L << 8) | CRC_H);
 }

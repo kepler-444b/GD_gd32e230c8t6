@@ -299,7 +299,7 @@ void panel_read_adc(TimerHandle_t xTimer)
 
 void panel_proce_cmd(TimerHandle_t xTimer)
 {
-    const panel_cfg_t *temp_cfg = app_get_dev_cfg();
+    const panel_cfg_t *temp_cfg = app_get_panel_cfg();
     for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
 
         if (my_panel_status[i].led_short) { // led 短亮
@@ -374,7 +374,7 @@ void panel_check_key_status(void)
 
 void panel_data_cb(valid_data_t *data)
 {
-    const panel_cfg_t *temp_cfg = app_get_dev_cfg();
+    const panel_cfg_t *temp_cfg = app_get_panel_cfg();
     switch (data->data[1]) {
 
         case 0x00: { // 总关
@@ -697,7 +697,7 @@ void panel_event_handler(event_type_e event, void *params)
 }
 void panel_power_status(void)
 {
-    const panel_cfg_t *temp_cfg = app_get_dev_cfg();
+    const panel_cfg_t *temp_cfg = app_get_panel_cfg();
     for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
         APP_PRINTF("%02X\n", temp_cfg[i].key_perm);
         if (temp_cfg[i].key_perm & 0x08) { // 权限是否勾选"迎宾"

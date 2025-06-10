@@ -6,7 +6,7 @@
 // 用于保存接收到的有效数据
 typedef struct
 {
-    uint8_t data[128];
+    uint8_t data[160];
     uint8_t length;
 
 } valid_data_t;
