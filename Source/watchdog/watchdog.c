@@ -8,8 +8,8 @@
 void app_watchdog_init(void)
 {
     // TIMER_5 定时器配置
-    rcu_periph_clock_enable(RCU_TIMER5); // 开启TIMER13时钟
-    timer_deinit(TIMER5);                // 复位TIMER13
+    rcu_periph_clock_enable(RCU_TIMER5); // 开启TIMER5时钟
+    timer_deinit(TIMER5);                // 复位TIMER5
 
     timer_parameter_struct timer_initpara;
     timer_initpara.prescaler        = (SYSTEM_CLOCK_FREQ / 2000) - 1; // 分频到2kHz

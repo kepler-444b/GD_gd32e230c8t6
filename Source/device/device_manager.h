@@ -7,19 +7,24 @@
 */
 
 // 设备类型多选一
-// #define PANEL_KEY // 灯控面板
-#define QUICK_BOX // 快装盒子
+#define PANEL_KEY // 灯控面板
+// #define QUICK_BOX // 快装盒子
 
 #if defined PANEL_KEY
 
 // 面板类型多选一
-#define PANEL_6KEY
-// #define PANEL_8KEY
+// #define PANEL_4KEY
+// #define PANEL_6KEY
+#define PANEL_8KEY
 
+#if defined PANEL_4KEY
+#define KEY_NUMBER_COUNT 4
+#endif
 #if defined PANEL_6KEY
 #define KEY_NUMBER_COUNT 6
-#elif defined PANEL_8KEY
-#define KEY_NUMBER_COUNT 8
+#endif
+#if defined PANEL_8KEY
+#define KEY_NUMBER_COUNT 4
 
 #endif
 #endif

@@ -15,7 +15,6 @@ void adc_config(adc_channel_t *channel_num);
 static uint16_t adc_value[4] = {0};
 void app_adc_init(adc_channel_t *adc_channel)
 {
-    // APP_PRINTF("%d %d %d %d\n", adc_channel->adc_channel_0, adc_channel->adc_channel_1, adc_channel->adc_channel_2, adc_channel->adc_channel_3);
     rcu_config();
     dma_config(adc_channel);
     adc_config(adc_channel);

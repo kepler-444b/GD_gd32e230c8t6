@@ -740,6 +740,16 @@
               <FileType>5</FileType>
               <FilePath>..\..\Source\watchdog\watchdog.h</FilePath>
             </File>
+            <File>
+              <FileName>zero.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Source\zero\zero.c</FilePath>
+            </File>
+            <File>
+              <FileName>zero.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\Source\zero\zero.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

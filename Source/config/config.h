@@ -17,6 +17,7 @@ typedef struct
     gpio_pin_typedef_t key_led;      // 按键所控led
 } panel_cfg_t;
 const panel_cfg_t *app_get_panel_cfg(void);
+const panel_cfg_t *app_get_panel_cfg_ex(void);
 #endif
 
 #if defined QUICK_BOX

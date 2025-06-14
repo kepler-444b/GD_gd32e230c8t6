@@ -42,19 +42,19 @@ OF SUCH DAMAGE.
 */
 void usart_deinit(uint32_t usart_periph)
 {
-    switch(usart_periph) {
-    case USART0:
-        /* reset USART0 */
-        rcu_periph_reset_enable(RCU_USART0RST);
-        rcu_periph_reset_disable(RCU_USART0RST);
-        break;
-    case USART1:
-        /* reset USART1 */
-        rcu_periph_reset_enable(RCU_USART1RST);
-        rcu_periph_reset_disable(RCU_USART1RST);
-        break;
-    default:
-        break;
+    switch (usart_periph) {
+        case USART0:
+            /* reset USART0 */
+            rcu_periph_reset_enable(RCU_USART0RST);
+            rcu_periph_reset_disable(RCU_USART0RST);
+            break;
+        case USART1:
+            /* reset USART1 */
+            rcu_periph_reset_enable(RCU_USART1RST);
+            rcu_periph_reset_disable(RCU_USART1RST);
+            break;
+        default:
+            break;
     }
 }
 
@@ -68,30 +68,30 @@ void usart_deinit(uint32_t usart_periph)
 void usart_baudrate_set(uint32_t usart_periph, uint32_t baudval)
 {
     uint32_t uclk = 0U, intdiv = 0U, fradiv = 0U, udiv = 0U;
-    switch(usart_periph) {
-    /* get clock frequency */
-    case USART0:
-        /* get USART0 clock */
-        uclk = rcu_clock_freq_get(CK_USART);
-        break;
-    case USART1:
-        /* get USART1 clock */
-        uclk = rcu_clock_freq_get(CK_APB1);
-        break;
-    default:
-        break;
+    switch (usart_periph) {
+        /* get clock frequency */
+        case USART0:
+            /* get USART0 clock */
+            uclk = rcu_clock_freq_get(CK_USART);
+            break;
+        case USART1:
+            /* get USART1 clock */
+            uclk = rcu_clock_freq_get(CK_APB1);
+            break;
+        default:
+            break;
     }
-    if(USART_CTL0(usart_periph) & USART_CTL0_OVSMOD) {
+    if (USART_CTL0(usart_periph) & USART_CTL0_OVSMOD) {
         /* oversampling by 8, configure the value of USART_BAUD */
-        udiv = ((2U * uclk) + baudval / 2U) / baudval;
-        intdiv = udiv & 0x0000fff0U;
-        fradiv = (udiv >> 1U) & 0x00000007U;
+        udiv                     = ((2U * uclk) + baudval / 2U) / baudval;
+        intdiv                   = udiv & 0x0000fff0U;
+        fradiv                   = (udiv >> 1U) & 0x00000007U;
         USART_BAUD(usart_periph) = ((USART_BAUD_FRADIV | USART_BAUD_INTDIV) & (intdiv | fradiv));
     } else {
         /* oversampling by 16, configure the value of USART_BAUD */
-        udiv = (uclk + baudval / 2U) / baudval;
-        intdiv = udiv & 0x0000fff0U;
-        fradiv = udiv & 0x0000000fU;
+        udiv                     = (uclk + baudval / 2U) / baudval;
+        intdiv                   = udiv & 0x0000fff0U;
+        fradiv                   = udiv & 0x0000000fU;
         USART_BAUD(usart_periph) = ((USART_BAUD_FRADIV | USART_BAUD_INTDIV) & (intdiv | fradiv));
     }
 }
@@ -252,33 +252,33 @@ void usart_invert_config(uint32_t usart_periph, usart_invert_enum invertpara)
 {
     USART_CTL0(usart_periph) &= ~(USART_CTL0_UEN);
     /* inverted or not the specified signal */
-    switch(invertpara) {
-    case USART_DINV_ENABLE:
-        USART_CTL1(usart_periph) |= USART_CTL1_DINV;
-        break;
-    case USART_DINV_DISABLE:
-        USART_CTL1(usart_periph) &= ~(USART_CTL1_DINV);
-        break;
-    case USART_TXPIN_ENABLE:
-        USART_CTL1(usart_periph) |= USART_CTL1_TINV;
-        break;
-    case USART_TXPIN_DISABLE:
-        USART_CTL1(usart_periph) &= ~(USART_CTL1_TINV);
-        break;
-    case USART_RXPIN_ENABLE:
-        USART_CTL1(usart_periph) |= USART_CTL1_RINV;
-        break;
-    case USART_RXPIN_DISABLE:
-        USART_CTL1(usart_periph) &= ~(USART_CTL1_RINV);
-        break;
-    case USART_SWAP_ENABLE:
-        USART_CTL1(usart_periph) |= USART_CTL1_STRP;
-        break;
-    case USART_SWAP_DISABLE:
-        USART_CTL1(usart_periph) &= ~(USART_CTL1_STRP);
-        break;
-    default:
-        break;
+    switch (invertpara) {
+        case USART_DINV_ENABLE:
+            USART_CTL1(usart_periph) |= USART_CTL1_DINV;
+            break;
+        case USART_DINV_DISABLE:
+            USART_CTL1(usart_periph) &= ~(USART_CTL1_DINV);
+            break;
+        case USART_TXPIN_ENABLE:
+            USART_CTL1(usart_periph) |= USART_CTL1_TINV;
+            break;
+        case USART_TXPIN_DISABLE:
+            USART_CTL1(usart_periph) &= ~(USART_CTL1_TINV);
+            break;
+        case USART_RXPIN_ENABLE:
+            USART_CTL1(usart_periph) |= USART_CTL1_RINV;
+            break;
+        case USART_RXPIN_DISABLE:
+            USART_CTL1(usart_periph) &= ~(USART_CTL1_RINV);
+            break;
+        case USART_SWAP_ENABLE:
+            USART_CTL1(usart_periph) |= USART_CTL1_STRP;
+            break;
+        case USART_SWAP_DISABLE:
+            USART_CTL1(usart_periph) &= ~(USART_CTL1_STRP);
+            break;
+        default:
+            break;
     }
 }
 
@@ -1099,7 +1099,7 @@ uint8_t usart_receive_fifo_counter_number(uint32_t usart_periph)
 */
 FlagStatus usart_flag_get(uint32_t usart_periph, usart_flag_enum flag)
 {
-    if(RESET != (USART_REG_VAL(usart_periph, flag) & BIT(USART_BIT_POS(flag)))) {
+    if (RESET != (USART_REG_VAL(usart_periph, flag) & BIT(USART_BIT_POS(flag)))) {
         return SET;
     } else {
         return RESET;
@@ -1235,7 +1235,7 @@ FlagStatus usart_interrupt_flag_get(uint32_t usart_periph, usart_interrupt_flag_
     /* get the corresponding flag bit status */
     flagstatus = (USART_REG_VAL2(usart_periph, int_flag) & BIT(USART_BIT_POS2(int_flag)));
 
-    if(flagstatus && intenable) {
+    if (flagstatus && intenable) {
         return SET;
     } else {
         return RESET;
@@ -1266,7 +1266,7 @@ FlagStatus usart_interrupt_flag_get(uint32_t usart_periph, usart_interrupt_flag_
 */
 void usart_interrupt_flag_clear(uint32_t usart_periph, usart_interrupt_flag_enum flag)
 {
-    if(USART_INT_FLAG_RFF == flag) {
+    if (USART_INT_FLAG_RFF == flag) {
         USART_RFCS(usart_periph) &= (uint32_t)(~USART_RFCS_RFFINT);
     } else {
         USART_INTC(usart_periph) |= BIT(USART_BIT_POS2(flag));

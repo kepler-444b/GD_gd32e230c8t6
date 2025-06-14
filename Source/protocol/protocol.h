@@ -1,8 +1,10 @@
 #ifndef _PROTOCOL_H_
 #define _PROTOCOL_H_
 
+#include <stdbool.h>
 #define AT_HEAD "AT+SEND=FFFFFFFFFFFF" // AT 指令固定帧头
 
+static bool is_offline = true;
 // 用于保存接收到的有效数据
 typedef struct
 {
@@ -22,5 +24,5 @@ typedef void (*ValidDataCallback)(valid_data_t *data);
 
 void app_proto_init(void);
 void app_at_send(at_frame_t *at_frame_t);
-void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t cmd, uint8_t func);
+void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t cmd, uint8_t func, bool is_ex);
 #endif

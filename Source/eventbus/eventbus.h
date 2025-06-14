@@ -3,12 +3,17 @@
 
 // 事件类型定义(根据需求修改)
 typedef enum {
-    EVENT_BUTTON_PRESS,
-    EVENT_SENSOR_UPDATE,
-    EVENT_TIMER_TICK,
+
+    EVENT_ONLINE,  // 设备上线
+    EVENT_OFFLINE, // 设备离线
+
     EVENT_ENTER_CONFIG, // 进入配置模式
     EVENT_EXIT_CONFIG,  // 退出配置模式
     EVENT_SAVE_SUCCESS, // 配置信息保存成功
+
+    EVENT_ENTER_CONFIG_EX, // 进入配置模式
+    EVENT_EXIT_CONFIG_EX,  // 退出配置模式
+    EVENT_SAVE_SUCCESS_EX, // 配置信息保存成功
 
     EVENT_SEND_CMD,    // 面板发送命令
     EVENT_RECEIVE_CMD, // 模块接收命令

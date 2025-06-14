@@ -14,7 +14,7 @@
 
 // 获取GPIO
 #define APP_GET_GPIO(obj) \
-    (((uint32_t)RESET != (GPIO_ISTAT((obj).port) & ((obj).pin))) ? SET : RESET)
+    (((bool)false != (GPIO_ISTAT((obj).port) & ((obj).pin))) ? true : false)
 
 typedef struct {
     uint32_t port;

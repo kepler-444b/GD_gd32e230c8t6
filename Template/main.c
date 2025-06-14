@@ -36,7 +36,7 @@ static void app_serve_task(void *pvParameters)
     app_eventbus_init();       // 事件总线
     app_proto_init();          // 协议层
     app_watchdog_init();       // 看门狗
-
+ 
     // 加载配置和设备初始化
     app_load_config();
     app_jump_device_init();

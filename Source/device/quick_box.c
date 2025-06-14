@@ -22,57 +22,68 @@ typedef struct {
     bool enter_config;        // 进入配置状态
     uint16_t key_long_count;  // 长按计数
     uint32_t led_filck_count; // 闪烁计数
+
+    bool zero_now;
+    bool zero_last;
 } common_quick_t;
 static common_quick_t my_common_quick = {0};
 
 typedef struct
 {
-    bool led_open;
-    bool led_last;
-} quick_status_t;
-static quick_status_t my_quick_status[LED_NUMBER_COUNT] = {0};
+    bool tigger_relay;
+    bool relay_status;
+} tigger_relay_t;
+static tigger_relay_t my_tigger_relay[3] = {0};
+
+static gpio_pin_typedef_t relay_pins[3] = {0};
 
 void quick_box_gpio_init(void);
+void quick_zero_init(void);
 void quick_box_data_cb(valid_data_t *data);
 void quick_event_handler(event_type_e event, void *params);
 void quick_box_timer(TimerHandle_t xTimer);
 void quick_ctrl_led_all(bool status);
+void quick_tigger_relay(void);
+void quick_led_open(uint8_t scene_num, bool status);
 
 void quick_box_init(void)
 {
     APP_PRINTF("quick_box_init\n");
     quick_box_gpio_init();
 
-    // 上电后,先关闭所有灯
-    APP_SET_GPIO(PB5, false);
-    APP_SET_GPIO(PB6, false);
-    APP_SET_GPIO(PB7, false);
+    app_eventbus_subscribe(quick_event_handler); // 订阅事件总线
 
-    // 订阅事件总线
-    app_eventbus_subscribe(quick_event_handler);
+    quick_zero_init(); // 初始化零点检测
 
     // 初始化一个静态定时器,用于检测值
     static StaticTimer_t CheckZeroStaticBuffer;
     static TimerHandle_t CheckZeroTimerHandle = NULL;
 
     CheckZeroTimerHandle = xTimerCreateStatic(
-        "QuickTimer",          // 定时器名称(调试用)
-        pdMS_TO_TICKS(1),      // 定时周期(1ms)
-        pdTRUE,                // 自动重载(TRUE=周期性，FALSE=单次)
-        NULL,                  // 定时器ID(可用于传递参数)
-        quick_box_timer,       // 回调函数
-        &CheckZeroStaticBuffer // 静态内存缓冲区
-    );
-    // 启动定时器(0表示不阻塞)
-    if (xTimerStart(CheckZeroTimerHandle, 0) != pdPASS) {
+        "QuickTimer",
+        pdMS_TO_TICKS(1),
+        pdTRUE,
+        NULL,
+        quick_box_timer,
+        &CheckZeroStaticBuffer);
+
+    if (xTimerStart(CheckZeroTimerHandle, 0) != pdPASS) { // 启动定时器
         APP_ERROR("CheckZeroTimerHandle error");
     }
 
-    gpio_pin_typedef_t pins[3] = {PB7, PB6, PB5};
-    app_pwm_init(pins, 3);
+    gpio_pin_typedef_t led_pins[3] = {PB7, PB6, PB5}; // (led与io口映射)顺序为 led1,led2,led3
+    app_pwm_init(led_pins, 3);
+
+    relay_pins[0] = PB13;
+    relay_pins[1] = PB14;
+    relay_pins[2] = PB15;
+
     // app_set_pwm_fade(0, 10, 1000);
     // app_set_pwm_fade(1, 10, 1000);
     // app_set_pwm_fade(2, 10, 1000);
+    // APP_SET_GPIO(PB13, true);
+    // APP_SET_GPIO(PB14, true);
+    // APP_SET_GPIO(PB15, true);
 }
 
 void quick_box_gpio_init(void)
@@ -104,23 +115,79 @@ void quick_box_gpio_init(void)
     gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_15); // OUT7
 }
 
+void quick_zero_init(void)
+{
+    // (零点检测对实时性要求高,摒弃轮询方式,采用外部中断触发)
+
+    rcu_periph_clock_enable(RCU_CFGCMP);                           // EXIT 线路与 GPIO 相连接
+    syscfg_exti_line_config(EXTI_SOURCE_GPIOB, EXTI_SOURCE_PIN11); // GPIO 配置为外部中断
+    exti_init(EXTI_11, EXTI_INTERRUPT, EXTI_TRIG_RISING);          // 上升沿触发
+    nvic_irq_enable(EXTI4_15_IRQn, 3);
+}
+
+void EXTI4_15_IRQHandler(void)
+{
+    if (exti_interrupt_flag_get(EXTI_11) != RESET) {
+        exti_interrupt_flag_clear(EXTI_11);
+        quick_tigger_relay();
+    }
+}
+
+// 执行场景
+void quick_led_open(uint8_t scene_num, bool status)
+{
+    const quick_ctg_t *temp_cfg = app_get_quick_cfg();
+    if (status) {
+        for (uint8_t i = 0; i < 3; i++) {
+            app_set_pwm_fade(i, SCALE_100_TO_500(temp_cfg->key_packet[scene_num].target[i]), SCALE_5_TO_5000(temp_cfg->speed));
+            if (temp_cfg->key_packet[scene_num].target[3 + i] <= 100) {
+                my_tigger_relay[i].relay_status = temp_cfg->key_packet[scene_num].target[3 + i];
+                my_tigger_relay[i].tigger_relay = true;
+            }
+        }
+    } else {
+        for (uint8_t i = 0; i < 3; i++) {
+            app_set_pwm_fade(i, 0, SCALE_5_TO_5000(temp_cfg->speed));
+            my_tigger_relay[i].relay_status = temp_cfg->key_packet[scene_num].target[3 + i];
+            my_tigger_relay[i].tigger_relay = true;
+        }
+    }
+}
+
+// 触发继电器
+void quick_tigger_relay(void)
+{
+    for (uint8_t i = 0; i < 3; i++) {
+        if (my_tigger_relay[i].relay_status == true &&
+            my_tigger_relay[i].tigger_relay == true) {
+
+            APP_SET_GPIO(relay_pins[i], true);
+            my_tigger_relay[i].tigger_relay = false;
+        } else if (my_tigger_relay[i].relay_status == false &&
+                   my_tigger_relay[i].tigger_relay == true) {
+
+            APP_SET_GPIO(relay_pins[i], false);
+            my_tigger_relay[i].tigger_relay = false;
+        }
+    }
+}
+
 void quick_box_data_cb(valid_data_t *data)
 {
     APP_PRINTF_BUF("quick_recv", data->data, data->length);
     const quick_ctg_t *temp_cfg = app_get_quick_cfg();
 
-    for (uint8_t i = 0; i < LED_NUMBER_COUNT; i++) {
+    for (uint8_t i = 0; i < LED_NUMBER_COUNT; i++) { // 匹配按键
         if (temp_cfg->key_packet[i].key_func == data->data[1] &&
             temp_cfg->key_packet[i].key_group == data->data[3] &&
             temp_cfg->key_packet[i].key_area == data->data[6] &&
             temp_cfg->key_packet[i].key_scene == data->data[7] &&
             temp_cfg->key_packet[i].key_perm == data->data[4]) {
             if (temp_cfg->key_packet[i].key_area & 0x10) { // 如果勾选了只开
-                my_quick_status[i].led_open = true;
+                quick_led_open(i, true);
             } else {
-                my_quick_status[i].led_open = data->data[2];
+                quick_led_open(i, data->data[2]);
             }
-            APP_PRINTF("%d\n", i);
         }
     }
 }
@@ -143,7 +210,7 @@ void quick_event_handler(event_type_e event, void *params)
         case EVENT_RECEIVE_CMD: {
             valid_data_t *valid_data = (valid_data_t *)params;
             quick_box_data_cb(valid_data);
-        }
+        } break;
         default:
             return;
     }
@@ -152,14 +219,13 @@ void quick_event_handler(event_type_e event, void *params)
 void quick_box_timer(TimerHandle_t xTimer)
 {
     const quick_ctg_t *temp_cfg = app_get_quick_cfg();
-    // FlagStatus status = APP_GET_GPIO(PB11);
-    // APP_PRINTF("status:%d\n", status);
+
     my_common_quick.key_status = APP_GET_GPIO(PA0);
 
     if (my_common_quick.key_status == false) { // 按键按下
         my_common_quick.key_long_count++;
         if (my_common_quick.key_long_count >= 5000) { // 触发长按
-            app_send_cmd(0, 0, 0xF8, 0x00);
+            app_send_cmd(0, 0, 0xF8, 0x00);           // 向上位机发送配置申请
             APP_PRINTF("long_press\n");
             my_common_quick.key_long_count = 0;
         }
@@ -174,43 +240,10 @@ void quick_box_timer(TimerHandle_t xTimer)
         } else if (my_common_quick.led_filck_count <= 1000) {
             quick_ctrl_led_all(false);
         } else {
-            my_common_quick.led_filck_count = 0;     // 重置计数器
-            my_common_quick.led_filck       = false; // 停止闪烁
             quick_ctrl_led_all(true);
-        }
-    }
+            my_common_quick.led_filck_count = 0; // 重置计数器
 
-    for (uint8_t i = 0; i < LED_NUMBER_COUNT; i++) { // led 轮询
-        if (my_quick_status[i].led_open != my_quick_status[i].led_last) {
-            if (my_quick_status[i].led_open) {
-                APP_PRINTF("timer:%d\n", SCALE_5_TO_5000(temp_cfg->speed));
-                app_set_pwm_fade(0, SCALE_100_TO_500(temp_cfg->key_packet[i].target[0]), SCALE_5_TO_5000(temp_cfg->speed));
-                app_set_pwm_fade(1, SCALE_100_TO_500(temp_cfg->key_packet[i].target[1]), SCALE_5_TO_5000(temp_cfg->speed));
-                app_set_pwm_fade(2, SCALE_100_TO_500(temp_cfg->key_packet[i].target[2]), SCALE_5_TO_5000(temp_cfg->speed));
-                if (temp_cfg->key_packet->target[3] <= 100) {
-                    APP_SET_GPIO(PB7, temp_cfg->key_packet->target[3]);
-                }
-                if (temp_cfg->key_packet->target[4] <= 100) {
-                    APP_SET_GPIO(PB6, temp_cfg->key_packet->target[4]);
-                }
-                if (temp_cfg->key_packet->target[5] <= 100) {
-                    APP_SET_GPIO(PB5, temp_cfg->key_packet->target[5]);
-                }
-
-            } else {
-                app_set_pwm_fade(0, 0, SCALE_5_TO_5000(temp_cfg->speed));
-                app_set_pwm_fade(1, 0, SCALE_5_TO_5000(temp_cfg->speed));
-                app_set_pwm_fade(2, 0, SCALE_5_TO_5000(temp_cfg->speed));
-                APP_SET_GPIO(PB7, false);
-                APP_SET_GPIO(PB6, false);
-                APP_SET_GPIO(PB5, false);
-            }
-            if (temp_cfg->key_packet[i].key_area & 0x10) { // 如果勾选了"只开"
-                my_quick_status[i].led_open = false;
-                my_quick_status[i].led_last = false;
-            } else {
-                my_quick_status[i].led_last = my_quick_status[i].led_open;
-            }
+            my_common_quick.led_filck = false; // 停止闪烁
         }
     }
 }
@@ -218,16 +251,10 @@ void quick_box_timer(TimerHandle_t xTimer)
 void quick_ctrl_led_all(bool status)
 {
     if (status == true) {
-        APP_SET_GPIO(PB7, true);
-        APP_SET_GPIO(PB6, true);
-        APP_SET_GPIO(PB5, true);
         app_set_pwm_duty(0, 500);
         app_set_pwm_duty(1, 500);
         app_set_pwm_duty(2, 500);
     } else {
-        APP_SET_GPIO(PB7, false);
-        APP_SET_GPIO(PB6, false);
-        APP_SET_GPIO(PB5, false);
         app_set_pwm_duty(0, 0);
         app_set_pwm_duty(1, 0);
         app_set_pwm_duty(2, 0);
