@@ -5,7 +5,6 @@
 #include "main.h"
 #include "FreeRTOS.h"
 #include "task.h"
-#include "timers.h"
 #include "../Source/uart/uart.h"
 #include "../Source/base/debug.h"
 #include "../Source/base/base.h"
@@ -17,7 +16,7 @@
 #include "../Source/watchdog/watchdog.h"
 #include "../device/device_manager.h"
 
-StackType_t AppInitStackBuffer[128]; // 分配256字(word)的栈空间
+StackType_t AppInitStackBuffer[128]; // 分配128字(word)的栈空间
 StaticTask_t AppInitStaticBuffer;
 
 // FreeRTOS 检测堆栈溢出的钩子函数,在这里实现
@@ -28,7 +27,7 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
     while (1); // 死循环,便于调试
 }
 
-static void app_serve_task(void *pvParameters)
+static void app_main_task(void *pvParameters)
 {
     // 初始化硬件和外设
     app_usart_init(1, 115200); // 调试串口
@@ -36,7 +35,7 @@ static void app_serve_task(void *pvParameters)
     app_eventbus_init();       // 事件总线
     app_proto_init();          // 协议层
     app_watchdog_init();       // 看门狗
- 
+
     // 加载配置和设备初始化
     app_load_config();
     app_jump_device_init();
@@ -44,7 +43,7 @@ static void app_serve_task(void *pvParameters)
         app_eventbus_poll();
         vTaskDelay(1); // 延时1ms,让出cpu
 
-#if 0 // 打印任务剩余栈空间(word)
+#if 0 // 打印任务剩余栈空间(word),调试使用
         UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
         APP_PRINTF("Stack remaining: %lu words\n", (unsigned long)uxHighWaterMark);
         vTaskDelay(pdMS_TO_TICKS(1000));
@@ -56,9 +55,9 @@ int main(void)
     systick_config(); // 配置系统定时器
 
     TaskHandle_t AppInitTaskHandle = xTaskCreateStatic(
-        app_serve_task,           // 主任务
+        app_main_task,            // 主任务
         "app_init_task",          // 任务名称
-        128,                      // 任务堆栈大小(256个word)
+        128,                      // 任务堆栈大小(128个word)
         NULL,                     // 任务参数(可传递给任务函数的void指针)
         configMAX_PRIORITIES - 1, // 优先级
         AppInitStackBuffer,       // 静态分配的堆栈空间数组

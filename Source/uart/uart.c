@@ -4,7 +4,8 @@
 #include "gd32e230c_eval.h"
 #include "gd32e23x_usart.h"
 #include "uart.h"
-
+#include "FreeRTOS.h"
+#include "task.h"
 #include "../base/debug.h"
 #include "../base/base.h"
 
@@ -95,7 +96,7 @@ void app_usart_tx_byte(uint8_t data)
 {
     usart_data_transmit(USART0, data);
     while (RESET == usart_flag_get(USART0, USART_FLAG_TBE));
-    APP_DELAY_1MS();
+    vTaskDelay(1);
 }
 
 // 发送字符串

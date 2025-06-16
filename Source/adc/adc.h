@@ -3,13 +3,11 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-/* 
+/*
     2025.5.26 舒东升
     adc采集电流,支持四路adc通道,
     采用DMA传输采集的电压值
 */
-
-
 
 // 用于配置adc通道的结构体
 typedef struct {

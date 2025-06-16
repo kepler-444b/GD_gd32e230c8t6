@@ -202,6 +202,7 @@ void quick_event_handler(event_type_e event, void *params)
         case EVENT_EXIT_CONFIG: { // 退出配置模式
             quick_ctrl_led_all(false);
             my_common_quick.enter_config = false;
+            NVIC_SystemReset(); // 退出"配置模式"后触发软件复位
         } break;
         case EVENT_SAVE_SUCCESS:
             my_common_quick.led_filck = true;
@@ -224,8 +225,8 @@ void quick_box_timer(TimerHandle_t xTimer)
 
     if (my_common_quick.key_status == false) { // 按键按下
         my_common_quick.key_long_count++;
-        if (my_common_quick.key_long_count >= 5000) { // 触发长按
-            app_send_cmd(0, 0, 0xF8, 0x00);           // 向上位机发送配置申请
+        if (my_common_quick.key_long_count >= 5000) {       // 触发长按
+            app_send_cmd(0, 0, JD_RECV_APPLY, 0x00, false); // 向上位机发送配置申请
             APP_PRINTF("long_press\n");
             my_common_quick.key_long_count = 0;
         }

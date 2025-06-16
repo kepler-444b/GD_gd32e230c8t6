@@ -2,7 +2,6 @@
 #define _PROTOCOL_H_
 
 #include <stdbool.h>
-
 /*
     2025.6.14 舒东升
     本模块用于设备与PLC模组通信的协议
@@ -39,4 +38,42 @@ typedef void (*ValidDataCallback)(valid_data_t *data);
 void app_proto_init(void);
 void app_at_send(at_frame_t *at_frame_t);
 void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t cmd, uint8_t func, bool is_ex);
+
+typedef enum {
+    PANEL_HEAD = 0xF1, // 帧头
+
+    QUICK_SINGLE = 0xE1, // quick (快装盒子)单发串码
+    PANEL_SINGLE = 0xF2, // panel (面板)单发串码
+    PANEL_MULTI  = 0xF3, // panel (面板)群发串码
+    APPLY_CONFIG = 0xF8, // 设置软件回复设置申请
+    EXIT_CONFIG  = 0xF9, // 设置软件"退出"配置模式
+
+    // 按键功能
+    ALL_CLOSE     = 0x00, // 总关
+    ALL_ON_OFF    = 0x01, // 总开关
+    CLEAN_ROOM    = 0x02, // 清理模式
+    DND_MODE      = 0x03, // 勿扰模式
+    LATER_MODE    = 0x04, // 请稍后
+    CHECK_OUT     = 0x05, // 退房
+    SOS_MODE      = 0x06, // 紧急呼叫
+    SERVICE       = 0x07, // 请求服务
+    CURTAIN_OPEN  = 0x10, // 窗帘开
+    CURTAIN_CLOSE = 0x11, // 窗帘关
+    SCENE_MODE    = 0x0D, // 场景模式
+    LIGHT_MODE    = 0x0E, // 灯控模式
+    NIGHT_LIGHT   = 0x0F, // 夜灯模式
+    LIGHT_UP      = 0x18, // 调光上键
+    LIGHT_DOWN    = 0x1B, // 调光下键
+    DIMMING_3     = 0x1E, // 调光3
+    DIMMING_4     = 0x21, // 调光4
+    UNLOCKING     = 0x60, // 开锁
+    BLUETOOTH     = 0x61, // 蓝牙
+    CURTAIN_STOP  = 0x62, // 窗帘停
+    VOLUME_ADD    = 0x63, // 音量+
+    VOLUME_SUB    = 0x64, // 音量-;
+    PLAY_PAUSE    = 0x65, // 播放/暂停
+    NEXT_SONG     = 0x66, // 下一首
+    LAST_SONG     = 0x67, // 上一首
+
+} common_frame;
 #endif

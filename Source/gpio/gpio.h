@@ -4,6 +4,16 @@
 #include <stdbool.h>
 #include "../base/debug.h"
 
+/*
+    2025.5.9 舒东升
+    将GPIO操作抽象化,引入 gpio_pin_typedef_t 类型,
+    将port和pin合为一个参数,使得操作更灵活
+    利用宏定义
+    APP_SET_GPIO 替换 gpio_bit_set
+    APP_GET_GPIO 替换 gpio_input_bit_get
+    在频繁操作GPIO的时候(如PWM)更加高效
+*/
+
 // 检查GPIO是否有效
 #define GPIO_IS_VALID(obj) \
     ((obj).pin != 0 || (obj).port != 0)
@@ -20,7 +30,6 @@ typedef struct {
     uint32_t port;
     uint32_t pin;
 } gpio_pin_typedef_t;
-
 
 const char *app_get_gpio_name(gpio_pin_typedef_t gpio);
 

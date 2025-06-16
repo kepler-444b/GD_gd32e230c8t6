@@ -1,6 +1,13 @@
 #ifndef _UART_H_
 #define _UART_H_
 
+/*
+    2025.5.8 舒东升
+    两路 usart 的初始化,完成收发功能,
+    暂使用一个固定的缓冲区 uart_rx_buffer_t,
+    usart0 为业务串口,usart1 为调试串口,
+*/
+
 #define UART_RECV_SIZE 256
 typedef struct {
     uint8_t buffer[UART_RECV_SIZE];

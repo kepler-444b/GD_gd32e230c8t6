@@ -83,12 +83,12 @@ void app_proto_process(valid_data_t *my_valid_data)
 {
     APP_PRINTF_BUF("[recv]", my_valid_data->data, my_valid_data->length);
     switch (my_valid_data->data[0]) {
-        case 0xF1: // 收到其他设备的AT指令
+        case PANEL_HEAD: // 收到其他设备的AT指令
             if (my_valid_data->data[5] == CALC_CRC(my_valid_data->data, 5)) {
                 app_eventbus_publish(EVENT_RECEIVE_CMD, my_valid_data);
             }
             break;
-        case 0xF2: // panel 串码(单发)
+        case PANEL_SINGLE: // panel 串码(单发)
             if (my_apply.enter_apply == true) {
                 if (my_valid_data->data[24] == CALC_CRC(my_valid_data->data, 24)) {
                     memcpy(extend_data, &my_valid_data->data[25], 9);
@@ -98,7 +98,7 @@ void app_proto_process(valid_data_t *my_valid_data)
                 }
             }
             break;
-        case 0xF3: // panel 串码(群发)
+        case PANEL_MULTI: // panel 串码(群发)
             if (my_valid_data->data[24] == CALC_CRC(my_valid_data->data, 24)) {
                 memcpy(extend_data, &my_valid_data->data[25], 9);
                 if (extend_data[9] == CALC_CRC(extend_data, 9)) {
@@ -106,7 +106,7 @@ void app_proto_process(valid_data_t *my_valid_data)
                 }
             }
             break;
-        case 0xE1: // quick 串码(单发)
+        case QUICK_SINGLE: // quick 串码(单发)
             if (my_apply.enter_apply == true) {
                 if ((my_valid_data->data[1] * 11 + 5) == my_valid_data->length) { // 确定长度
                     uint16_t crc = (my_valid_data->data[my_valid_data->length - 2] << 8) | my_valid_data->data[my_valid_data->length - 1];
@@ -117,13 +117,13 @@ void app_proto_process(valid_data_t *my_valid_data)
             }
 
             break;
-        case 0xF8: // 设置软件回复(若不是本设备发送的申请,则屏蔽软件的回复)
+        case APPLY_CONFIG: // 设置软件回复(若不是本设备发送的申请,则屏蔽软件的回复)
             if (my_valid_data->data[1] == 0x02 && my_valid_data->data[2] == 0x06 && my_apply.apply_cmd) {
                 app_eventbus_publish(my_apply.is_ex ? EVENT_ENTER_CONFIG_EX : EVENT_ENTER_CONFIG, NULL);
                 my_apply.enter_apply = true;
             }
             break;
-        case 0xF9: // 接收上位机发送退出命令
+        case EXIT_CONFIG: // 接收上位机发送退出命令
             if (my_valid_data->data[1] == 0x03 && my_valid_data->data[2] == 0x04 && my_apply.enter_apply) {
                 app_eventbus_publish(my_apply.is_ex ? EVENT_EXIT_CONFIG_EX : EVENT_EXIT_CONFIG, NULL);
                 my_apply.enter_apply = false;
@@ -182,9 +182,9 @@ void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t cmd, uint8_t f
     static at_frame_t my_at_frame = {0};
 
     switch (cmd) {
-        case 0xF1: { // 发送通信帧(panel产品用到)
+        case PANEL_HEAD: { // 发送通信帧(panel产品用到)
 #if defined PANEL_KEY
-            my_at_frame.data[0] = 0xF1;
+            my_at_frame.data[0] = PANEL_HEAD;
 
             // 验证按键编号有效性
             if (key_number > KEY_NUMBER_COUNT) {
@@ -192,8 +192,8 @@ void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t cmd, uint8_t f
                 return;
             }
 
-            if (func == 0x62) { // 特殊命令(窗帘开关)
-                my_at_frame.data[1] = 0x62;
+            if (func == CURTAIN_STOP) { // 特殊命令(窗帘开关)
+                my_at_frame.data[1] = CURTAIN_STOP;
                 my_at_frame.data[2] = 0x00;
             } else if (func == 0x00) { // 通用命令
                 uint8_t func_value = temp_cfg[key_number].key_func;
@@ -215,8 +215,8 @@ void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t cmd, uint8_t f
 #endif
         } break;
 
-        case 0xF8: { // 申请进入设置模式(所有产品通用)
-            my_at_frame.data[0] = 0xF8;
+        case APPLY_CONFIG: { // 申请进入设置模式(所有产品通用)
+            my_at_frame.data[0] = APPLY_CONFIG;
             my_at_frame.data[1] = 0x01;
             my_at_frame.data[2] = 0x07;
             my_at_frame.length  = 3;
@@ -224,7 +224,6 @@ void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t cmd, uint8_t f
             my_apply.apply_cmd = true;
 
             my_apply.is_ex = is_ex;
-            APP_PRINTF("0xF8:%d\n", my_apply.is_ex);
         } break;
         default:
             return;

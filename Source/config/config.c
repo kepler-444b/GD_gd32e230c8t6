@@ -7,17 +7,31 @@
 #include "../device/device_manager.h"
 
 #if defined PANEL_KEY
+
+#if defined PANEL_6KEY
 static panel_cfg_t my_panel_cfg[KEY_NUMBER_COUNT] = {0};
 
-#if defined PANEL_8KEY
-static panel_cfg_t my_panel_cfg_ex[KEY_NUMBER_COUNT] = {0};
+static const gpio_pin_typedef_t RELAY_GPIO_MAP[KEY_NUMBER_COUNT] = {PB12, PB13, PB14, PB15};
+static const gpio_pin_typedef_t LED_W_GPIO_MAP[KEY_NUMBER_COUNT] = {PA15, PB3, PB4, PB5, PB6, PB8};
 #endif
-// 预定义继电器GPIO配置
+
+#if defined PANEL_8KEY
+static panel_cfg_t my_panel_cfg[KEY_NUMBER_COUNT]    = {0};
+static panel_cfg_t my_panel_cfg_ex[KEY_NUMBER_COUNT] = {0};
+
+// 预定义 GPIO
 static const gpio_pin_typedef_t RELAY_GPIO_MAP[] = {PB12, PB13, PB14, PB15};
+
+static const gpio_pin_typedef_t LED_W_GPIO_MAP[KEY_NUMBER_COUNT]    = {PB0, PB1, PB2, PB10};
+static const gpio_pin_typedef_t LED_W_GPIO_MAP_EX[KEY_NUMBER_COUNT] = {PA15, PB3, PB4, PB5};
+
+static const gpio_pin_typedef_t LED_Y_GPIO_MAP[KEY_NUMBER_COUNT]    = {PA4, PA5, PA6, PA7};
+static const gpio_pin_typedef_t LED_Y_GPIO_MAP_EX[KEY_NUMBER_COUNT] = {PB6, PB7, PB8, PB9};
+#endif
 
 // 函数声明
 void app_panel_get_relay_num(void);
-static void app_set_key_relay(panel_cfg_t *panel_cfg, uint8_t relay_val);
+static void app_set_relay_pin(panel_cfg_t *panel_cfg, uint8_t relay_val);
 #endif
 
 #if defined QUICK_BOX
@@ -81,14 +95,8 @@ bool app_load_config(void)
             my_panel_cfg[i].key_perm        = new_data[31];
             my_panel_cfg[i].key_scene_group = new_data[32];
         }
+        my_panel_cfg[i].led_w_pin = LED_W_GPIO_MAP[i];
     }
-
-    my_panel_cfg[0].key_led = PA15;
-    my_panel_cfg[1].key_led = PB3;
-    my_panel_cfg[2].key_led = PB4;
-    my_panel_cfg[3].key_led = PB5;
-    my_panel_cfg[4].key_led = PB6;
-    my_panel_cfg[5].key_led = PB8;
     app_panel_get_relay_num();
 
     for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
@@ -97,9 +105,9 @@ bool app_load_config(void)
         APP_PRINTF("[%02X] ", my_panel_cfg[i].key_group);
         APP_PRINTF("[%02X] ", my_panel_cfg[i].key_area);
         APP_PRINTF("[%02X] ", my_panel_cfg[i].key_perm);
-        APP_PRINTF("[%s] ", app_get_gpio_name(my_panel_cfg[i].key_led));
+        APP_PRINTF("[%s] ", app_get_gpio_name(my_panel_cfg[i].led_w_pin));
         for (uint8_t j = 0; j < 4; j++) {
-            APP_PRINTF("[%s] ", app_get_gpio_name(my_panel_cfg[i].key_relay[j]));
+            APP_PRINTF("[%s] ", app_get_gpio_name(my_panel_cfg[i].relay_pin[j]));
         }
         APP_PRINTF("\n");
     }
@@ -113,46 +121,29 @@ bool app_load_config(void)
         my_panel_cfg[i].key_area        = new_data[i + 9];
         my_panel_cfg[i].key_perm        = new_data[i + 13];
         my_panel_cfg[i].key_scene_group = new_data[i + 17];
+        my_panel_cfg[i].led_w_pin       = LED_W_GPIO_MAP[i];
+        my_panel_cfg[i].led_y_pin       = LED_Y_GPIO_MAP[i];
 
         my_panel_cfg_ex[i].key_func        = new_data_ex[i + 1];
         my_panel_cfg_ex[i].key_group       = new_data_ex[i + 5];
         my_panel_cfg_ex[i].key_area        = new_data_ex[i + 9];
         my_panel_cfg_ex[i].key_perm        = new_data_ex[i + 13];
         my_panel_cfg_ex[i].key_scene_group = new_data_ex[i + 17];
+        my_panel_cfg_ex[i].led_w_pin       = LED_W_GPIO_MAP_EX[i];
+        my_panel_cfg_ex[i].led_y_pin       = LED_Y_GPIO_MAP_EX[i];
     }
-    my_panel_cfg[0].key_led = PB0;
-    my_panel_cfg[1].key_led = PB1;
-    my_panel_cfg[2].key_led = PB2;
-    my_panel_cfg[3].key_led = PB10;
-
-    my_panel_cfg_ex[0].key_led = PA15;
-    my_panel_cfg_ex[1].key_led = PB3;
-    my_panel_cfg_ex[2].key_led = PB4;
-    my_panel_cfg_ex[3].key_led = PB5;
 
     app_panel_get_relay_num();
 
-    // for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
-    //     APP_PRINTF("[%d] ", i);
-    //     APP_PRINTF("[%02X] ", my_panel_cfg[i].key_func);
-    //     APP_PRINTF("[%02X] ", my_panel_cfg[i].key_group);
-    //     APP_PRINTF("[%02X] ", my_panel_cfg[i].key_area);
-    //     APP_PRINTF("[%02X] ", my_panel_cfg[i].key_perm);
-    //     APP_PRINTF("[%s] ", app_get_gpio_name(my_panel_cfg[i].key_led));
-    //     for (uint8_t j = 0; j < 4; j++) {
-    //         APP_PRINTF("[%s] ", app_get_gpio_name(my_panel_cfg[i].key_relay[j]));
-    //     }
-    //     APP_PRINTF("\n");
-    // }
     for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
         APP_PRINTF("[%d] ", i);
         APP_PRINTF("[%02X] ", my_panel_cfg_ex[i].key_func);
         APP_PRINTF("[%02X] ", my_panel_cfg_ex[i].key_group);
         APP_PRINTF("[%02X] ", my_panel_cfg_ex[i].key_area);
         APP_PRINTF("[%02X] ", my_panel_cfg_ex[i].key_perm);
-        APP_PRINTF("[%s] ", app_get_gpio_name(my_panel_cfg_ex[i].key_led));
+        APP_PRINTF("[%s] ", app_get_gpio_name(my_panel_cfg_ex[i].led_w_pin));
         for (uint8_t j = 0; j < 4; j++) {
-            APP_PRINTF("[%s] ", app_get_gpio_name(my_panel_cfg_ex[i].key_relay[j]));
+            APP_PRINTF("[%s] ", app_get_gpio_name(my_panel_cfg_ex[i].relay_pin[j]));
         }
         APP_PRINTF("\n");
     }
@@ -191,21 +182,22 @@ void app_panel_get_relay_num(void)
 
         // 奇数取字节的高4位,偶数取字节的低4位
         uint8_t relay_num = (i % 2) ? (new_data[byte_offset] >> 4) : (new_data[byte_offset] & 0x0F);
-        app_set_key_relay(&my_panel_cfg[i], relay_num);
+        app_set_relay_pin(&my_panel_cfg[i], relay_num);
 #if defined PANEL_8KEY
         uint8_t relay_num_ex = (i % 2) ? (new_data_ex[byte_offset] >> 4) : (new_data_ex[byte_offset] & 0x0F);
-        app_set_key_relay(&my_panel_cfg_ex[i], relay_num_ex);
+        app_set_relay_pin(&my_panel_cfg_ex[i], relay_num_ex);
 #endif
     }
 }
 
-static void app_set_key_relay(panel_cfg_t *panel_cfg, uint8_t relay_num)
+static void app_set_relay_pin(panel_cfg_t *panel_cfg, uint8_t relay_num)
 {
-    memset(panel_cfg->key_relay, 0, sizeof(panel_cfg->key_relay));
+    memset(panel_cfg->relay_pin, 0, sizeof(panel_cfg->relay_pin));
     for (uint8_t i = 0; i < 4; i++) { // 只有4个继电器
-        panel_cfg->key_relay[i] = (relay_num & (1 << i)) ? RELAY_GPIO_MAP[i] : DEFAULT;
+        panel_cfg->relay_pin[i] = (relay_num & (1 << i)) ? RELAY_GPIO_MAP[i] : DEFAULT;
     }
 }
+
 #endif
 
 #if defined PANEL_KEY

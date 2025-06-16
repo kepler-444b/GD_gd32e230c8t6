@@ -27,7 +27,6 @@
 
 #else
 
-
 #define APP_PRINTF(...)
 #define APP_PRINTF_BUF(name, buf, len)
 #define APP_ERROR(fmt, ...)
