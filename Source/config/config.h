@@ -16,8 +16,8 @@
 typedef struct
 {
     uint8_t key_func;                // 按键功能
-    uint8_t key_group;               // 按键分组
-    uint8_t key_area;                // 按键区域
+    uint8_t key_group;               // 双控分组
+    uint8_t key_area;                // 按键区域(高4位:总开关分区,低4位:场景分区)
     uint8_t key_perm;                // 按键权限
     uint8_t key_scene_group;         // 场景分组
     gpio_pin_typedef_t relay_pin[4]; // 按键所控继电器

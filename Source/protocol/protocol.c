@@ -154,6 +154,7 @@ void app_save_config(valid_data_t *boj, bool is_ex)
 void app_at_send(at_frame_t *my_at_frame)
 {
     if (is_offline == true) { // 如果设备离线,则把数据发送给自己
+
         app_eventbus_publish(EVENT_RECEIVE_CMD, my_at_frame);
     }
     APP_PRINTF_BUF("[send]", my_at_frame->data, my_at_frame->length);
@@ -256,7 +257,6 @@ uint16_t calcrc_data_quick(uint8_t *rxbuf, uint8_t len)
             }
         }
     }
-
     CRC_L = wcrc & 0xff; // crc的低八位
     CRC_H = wcrc >> 8;   // crc的高八位
     return ((CRC_L << 8) | CRC_H);

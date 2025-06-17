@@ -16,7 +16,7 @@
 */
 #define AT_HEAD "AT+SEND=FFFFFFFFFFFF" // AT 指令固定帧头
 
-static bool is_offline = true;
+static bool is_offline = false;
 
 // 用于保存接收到的有效数据
 typedef struct
