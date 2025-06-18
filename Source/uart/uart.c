@@ -96,7 +96,7 @@ void app_usart_tx_byte(uint8_t data)
 {
     usart_data_transmit(USART0, data);
     while (RESET == usart_flag_get(USART0, USART_FLAG_TBE));
-    APP_DELAY; // 这里必须加一个非阻塞的延时函数(原因未知,可能是plc模组的问题)
+    vTaskDelay(1); // 这里必须加一个非阻塞的延时函数(原因未知,可能是plc模组的问题)
 }
 
 // 发送字符串

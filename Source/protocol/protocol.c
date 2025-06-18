@@ -58,19 +58,16 @@ void app_proto_check(uart_rx_buffer_t *my_uart_rx_buffer)
     if (start_ptr == NULL || *(start_ptr + 1) == '\0') {
         return;
     }
-
     char *end_ptr = strchr(start_ptr + 1, '"');
     // 检查是否找到结束引号，并且位置合理
     if (end_ptr == NULL || end_ptr <= start_ptr + 1) {
         return;
     }
-
     // 计算数据长度并验证是否为偶数个十六进制字符
     size_t hex_len = end_ptr - start_ptr - 1;
     if (hex_len == 0 || hex_len % 2 != 0) {
         return;
     }
-
     // 提取并转换十六进制数据
     my_valid_data.length = hex_len / 2;
     for (uint16_t i = 0; i < my_valid_data.length; i++) {
@@ -115,7 +112,6 @@ void app_proto_process(valid_data_t *my_valid_data)
                     }
                 }
             }
-
             break;
         case APPLY_CONFIG: // 设置软件回复(若不是本设备发送的申请,则屏蔽软件的回复)
             if (my_valid_data->data[1] == 0x02 && my_valid_data->data[2] == 0x06 && my_apply.apply_cmd) {
@@ -153,54 +149,54 @@ void app_save_config(valid_data_t *boj, bool is_ex)
 // 构造发送 AT 帧
 void app_at_send(at_frame_t *my_at_frame)
 {
-    if (is_offline == true) { // 如果设备离线,则把数据发送给自己
-
-        app_eventbus_publish(EVENT_RECEIVE_CMD, my_at_frame);
-    }
     APP_PRINTF_BUF("[send]", my_at_frame->data, my_at_frame->length);
     // 转换为十六进制字符串
-    static char hex_buffer[125] = {0};
-    static char at_frame[256]   = {0};
+    static char hex_buffer[64] = {0};
+    static char at_frame[64]   = {0};
     for (int i = 0; i < my_at_frame->length; i++) {
         snprintf(hex_buffer + 2 * i, 3, "%02X", my_at_frame->data[i]);
     }
 
     snprintf(at_frame, sizeof(at_frame), "%s,%d,\"%s\",1\r\n", AT_HEAD, my_at_frame->length * 2, hex_buffer);
-    app_usart_tx_string(at_frame);
+    app_usart_tx_string(at_frame); // 通过 usart0 发送到给 plc 模组
+
+    if (is_offline == true) { // 如果设备离线,则把数据发送给自己
+        app_eventbus_publish(EVENT_RECEIVE_CMD, my_at_frame);
+    }
 }
 
 // 构造命令
 void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t cmd, uint8_t func, bool is_ex)
 {
-#if defined PANEL_KEY
-#ifndef PANEL_8KEY
-    const panel_cfg_t *temp_cfg = app_get_panel_cfg();
-#endif
-#if defined PANEL_8KEY
-    const panel_cfg_t *temp_cfg = is_ex ? app_get_panel_cfg_ex() : app_get_panel_cfg();
-#endif
-#endif
     static at_frame_t my_at_frame = {0};
+
+    const panel_cfg_t *temp_cfg =
+#if defined PANEL_8KEY
+        is_ex ? app_get_panel_cfg_ex() : app_get_panel_cfg();
+#else
+        app_get_panel_cfg();
+#endif
 
     switch (cmd) {
         case PANEL_HEAD: { // 发送通信帧(panel产品用到)
 #if defined PANEL_KEY
             my_at_frame.data[0] = PANEL_HEAD;
 
-            // 验证按键编号有效性
-            if (key_number > KEY_NUMBER_COUNT) {
+            if (key_number > KEY_NUMBER_COUNT) { // 验证按键编号有效性
                 APP_ERROR("key_number error: %d", key_number);
                 return;
             }
 
-            if (func == CURTAIN_STOP) { // 特殊命令(窗帘开关)
+            if (func == CURTAIN_STOP) { // 特殊命令(窗帘停)
                 my_at_frame.data[1] = CURTAIN_STOP;
                 my_at_frame.data[2] = 0x00;
-            } else if (func == 0x00) { // 通用命令
-                uint8_t func_value = temp_cfg[key_number].key_func;
-
-                my_at_frame.data[1] = func_value;
-                my_at_frame.data[2] = key_status;
+            } else { // 通用命令
+                my_at_frame.data[1] = temp_cfg[key_number].key_func;
+                if (BIT4(temp_cfg[key_number].key_perm) == true) {
+                    my_at_frame.data[2] = true;
+                } else {
+                    my_at_frame.data[2] = key_status;
+                }
             }
 
             // 设置分组、区域、权限和场景组信息
@@ -215,7 +211,6 @@ void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t cmd, uint8_t f
             app_at_send(&my_at_frame);
 #endif
         } break;
-
         case APPLY_CONFIG: { // 申请进入设置模式(所有产品通用)
             my_at_frame.data[0] = APPLY_CONFIG;
             my_at_frame.data[1] = 0x01;
@@ -223,41 +218,35 @@ void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t cmd, uint8_t f
             my_at_frame.length  = 3;
             app_at_send(&my_at_frame);
             my_apply.apply_cmd = true;
-
-            my_apply.is_ex = is_ex;
+            my_apply.is_ex     = is_ex;
         } break;
         default:
             return;
     }
 }
 
-// 用于快装盒子的校验
+// 用于快装盒子串码的校验
 uint16_t calcrc_data_quick(uint8_t *rxbuf, uint8_t len)
 {
     uint16_t wcrc = 0XFFFF; // 16位crc寄存器预置
     uint8_t temp;
     uint8_t CRC_L; // 定义数组
     uint8_t CRC_H;
-
-    uint16_t i = 0, j = 0;    // 计数
-    for (i = 0; i < len; i++) // 循环计算每个数据
-    {
-        temp = *rxbuf & 0X00FF; // 将八位数据与crc寄存器亦或
-        rxbuf++;                // 指针地址增加，指向下个数据
-        wcrc ^= temp;           // 将数据存入crc寄存器
-        for (j = 0; j < 8; j++) // 循环计算数据的
-        {
-            if (wcrc & 0X0001) // 判断右移出的是不是1，如果是1则与多项式进行异或。
-            {
-                wcrc >>= 1;     // 先将数据右移一位
-                wcrc ^= 0XA001; // 与上面的多项式进行异或
-            } else              // 如果不是1，则直接移出
-            {
-                wcrc >>= 1; // 直接移出
+    uint16_t i = 0, j = 0;
+    for (i = 0; i < len; i++) {
+        temp = *rxbuf & 0X00FF;
+        rxbuf++;
+        wcrc ^= temp;
+        for (j = 0; j < 8; j++) {
+            if (wcrc & 0X0001) {
+                wcrc >>= 1;
+                wcrc ^= 0XA001;
+            } else {
+                wcrc >>= 1;
             }
         }
     }
-    CRC_L = wcrc & 0xff; // crc的低八位
-    CRC_H = wcrc >> 8;   // crc的高八位
+    CRC_L = wcrc & 0xff;
+    CRC_H = wcrc >> 8;
     return ((CRC_L << 8) | CRC_H);
 }

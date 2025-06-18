@@ -23,7 +23,7 @@
 #define DEFAULT_MIN_VALUE       329 // 无按键按下时的最小电压值
 #define DEFAULT_MAX_VALUE       330 // 无按键按下时的最大电压值
 
-#define SHORT_TIME_LED          50    // 短亮时间
+#define SHORT_TIME_LED          100   // 短亮时间
 #define SHORT_TIME_RELAY        30000 // 继电器导通时间
 
 typedef struct {
@@ -117,7 +117,7 @@ static void panel_proce_cmd(TimerHandle_t xTimer);
 static void panel_ctrl_led_all(bool led_state, bool is_ex);
 static void panel_event_handler(event_type_e event, void *params);
 static void process_led_flicker(common_panel_t *common_panel, bool is_ex_panel);
-static void panel_fast_exe(panel_status_t *temp_fast, uint8_t count, uint8_t flag);
+static void panel_fast_exe(panel_status_t *temp_fast, uint8_t flag);
 static void process_exe_status(const panel_cfg_t *temp_cfg, panel_status_t *temp_status);
 static void process_cmd_check(valid_data_t *data, const panel_cfg_t *temp_cfg, panel_status_t *temp_status);
 static void process_panel_adc(panel_status_t *panel_status, common_panel_t *common_panel, adc_value_t *adc_value, bool is_ex);
@@ -235,7 +235,6 @@ static void panel_read_adc(TimerHandle_t xTimer)
     if (my_common_panel.led_filck == true) {
         process_led_flicker(&my_common_panel, false);
     }
-
 #if defined PANEL_8KEY
     my_adc_value_ex.vol = ADC_TO_VOLTAGE(app_get_adc_value()[1]);
     process_panel_adc(my_panel_status_ex, &my_common_panel_ex, &my_adc_value_ex, true);
@@ -308,7 +307,6 @@ static void panel_proce_cmd(TimerHandle_t xTimer)
 #if defined PANEL_8KEY
     const panel_cfg_t *temp_cfg_ex = app_get_panel_cfg_ex();
     process_exe_status(temp_cfg_ex, my_panel_status_ex);
-
 #endif
 }
 
@@ -420,23 +418,21 @@ static void process_cmd_check(valid_data_t *data, const panel_cfg_t *temp_cfg, p
 
         case ALL_CLOSE: {
             for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
-                // 匹配"权限""总关区域"
-                if ((temp_cfg[i].key_perm & 0x20) &&
-                    ((data->data[4] >> 4 == temp_cfg[i].key_area >> 4) || data->data[4] >> 4 == 0xF)) {
+                if ((BIT5(temp_cfg[i].key_perm) == true) && // 屏蔽掉没有勾选"睡眠"的按键
+                    ((H_BIT(data->data[4]) == H_BIT(temp_cfg[i].key_area)) || (H_BIT(data->data[4]) == 0xF))) {
                     switch (temp_cfg[i].key_func) {
                         case ALL_CLOSE:
-                            panel_fast_exe(temp_status, i, (0b00001000 & ~0x01) | (data->data[2] & 0x01));
-                            panel_fast_exe(temp_status, i, (0b10010010 & ~0x01) | (data->data[2] & 0x01));
+                            panel_fast_exe(&temp_status[i], (0b00011010 & ~0x01) | (data->data[2] & 0x01));
                             break;
                         case NIGHT_LIGHT:
                         case DND_MODE:
-                            panel_fast_exe(temp_status, i, (0b00010110 & ~0x01) | (data->data[2] & 0x01));
+                            panel_fast_exe(&temp_status[i], (0b00010110 & ~0x01) | 0x01);
                             break;
                         case SCENE_MODE:
                         case LIGHT_MODE:
                         case ALL_ON_OFF:
                         case CLEAN_ROOM:
-                            panel_fast_exe(temp_status, i, (0b00000000 & ~0x01) | (data->data[2] & 0x01));
+                            panel_fast_exe(&temp_status[i], (0b00010110 & ~0x01) | 0x00);
                             break;
                         default:
                             break;
@@ -444,175 +440,136 @@ static void process_cmd_check(valid_data_t *data, const panel_cfg_t *temp_cfg, p
                 }
             }
         } break;
-
         case ALL_ON_OFF: {
             for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
-                // 匹配"权限""总关区域"
-                if ((temp_cfg[i].key_perm & 0x20) &&
-                    ((data->data[4] >> 4 == temp_cfg[i].key_area >> 4) || data->data[4] >> 4 == 0xF)) {
-
+                if ((BIT5(temp_cfg[i].key_perm) == true) && // 屏蔽掉没有勾选"总开关"的按键
+                    ((H_BIT(data->data[4]) == H_BIT(temp_cfg[i].key_area)) || (H_BIT(data->data[4]) == 0xF))) {
                     switch (temp_cfg[i].key_func) {
                         case ALL_ON_OFF:
-                            panel_fast_exe(temp_status, i, (0b10010110 & ~0x01) | (data->data[2] & 0x01));
+                            panel_fast_exe(&temp_status[i], (0b00010110 & ~0x01) | (data->data[2] & 0x01));
                             break;
                         case NIGHT_LIGHT:
                         case DND_MODE:
-                            panel_fast_exe(temp_status, i, (0b10010110 & ~0x01) | (~data->data[2] & 0x01));
+                            panel_fast_exe(&temp_status[i], (0b00010110 & ~0x01) | (~data->data[2] & 0x01));
                             break;
                         case SCENE_MODE:
                         case LIGHT_MODE:
                         case CLEAN_ROOM:
-                            panel_fast_exe(temp_status, i, (0b10010110 & ~0x01) | (data->data[2] & 0x01));
+                            panel_fast_exe(&temp_status[i], (0b00010110 & ~0x01) | (data->data[2] & 0x01));
                             break;
                         case ALL_CLOSE:
-                            panel_fast_exe(temp_status, i, (0b00001000 & ~0x01) | (data->data[2] & 0x01));
-                            panel_fast_exe(temp_status, i, (0b10010010 & ~0x01) | (data->data[2] & 0x01));
+                            panel_fast_exe(&temp_status[i], (0b00011010 & ~0x01) | (data->data[2] & 0x01));
                             break;
                         default:
                             break;
                     }
                 }
             }
-
         } break;
         case CLEAN_ROOM: {
             for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
                 if (temp_cfg[i].key_func == CLEAN_ROOM &&
-                    (data->data[3] == temp_cfg[i].key_group || data->data[3] == 0xF)) {
-                    panel_fast_exe(temp_status, i, (0b10010110 & ~0x01) | (data->data[2] & 0x01));
+                    (data->data[3] == temp_cfg[i].key_group || data->data[3] == 0xFF)) {
                     if (data->data[2] == true) {
                         for (uint8_t j = 0; j < KEY_NUMBER_COUNT; j++) {
                             if (temp_cfg[j].key_func == DND_MODE &&
-                                (data->data[3] == temp_cfg[j].key_group || data->data[3] == 0xF)) {
-                                panel_fast_exe(temp_status, j, (0b10010110 & ~0x01) | (~data->data[2] & 0x01));
+                                (data->data[3] == temp_cfg[j].key_group || data->data[3] == 0xFF)) {
+                                panel_fast_exe(&temp_status[j], (0b00010110 & ~0x01) | (~data->data[2] & 0x01));
                             }
                         }
                     }
+                    panel_fast_exe(&temp_status[i], (0b00010110 & ~0x01) | (data->data[2] & 0x01));
                 }
             }
-
         } break;
         case DND_MODE: {
             for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
                 if (temp_cfg[i].key_func == DND_MODE &&
-                    (data->data[3] == temp_cfg[i].key_group || data->data[3] == 0xF)) {
-                    panel_fast_exe(temp_status, i, (0b10010110 & ~0x01) | (data->data[2] & 0x01));
+                    (data->data[3] == temp_cfg[i].key_group || data->data[3] == 0xFF)) {
                     if (data->data[2] == true) {
                         for (uint8_t j = 0; j < KEY_NUMBER_COUNT; j++) {
                             if (temp_cfg[j].key_func == CLEAN_ROOM &&
-                                (data->data[3] == temp_cfg[j].key_group || data->data[3] == 0xF)) {
-                                panel_fast_exe(temp_status, j, (0b10010110 & ~0x01) | (~data->data[2] & 0x01));
+                                (data->data[3] == temp_cfg[j].key_group || data->data[3] == 0xFF)) {
+                                panel_fast_exe(&temp_status[j], (0b00010110 & ~0x01) | (~data->data[2] & 0x01));
                             }
                         }
                     }
+                    panel_fast_exe(&temp_status[i], (0b00010110 & ~0x01) | (data->data[2] & 0x01));
                 }
             }
-
         } break;
         case LATER_MODE: {
             for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
                 if (temp_cfg[i].key_func == LATER_MODE &&
-                    (data->data[3] == temp_cfg[i].key_group || data->data[3] == 0xF)) {
-                    panel_fast_exe(temp_status, i, (0b10100110 & ~0x01) | (data->data[2] & 0x01));
+                    (data->data[3] == temp_cfg[i].key_group || data->data[3] == 0xFF)) {
+                    panel_fast_exe(&temp_status[i], (0b00100110 & ~0x01) | (data->data[2] & 0x01));
                 }
             }
-
         } break;
         case CHECK_OUT: {
             for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
                 if (temp_cfg[i].key_func == CHECK_OUT &&
-                    (data->data[3] == temp_cfg[i].key_group || data->data[3] == 0xF)) {
-                    panel_fast_exe(temp_status, i, (0b10010110 & ~0x01) | (data->data[2] & 0x01));
+                    (data->data[3] == temp_cfg[i].key_group || data->data[3] == 0xFF)) {
+                    panel_fast_exe(&temp_status[i], (0b00010110 & ~0x01) | (data->data[2] & 0x01));
                 }
             }
-
         } break;
         case SOS_MODE: {
             for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
-                if (temp_cfg[i].key_func == data->data[1] &&
-                    temp_cfg[i].key_group == data->data[3] &&
-                    temp_cfg[i].key_group != 0x00) {
-                    temp_status[i].led_w_open = data->data[2];
-                    temp_status[i].relay_open = data->data[2];
-                    temp_status[i].key_status = data->data[2];
+                if (temp_cfg[i].key_func == SOS_MODE &&
+                    (data->data[3] == temp_cfg[i].key_group || data->data[3] == 0xFF)) {
+                    panel_fast_exe(&temp_status[i], (0b00010110 & ~0x01) | (data->data[2] & 0x01));
                 }
             }
-
         } break;
         case SERVICE: {
             for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
-                if (temp_cfg[i].key_func == data->data[1] &&
-                    temp_cfg[i].key_group == data->data[3] &&
-                    temp_cfg[i].key_group != 0x00) {
-                    temp_status[i].led_w_open = data->data[2];
-                    temp_status[i].relay_open = data->data[2];
-                    temp_status[i].key_status = data->data[2];
+                if (temp_cfg[i].key_func == SERVICE &&
+                    (data->data[3] == temp_cfg[i].key_group || data->data[3] == 0xFF)) {
+                    panel_fast_exe(&temp_status[i], (0b00010110 & ~0x01) | (data->data[2] & 0x01));
                 }
             }
-
         } break;
         case CURTAIN_OPEN: {
             for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
-                // 检查功能匹配和分组匹配
-                if (temp_cfg[i].key_func == data->data[1] &&
-                    temp_cfg[i].key_group == data->data[3] &&
-                    temp_cfg[i].key_group != 0x00) {
-                    for (uint8_t j = 0; j < KEY_NUMBER_COUNT; j++) {
-                        // 关闭同分组的"窗帘关"
+                if (temp_cfg[i].key_func == CURTAIN_OPEN &&
+                    (data->data[3] == temp_cfg[i].key_group || data->data[3] == 0xFF)) {
+                    for (uint8_t j = 0; j < KEY_NUMBER_COUNT; j++) { // 先关闭同分组的"窗帘关"
                         if (temp_cfg[j].key_func == CURTAIN_CLOSE &&
-                            temp_cfg[j].key_group == data->data[3]) {
-                            temp_status[j].relay_open  = false;
-                            temp_status[j].relay_short = false;
+                            (data->data[3] == temp_cfg[j].key_group || data->data[3] == 0xFF)) {
+                            panel_fast_exe(&temp_status[j], (0b00110000 & ~0x01) | 0x00);
                         }
                     }
-                    temp_status[i].led_w_short = true; // 短亮
-                    temp_status[i].relay_short = true; // 继电器导通 30s
+                    panel_fast_exe(&temp_status[i], (0b00101010 & ~0x01) | 0x01);
                 }
             }
         } break;
         case CURTAIN_CLOSE: {
             for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
-                // 检查功能匹配和分组匹配
-                if (temp_cfg[i].key_func == data->data[1] &&
-                    temp_cfg[i].key_group == data->data[3] &&
-                    temp_cfg[i].key_group != 0x00) {
-                    for (uint8_t j = 0; j < KEY_NUMBER_COUNT; j++) {
-                        // 关闭同分组的"窗帘开"
+                if (temp_cfg[i].key_func == CURTAIN_CLOSE &&
+                    (data->data[3] == temp_cfg[i].key_group || data->data[3] == 0xFF)) {
+                    for (uint8_t j = 0; j < KEY_NUMBER_COUNT; j++) { // 先关闭同分组的"窗帘开"
                         if (temp_cfg[j].key_func == CURTAIN_OPEN &&
-                            temp_cfg[j].key_group == data->data[3]) {
-                            temp_status[j].relay_open  = false;
-                            temp_status[j].relay_short = false;
+                            (data->data[3] == temp_cfg[j].key_group || data->data[3] == 0xFF)) {
+                            panel_fast_exe(&temp_status[j], (0b00110000 & ~0x01) | 0x00);
                         }
                     }
-                    temp_status[i].led_w_short = true;
-                    temp_status[i].relay_short = true;
+                    panel_fast_exe(&temp_status[i], (0b00101010 & ~0x01) | 0x01);
                 }
             }
         } break;
-
-        case SCENE_MODE: {
+        case SCENE_MODE: { // 场景模式
             for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
+                if ((temp_cfg[i].key_scene_group != 0x00) && // 屏蔽掉没有勾选任何场景分组的按键
+                    ((L_BIT(data->data[4]) == L_BIT(temp_cfg[i].key_area)) || (L_BIT(data->data[4]) == 0xF))) {
 
-                if ((((temp_cfg[i].key_area & NIGHT_LIGHT) == (data->data[4] & NIGHT_LIGHT)) ||
-                     ((data->data[4] & NIGHT_LIGHT) == 0xF)) &&
-                    (temp_cfg[i].key_func == data->data[1])) {          // 匹配"场景区域"(若为0xF则可以控制所有场景区域)和"按键功能"
-                    if (temp_cfg[i].key_scene_group == data->data[7]) { // 匹配"场景分组"
-                        for (uint8_t j = 0; j < KEY_NUMBER_COUNT; j++) {
-                            if (temp_cfg[j].key_func == SCENE_MODE &&
-                                (((temp_cfg[j].key_area & NIGHT_LIGHT) == (data->data[4] & NIGHT_LIGHT)) ||
-                                 ((data->data[4] & NIGHT_LIGHT) == 0xF))) { // 关闭同"场景区域"的其他分组
-                                temp_status[j].led_w_open = false;
-                                temp_status[j].relay_open = false;
-                                temp_status[j].key_status = false;
-                            }
-                        }
-                        temp_status[i].led_w_open = data->data[2];
-                        temp_status[i].relay_open = data->data[2];
-                        temp_status[i].key_status = data->data[2];
+                    panel_fast_exe(&temp_status[i], (0b00010110 & ~0x01) | 0x00); // 先关闭该场景区域的所有分组
+                    uint8_t mask = data->data[7] & temp_cfg[i].key_scene_group;   // 找出两个字节中同为1的位
+                    if (mask != 0) {                                              // 任意一位同为1,说明勾选了该场景分组,执行动作
+                        panel_fast_exe(&temp_status[i], (0b00010110 & ~0x01) | (data->data[2] & 0x01));
                     }
                 }
             }
-
         } break;
         case LIGHT_MODE: {
             for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
@@ -625,7 +582,6 @@ static void process_cmd_check(valid_data_t *data, const panel_cfg_t *temp_cfg, p
                     temp_status[i].key_status = data->data[2];
                 }
             }
-
         } break;
         case NIGHT_LIGHT: {
             for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
@@ -637,7 +593,6 @@ static void process_cmd_check(valid_data_t *data, const panel_cfg_t *temp_cfg, p
                     temp_status[i].key_status = data->data[2];
                 }
             }
-
         } break;
         case LIGHT_UP:
             break;
@@ -653,12 +608,9 @@ static void process_cmd_check(valid_data_t *data, const panel_cfg_t *temp_cfg, p
             break;
         case CURTAIN_STOP: {
             for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
-                if (temp_cfg[i].key_group == data->data[3] &&
-                    temp_cfg[i].key_group != 0x00 &&
-                    temp_status[i].relay_short == true) { // 匹配分组后如果该继电器正在动作才能触发暂停
-                    temp_status[i].led_w_short = true;
-                    temp_status[i].relay_short = false;
-                    temp_status[i].relay_open  = false;
+                if (temp_status[i].relay_short == true &&
+                    (data->data[3] == temp_cfg[i].key_group || data->data[3] == 0xFF)) {
+                    panel_fast_exe(&temp_status[i], (0b00111010 & ~0x01) | 0x00);
                 }
             }
         } break;
@@ -753,33 +705,24 @@ static void panel_power_status(void)
 #endif
 }
 
-static void panel_fast_exe(panel_status_t *temp_fast, uint8_t count, uint8_t flag)
+static void panel_fast_exe(panel_status_t *temp_fast, uint8_t flag)
 {
-    // 0位:data->data[2];1位:key_status;2位:led_w_open,3位:led_w_short
-    // 4位:relay_open;5位:relay_short;6位:保留;7位:是否受data->data[2]控制
+    // 0位:data->data[2];1位:key_status;2位:led_w_open,3位:led_w_short,4位:relay_open;5位:relay_short;6位:保留;7位:保留
 
-    if (BIT7(flag) == true) {
-        if (BIT1(flag) == true) {
-            temp_fast[count].key_status = BIT0(flag);
-        }
-        if (BIT2(flag) == true) {
-            temp_fast[count].led_w_open = BIT0(flag);
-        }
-        if (BIT3(flag) == true) {
-            temp_fast[count].led_w_short = BIT0(flag);
-        }
-        if (BIT4(flag) == true) {
-            temp_fast[count].relay_open = BIT0(flag);
-        }
-        if (BIT5(flag) == true) {
-            temp_fast[count].relay_short = BIT0(flag);
-        }
-    } else if (BIT7(flag) == false) {
-        temp_fast[count].key_status  = BIT1(flag);
-        temp_fast[count].led_w_open  = BIT2(flag);
-        temp_fast[count].led_w_short = BIT3(flag);
-        temp_fast[count].relay_open  = BIT4(flag);
-        temp_fast[count].relay_short = BIT5(flag);
+    if (BIT1(flag) == true) {
+        temp_fast->key_status = BIT0(flag);
+    }
+    if (BIT2(flag) == true) {
+        temp_fast->led_w_open = BIT0(flag);
+    }
+    if (BIT3(flag) == true) {
+        temp_fast->led_w_short = true; // 短亮会快速熄灭,无需持续状态,故而不受data->data[2]控制
+    }
+    if (BIT4(flag) == true) {
+        temp_fast->relay_open = BIT0(flag);
+    }
+    if (BIT5(flag) == true) {
+        temp_fast->relay_short = BIT0(flag);
     }
 }
 #endif
