@@ -187,16 +187,23 @@ void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t cmd, uint8_t f
                 return;
             }
 
-            if (func == CURTAIN_STOP) { // 特殊命令(窗帘停)
-                my_at_frame.data[1] = CURTAIN_STOP;
-                my_at_frame.data[2] = 0x00;
-            } else { // 通用命令
-                my_at_frame.data[1] = temp_cfg[key_number].key_func;
-                if (BIT4(temp_cfg[key_number].key_perm) == true) {
-                    my_at_frame.data[2] = true;
-                } else {
-                    my_at_frame.data[2] = key_status;
+            if (func == SPECIAL_CMD) { // 特殊命令
+                if (temp_cfg[key_number].key_func == CURTAIN_OPEN ||
+                    temp_cfg[key_number].key_func == CURTAIN_CLOSE) {
+                    // 窗帘(开/关)->发送窗帘停
+                    my_at_frame.data[1] = CURTAIN_STOP;
+                    my_at_frame.data[2] = 0x00;
+                } else if (temp_cfg[key_number].key_func == LATER_MODE) {
+                    // 请稍后
+                    my_at_frame.data[1] = temp_cfg[key_number].key_func;
+                    // 勾选了"只开","操作指令"为 ture
+                    my_at_frame.data[2] = BIT4(temp_cfg[key_number].key_perm) ? true : key_status;
                 }
+
+            } else if (func == COMMON_CMD) { // 普通命令
+                my_at_frame.data[1] = temp_cfg[key_number].key_func;
+                // 勾选了"只开","操作指令"为 ture
+                my_at_frame.data[2] = BIT4(temp_cfg[key_number].key_perm) ? true : key_status;
             }
 
             // 设置分组、区域、权限和场景组信息

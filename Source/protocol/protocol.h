@@ -41,6 +41,9 @@ void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t cmd, uint8_t f
 
 typedef enum {
     PANEL_HEAD = 0xF1, // 帧头
+    // 命令类型
+    COMMON_CMD  = 0x00, // 普通命令
+    SPECIAL_CMD = 0x01, // 特殊命令
 
     QUICK_SINGLE = 0xE1, // quick (快装盒子)单发串码
     PANEL_SINGLE = 0xF2, // panel (面板)单发串码

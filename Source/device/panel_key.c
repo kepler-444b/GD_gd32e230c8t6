@@ -258,10 +258,10 @@ static void process_panel_adc(panel_status_t *panel_status, common_panel_t *comm
                     if (panel_status[i].key_press == false) {
                         if (common_panel->enter_config == false) {
                             panel_status[i].key_status = !panel_status[i].key_status;
-                            if (panel_status[i].relay_short != false) {
-                                app_send_cmd(i, 0x00, PANEL_HEAD, CURTAIN_STOP, is_ex);
+                            if (panel_status[i].relay_short != false) { // 有继电器正在短开,发送特殊命令
+                                app_send_cmd(i, 0x00, PANEL_HEAD, SPECIAL_CMD, is_ex);
                             } else {
-                                app_send_cmd(i, panel_status[i].key_status, PANEL_HEAD, 0x00, is_ex);
+                                app_send_cmd(i, panel_status[i].key_status, PANEL_HEAD, COMMON_CMD, is_ex);
                             }
                             panel_status[i].key_press = true;
                         }
@@ -416,17 +416,19 @@ static void process_cmd_check(valid_data_t *data, const panel_cfg_t *temp_cfg, p
 {
     switch (data->data[1]) {
 
-        case ALL_CLOSE: {
+        case ALL_CLOSE: { // 总关
             for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
-                if ((BIT5(temp_cfg[i].key_perm) == true) && // 屏蔽掉没有勾选"睡眠"的按键
+                if ((BIT5(temp_cfg[i].key_perm) == true) && // "睡眠"被勾选,"总开关分区"相同 或 0xF
                     ((H_BIT(data->data[4]) == H_BIT(temp_cfg[i].key_area)) || (H_BIT(data->data[4]) == 0xF))) {
                     switch (temp_cfg[i].key_func) {
                         case ALL_CLOSE:
-                            panel_fast_exe(&temp_status[i], (0b00011010 & ~0x01) | (data->data[2] & 0x01));
+                            if (data->data[3] == temp_cfg[i].key_group) {
+                                panel_fast_exe(&temp_status[i], (0b00011010 & ~0x01) | (data->data[2] & 0x01));
+                            }
                             break;
                         case NIGHT_LIGHT:
                         case DND_MODE:
-                            panel_fast_exe(&temp_status[i], (0b00010110 & ~0x01) | 0x01);
+                            panel_fast_exe(&temp_status[i], (0b00010110 & ~0x01) | (data->data[2] & 0x01));
                             break;
                         case SCENE_MODE:
                         case LIGHT_MODE:
@@ -440,13 +442,15 @@ static void process_cmd_check(valid_data_t *data, const panel_cfg_t *temp_cfg, p
                 }
             }
         } break;
-        case ALL_ON_OFF: {
+        case ALL_ON_OFF: { // 总开关
             for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
-                if ((BIT5(temp_cfg[i].key_perm) == true) && // 屏蔽掉没有勾选"总开关"的按键
+                if ((BIT5(temp_cfg[i].key_perm) == true) && // "总开关"被勾选,"总开关分区"相同 或 0xF
                     ((H_BIT(data->data[4]) == H_BIT(temp_cfg[i].key_area)) || (H_BIT(data->data[4]) == 0xF))) {
                     switch (temp_cfg[i].key_func) {
                         case ALL_ON_OFF:
-                            panel_fast_exe(&temp_status[i], (0b00010110 & ~0x01) | (data->data[2] & 0x01));
+                            if (data->data[3] == temp_cfg[i].key_group) {
+                                panel_fast_exe(&temp_status[i], (0b00010110 & ~0x01) | (data->data[2] & 0x01));
+                            }
                             break;
                         case NIGHT_LIGHT:
                         case DND_MODE:
@@ -466,7 +470,7 @@ static void process_cmd_check(valid_data_t *data, const panel_cfg_t *temp_cfg, p
                 }
             }
         } break;
-        case CLEAN_ROOM: {
+        case CLEAN_ROOM: { // 清理房间
             for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
                 if (temp_cfg[i].key_func == CLEAN_ROOM &&
                     (data->data[3] == temp_cfg[i].key_group || data->data[3] == 0xFF)) {
@@ -482,7 +486,7 @@ static void process_cmd_check(valid_data_t *data, const panel_cfg_t *temp_cfg, p
                 }
             }
         } break;
-        case DND_MODE: {
+        case DND_MODE: { // 勿扰模式
             for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
                 if (temp_cfg[i].key_func == DND_MODE &&
                     (data->data[3] == temp_cfg[i].key_group || data->data[3] == 0xFF)) {
@@ -498,7 +502,7 @@ static void process_cmd_check(valid_data_t *data, const panel_cfg_t *temp_cfg, p
                 }
             }
         } break;
-        case LATER_MODE: {
+        case LATER_MODE: { // 请稍后
             for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
                 if (temp_cfg[i].key_func == LATER_MODE &&
                     (data->data[3] == temp_cfg[i].key_group || data->data[3] == 0xFF)) {
@@ -506,7 +510,7 @@ static void process_cmd_check(valid_data_t *data, const panel_cfg_t *temp_cfg, p
                 }
             }
         } break;
-        case CHECK_OUT: {
+        case CHECK_OUT: { // 退房
             for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
                 if (temp_cfg[i].key_func == CHECK_OUT &&
                     (data->data[3] == temp_cfg[i].key_group || data->data[3] == 0xFF)) {
@@ -514,7 +518,7 @@ static void process_cmd_check(valid_data_t *data, const panel_cfg_t *temp_cfg, p
                 }
             }
         } break;
-        case SOS_MODE: {
+        case SOS_MODE: { // 紧急呼叫
             for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
                 if (temp_cfg[i].key_func == SOS_MODE &&
                     (data->data[3] == temp_cfg[i].key_group || data->data[3] == 0xFF)) {
@@ -522,7 +526,7 @@ static void process_cmd_check(valid_data_t *data, const panel_cfg_t *temp_cfg, p
                 }
             }
         } break;
-        case SERVICE: {
+        case SERVICE: { // 请求服务
             for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
                 if (temp_cfg[i].key_func == SERVICE &&
                     (data->data[3] == temp_cfg[i].key_group || data->data[3] == 0xFF)) {
@@ -530,7 +534,7 @@ static void process_cmd_check(valid_data_t *data, const panel_cfg_t *temp_cfg, p
                 }
             }
         } break;
-        case CURTAIN_OPEN: {
+        case CURTAIN_OPEN: { // 窗帘开
             for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
                 if (temp_cfg[i].key_func == CURTAIN_OPEN &&
                     (data->data[3] == temp_cfg[i].key_group || data->data[3] == 0xFF)) {
@@ -544,7 +548,7 @@ static void process_cmd_check(valid_data_t *data, const panel_cfg_t *temp_cfg, p
                 }
             }
         } break;
-        case CURTAIN_CLOSE: {
+        case CURTAIN_CLOSE: { // 窗帘关
             for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
                 if (temp_cfg[i].key_func == CURTAIN_CLOSE &&
                     (data->data[3] == temp_cfg[i].key_group || data->data[3] == 0xFF)) {
@@ -571,26 +575,21 @@ static void process_cmd_check(valid_data_t *data, const panel_cfg_t *temp_cfg, p
                 }
             }
         } break;
-        case LIGHT_MODE: {
+        case LIGHT_MODE: { // 灯控模式
             for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
-                if (temp_cfg[i].key_func == data->data[1] &&
-                    temp_cfg[i].key_group == data->data[3] &&
-                    temp_cfg[i].key_group != 0x00) {
-
-                    temp_status[i].led_w_open = data->data[2];
-                    temp_status[i].relay_open = data->data[2];
-                    temp_status[i].key_status = data->data[2];
+                for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
+                    if (temp_cfg[i].key_func == LIGHT_MODE &&
+                        (data->data[3] == temp_cfg[i].key_group || data->data[3] == 0xFF)) {
+                        panel_fast_exe(&temp_status[i], (0b00010110 & ~0x01) | (data->data[2] & 0x01));
+                    }
                 }
             }
         } break;
-        case NIGHT_LIGHT: {
+        case NIGHT_LIGHT: { // 夜灯
             for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
-                if (temp_cfg[i].key_func == data->data[1] &&
-                    temp_cfg[i].key_group == data->data[3] &&
-                    temp_cfg[i].key_group != 0x00) {
-                    temp_status[i].led_w_open = data->data[2];
-                    temp_status[i].relay_open = data->data[2];
-                    temp_status[i].key_status = data->data[2];
+                if (temp_cfg[i].key_func == NIGHT_LIGHT &&
+                    (data->data[3] == temp_cfg[i].key_group || data->data[3] == 0xFF)) {
+                    panel_fast_exe(&temp_status[i], (0b00010110 & ~0x01) | (data->data[2] & 0x01));
                 }
             }
         } break;
@@ -606,10 +605,11 @@ static void process_cmd_check(valid_data_t *data, const panel_cfg_t *temp_cfg, p
             break;
         case BLUETOOTH:
             break;
-        case CURTAIN_STOP: {
+        case CURTAIN_STOP: { // 窗帘停
             for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
-                if (temp_status[i].relay_short == true &&
-                    (data->data[3] == temp_cfg[i].key_group || data->data[3] == 0xFF)) {
+                if (((temp_cfg[i].key_func == CURTAIN_OPEN) || (temp_cfg[i].key_func == CURTAIN_CLOSE)) &&
+                    (data->data[3] == temp_cfg[i].key_group || data->data[3] == 0xFF) &&
+                    temp_status[i].relay_short == true) {
                     panel_fast_exe(&temp_status[i], (0b00111010 & ~0x01) | 0x00);
                 }
             }
@@ -687,7 +687,7 @@ static void panel_power_status(void)
     const panel_cfg_t *temp_cfg = app_get_panel_cfg();
 
     for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
-        if (temp_cfg[i].key_perm & 0x08) { // 权限是否勾选"迎宾"
+        if (BIT3(temp_cfg[i].key_perm) == true) { // 权限是否勾选"迎宾"
             my_panel_status[i].led_w_open = true;
             my_panel_status[i].relay_open = true;
             my_panel_status[i].key_status = true;
@@ -696,7 +696,7 @@ static void panel_power_status(void)
 #if defined PANEL_8KEY
     const panel_cfg_t *temp_cfg_ex = app_get_panel_cfg_ex();
     for (uint8_t i = 0; i < KEY_NUMBER_COUNT; i++) {
-        if (temp_cfg_ex[i].key_perm & 0x08) { // 权限是否勾选"迎宾"
+        if (BIT3(temp_cfg_ex[i].key_perm) == true) { // 权限是否勾选"迎宾"
             my_panel_status_ex[i].led_w_open = true;
             my_panel_status_ex[i].relay_open = true;
             my_panel_status_ex[i].key_status = true;
