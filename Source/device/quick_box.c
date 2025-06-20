@@ -35,7 +35,7 @@ typedef struct
 } tigger_relay_t;
 static tigger_relay_t my_tigger_relay[3] = {0};
 
-static gpio_pin_typedef_t relay_pins[3] = {0};
+static gpio_pin_t relay_pins[3] = {0};
 
 void quick_box_gpio_init(void);
 void quick_zero_init(void);
@@ -71,7 +71,7 @@ void quick_box_init(void)
         APP_ERROR("CheckZeroTimerHandle error");
     }
 
-    gpio_pin_typedef_t led_pins[3] = {PB7, PB6, PB5}; // (led与io口映射)顺序为 led1,led2,led3
+    gpio_pin_t led_pins[3] = {PB7, PB6, PB5}; // (led与io口映射)顺序为 led1,led2,led3
     app_pwm_init(led_pins, 3);
 
     relay_pins[0] = PB13;
@@ -178,12 +178,12 @@ void quick_box_data_cb(valid_data_t *data)
     const quick_ctg_t *temp_cfg = app_get_quick_cfg();
 
     for (uint8_t i = 0; i < LED_NUMBER_COUNT; i++) { // 匹配按键
-        if (temp_cfg->key_packet[i].key_func == data->data[1] &&
-            temp_cfg->key_packet[i].key_group == data->data[3] &&
-            temp_cfg->key_packet[i].key_area == data->data[6] &&
+        if (temp_cfg->key_packet[i].func == data->data[1] &&
+            temp_cfg->key_packet[i].group == data->data[3] &&
+            temp_cfg->key_packet[i].area == data->data[6] &&
             temp_cfg->key_packet[i].key_scene == data->data[7] &&
-            temp_cfg->key_packet[i].key_perm == data->data[4]) {
-            if (temp_cfg->key_packet[i].key_area & 0x10) { // 如果勾选了只开
+            temp_cfg->key_packet[i].perm == data->data[4]) {
+            if (temp_cfg->key_packet[i].area & 0x10) { // 如果勾选了只开
                 quick_led_open(i, true);
             } else {
                 quick_led_open(i, data->data[2]);

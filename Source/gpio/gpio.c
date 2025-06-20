@@ -3,11 +3,11 @@
 #include <stdbool.h>
 #include "gd32e23x.h"
 
-const char *app_get_gpio_name(gpio_pin_typedef_t gpio)
+const char *app_get_gpio_name(gpio_pin_t gpio)
 {
     // 快速检查无效GPIO
     if (!GPIO_IS_VALID(gpio)) {
-        return "DEFAULT";
+        return "DEF";
     }
 
     // 预定义所有可能的GPIO名称字符串表

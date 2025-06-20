@@ -9,7 +9,7 @@ typedef struct
     uint8_t pwm_duty;
     uint8_t dither_accumulator; // 抖动累加器
     uint8_t pwm_cycle;          // PWM 周期
-    gpio_pin_typedef_t gpio;    // 输出的管脚
+    gpio_pin_t gpio;    // 输出的管脚
 } pwm_state;
 static pwm_state my_pwm_state;
 

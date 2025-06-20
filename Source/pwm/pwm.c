@@ -29,7 +29,7 @@ typedef struct {
     uint16_t start_duty;     // 渐变起始占空比
     bool is_fading;          // 是否正在渐变中
     bool is_active;          // 是否已激活
-    gpio_pin_typedef_t gpio; // 对应的GPIO引脚
+    gpio_pin_t gpio; // 对应的GPIO引脚
 } pwm_control_t;
 
 static pwm_control_t pwm_channels[PWM_MAX_CHANNELS]; // PWM通道控制数组
@@ -37,7 +37,7 @@ static uint8_t active_channel_count = 0;             // 已激活的pwm通道数
 static bool pwm_initialized         = false;         // pwm模块是否已经初始化
 
 // 根据引脚查找对应的PWM控制结构体索引
-static int find_pwm_index(gpio_pin_typedef_t pin)
+static int find_pwm_index(gpio_pin_t pin)
 {
     for (int i = 0; i < PWM_MAX_CHANNELS; i++) {
         if (pwm_channels[i].is_active &&
@@ -82,7 +82,7 @@ void app_pwm_init(void)
 }
 
 // 添加PWM引脚
-bool app_pwm_add_pin(gpio_pin_typedef_t pin)
+bool app_pwm_add_pin(gpio_pin_t pin)
 {
     if (!pwm_initialized || active_channel_count >= PWM_MAX_CHANNELS) {
         return false;
@@ -112,7 +112,7 @@ bool app_pwm_add_pin(gpio_pin_typedef_t pin)
     return false;
 }
 
-void app_set_pwm_duty(gpio_pin_typedef_t pin, uint16_t duty)
+void app_set_pwm_duty(gpio_pin_t pin, uint16_t duty)
 {
     int index = find_pwm_index(pin);
     if (index < 0) return;
@@ -126,7 +126,7 @@ void app_set_pwm_duty(gpio_pin_typedef_t pin, uint16_t duty)
     pwm_channels[index].is_fading    = false;
 }
 
-void app_set_pwm_fade(gpio_pin_typedef_t pin, uint16_t duty, uint16_t fade_time_ms)
+void app_set_pwm_fade(gpio_pin_t pin, uint16_t duty, uint16_t fade_time_ms)
 {
     int index = find_pwm_index(pin);
     if (index < 0) return;
@@ -160,14 +160,14 @@ void app_set_pwm_fade(gpio_pin_typedef_t pin, uint16_t duty, uint16_t fade_time_
     }
 }
 
-uint16_t app_get_pwm_duty(gpio_pin_typedef_t pin)
+uint16_t app_get_pwm_duty(gpio_pin_t pin)
 {
     int index = find_pwm_index(pin);
     if (index < 0) return 0;
     return pwm_channels[index].current_duty;
 }
 
-bool app_is_pwm_fading(gpio_pin_typedef_t pin)
+bool app_is_pwm_fading(gpio_pin_t pin)
 {
     int index = find_pwm_index(pin);
     if (index < 0) return false;

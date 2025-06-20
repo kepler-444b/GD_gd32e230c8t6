@@ -78,7 +78,6 @@ void app_proto_check(uart_rx_buffer_t *my_uart_rx_buffer)
 
 void app_proto_process(valid_data_t *my_valid_data)
 {
-    APP_PRINTF_BUF("[recv]", my_valid_data->data, my_valid_data->length);
     switch (my_valid_data->data[0]) {
         case PANEL_HEAD: // 收到其他设备的AT指令
             if (my_valid_data->data[5] == CALC_CRC(my_valid_data->data, 5)) {
@@ -131,10 +130,11 @@ void app_proto_process(valid_data_t *my_valid_data)
     }
 }
 
-void app_save_config(valid_data_t *boj, bool is_ex)
+void app_save_config(valid_data_t *obj, bool is_ex)
 {
+    APP_PRINTF_BUF("[SAVE]", obj->data, obj->length);
     static uint32_t output[24] = {0};
-    if (app_uint8_to_uint32(boj->data, boj->length, output, sizeof(output)) == true) {
+    if (app_uint8_to_uint32(obj->data, obj->length, output, sizeof(output)) == true) {
 
         __disable_irq(); // flash 写操作,需要关闭中断
         uint32_t flash_addr = is_ex ? CONFIG_EXTEN_ADDR : CONFIG_START_ADDR;
@@ -149,7 +149,7 @@ void app_save_config(valid_data_t *boj, bool is_ex)
 // 构造发送 AT 帧
 void app_at_send(at_frame_t *my_at_frame)
 {
-    APP_PRINTF_BUF("[send]", my_at_frame->data, my_at_frame->length);
+    APP_PRINTF_BUF("[SEND]", my_at_frame->data, my_at_frame->length);
     // 转换为十六进制字符串
     static char hex_buffer[64] = {0};
     static char at_frame[64]   = {0};
@@ -182,35 +182,35 @@ void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t cmd, uint8_t f
 #if defined PANEL_KEY
             my_at_frame.data[0] = PANEL_HEAD;
 
-            if (key_number > KEY_NUMBER_COUNT) { // 验证按键编号有效性
+            if (key_number > KEY_NUMBER) { // 验证按键编号有效性
                 APP_ERROR("key_number error: %d", key_number);
                 return;
             }
 
             if (func == SPECIAL_CMD) { // 特殊命令
-                if (temp_cfg[key_number].key_func == CURTAIN_OPEN ||
-                    temp_cfg[key_number].key_func == CURTAIN_CLOSE) {
+                if (temp_cfg[key_number].func == CURTAIN_OPEN ||
+                    temp_cfg[key_number].func == CURTAIN_CLOSE) {
                     // 窗帘(开/关)->发送窗帘停
                     my_at_frame.data[1] = CURTAIN_STOP;
                     my_at_frame.data[2] = 0x00;
-                } else if (temp_cfg[key_number].key_func == LATER_MODE) {
+                } else if (temp_cfg[key_number].func == LATER_MODE) {
                     // 请稍后
-                    my_at_frame.data[1] = temp_cfg[key_number].key_func;
+                    my_at_frame.data[1] = temp_cfg[key_number].func;
                     // 勾选了"只开","操作指令"为 ture
-                    my_at_frame.data[2] = BIT4(temp_cfg[key_number].key_perm) ? true : key_status;
+                    my_at_frame.data[2] = BIT4(temp_cfg[key_number].perm) ? true : key_status;
                 }
 
             } else if (func == COMMON_CMD) { // 普通命令
-                my_at_frame.data[1] = temp_cfg[key_number].key_func;
+                my_at_frame.data[1] = temp_cfg[key_number].func;
                 // 勾选了"只开","操作指令"为 ture
-                my_at_frame.data[2] = BIT4(temp_cfg[key_number].key_perm) ? true : key_status;
+                my_at_frame.data[2] = BIT4(temp_cfg[key_number].perm) ? true : key_status;
             }
 
             // 设置分组、区域、权限和场景组信息
-            my_at_frame.data[3] = temp_cfg[key_number].key_group;
-            my_at_frame.data[4] = temp_cfg[key_number].key_area;
-            my_at_frame.data[6] = temp_cfg[key_number].key_perm;
-            my_at_frame.data[7] = temp_cfg[key_number].key_scene_group;
+            my_at_frame.data[3] = temp_cfg[key_number].group;
+            my_at_frame.data[4] = temp_cfg[key_number].area;
+            my_at_frame.data[6] = temp_cfg[key_number].perm;
+            my_at_frame.data[7] = temp_cfg[key_number].scene_group;
 
             // 计算并设置CRC校验
             my_at_frame.data[5] = CALC_CRC(my_at_frame.data, 5);

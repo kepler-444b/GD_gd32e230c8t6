@@ -135,8 +135,6 @@ fmc_state_enum app_flash_program(uint32_t address, uint32_t *data, uint32_t leng
     fmc_state_enum state;
 
     if (erase_first) { // 如果需要先擦除
-
-        // 计算页地址(假设已知FLASH_PAGE_SIZE)
         uint32_t page_address = address & ~(FLASH_PAGE_SIZE - 1);
 
         state = app_flash_erase_page(page_address); // 执行页擦除

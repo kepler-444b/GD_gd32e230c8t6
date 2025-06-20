@@ -78,5 +78,5 @@ typedef enum {
     NEXT_SONG     = 0x66, // 下一首
     LAST_SONG     = 0x67, // 上一首
 
-} common_frame;
+} panel_frame_e;
 #endif

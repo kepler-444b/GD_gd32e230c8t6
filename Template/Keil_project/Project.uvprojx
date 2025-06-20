@@ -53,7 +53,7 @@
           <OutputName>Project</OutputName>
           <CreateExecutable>1</CreateExecutable>
           <CreateLib>0</CreateLib>
-          <CreateHexFile>1</CreateHexFile>
+          <CreateHexFile>0</CreateHexFile>
           <DebugInformation>1</DebugInformation>
           <BrowseInformation>1</BrowseInformation>
           <ListingPath>.\list\</ListingPath>
@@ -81,9 +81,9 @@
             <nStopB2X>0</nStopB2X>
           </BeforeMake>
           <AfterMake>
-            <RunUserProg1>0</RunUserProg1>
+            <RunUserProg1>1</RunUserProg1>
             <RunUserProg2>0</RunUserProg2>
-            <UserProg1Name></UserProg1Name>
+            <UserProg1Name>fromelf --bin --output=.\output\@L.bin !L</UserProg1Name>
             <UserProg2Name></UserProg2Name>
             <UserProg1Dos16Mode>0</UserProg1Dos16Mode>
             <UserProg2Dos16Mode>0</UserProg2Dos16Mode>
@@ -806,11 +806,6 @@
           <GroupName>base</GroupName>
           <Files>
             <File>
-              <FileName>base.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\Source\base\base.c</FilePath>
-            </File>
-            <File>
               <FileName>base.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\..\Source\base\base.h</FilePath>
@@ -829,6 +824,11 @@
               <FileName>panel_base.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\..\Source\base\panel_base.h</FilePath>
+            </File>
+            <File>
+              <FileName>base.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Source\base\base.c</FilePath>
             </File>
           </Files>
         </Group>

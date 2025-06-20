@@ -5,6 +5,7 @@
 #include "../base/debug.h"
 #include "../gpio/gpio.h"
 
+#if 0
 #define SYSTEM_CLOCK_FREQ 72000000 ///< 系统时钟频率
 #define TIMER_PERIOD      999      ///< 定时器周期(1ms中断)
 
@@ -189,3 +190,4 @@ int8_t app_timer_get_id_by_name(const char *name)
 {
     return (int8_t)find_timer_by_name(name);
 }
+#endif

@@ -18,13 +18,13 @@
 #define PANEL_8KEY
 
 #if defined PANEL_4KEY
-#define KEY_NUMBER_COUNT 4
+#define KEY_NUMBER 4
 #endif
 #if defined PANEL_6KEY
-#define KEY_NUMBER_COUNT 6
+#define KEY_NUMBER 6
 #endif
 #if defined PANEL_8KEY
-#define KEY_NUMBER_COUNT 4
+#define KEY_NUMBER 4
 
 #endif
 #endif

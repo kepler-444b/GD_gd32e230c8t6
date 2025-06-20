@@ -5,8 +5,9 @@
 #include <stdbool.h>
 #include <string.h>
 
-#define MAX_SOFT_TIMERS 10       ///< 最大支持的软定时器数量
-#define MAX_TIMER_NAME_LEN 16    ///< 定时器名称最大长度
+#if 0
+#define MAX_SOFT_TIMERS    10 ///< 最大支持的软定时器数量
+#define MAX_TIMER_NAME_LEN 16 ///< 定时器名称最大长度
 
 typedef enum {
     TIMER_STATE_INACTIVE = 0,    ///< 定时器未激活
@@ -87,4 +88,5 @@ uint32_t app_timer_get_ticks(void);
  */
 int8_t app_timer_get_id_by_name(const char *name);
 
+#endif
 #endif
