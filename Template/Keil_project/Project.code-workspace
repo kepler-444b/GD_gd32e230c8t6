@@ -18,11 +18,7 @@
             "*.c++": "cpp",
             "*.cpp": "cpp",
             "*.cxx": "cpp",
-            "*.cc": "cpp",
-            "limits": "c",
-            "string": "c",
-            "string_view": "c",
-            "cstddef": "c"
+            "*.cc": "cpp"
         },
         "[yaml]": {
             "editor.insertSpaces": true,

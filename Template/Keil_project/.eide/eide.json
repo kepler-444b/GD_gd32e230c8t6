@@ -1,0 +1,664 @@
+{
+  "name": "Project",
+  "type": "ARM",
+  "dependenceList": [],
+  "srcDirs": [],
+  "virtualFolder": {
+    "name": "<virtual_root>",
+    "files": [],
+    "folders": [
+      {
+        "name": "App",
+        "files": [
+          {
+            "path": "../gd32e23x_it.c"
+          },
+          {
+            "path": "../main.c"
+          },
+          {
+            "path": "../systick.c"
+          },
+          {
+            "path": "../../Source/FreeRTOS/FreeRTOSConfig.h"
+          },
+          {
+            "path": "../main.h"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "CMSIS",
+        "files": [
+          {
+            "path": "../../Firmware/CMSIS/GD/GD32E23x/Source/system_gd32e23x.c"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "Startup",
+        "files": [
+          {
+            "path": "../../Firmware/CMSIS/GD/GD32E23x/Source/ARM/startup_gd32e23x.s"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "Utilities",
+        "files": [
+          {
+            "path": "../../Utilities/gd32e230c_eval.c"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "Doc",
+        "files": [
+          {
+            "path": "../readme.txt"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "GD32E23x_src",
+        "files": [
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_adc.c"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_cmp.c"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_crc.c"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_dbg.c"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_dma.c"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_exti.c"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_fmc.c"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_fwdgt.c"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_gpio.c"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_i2c.c"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_misc.c"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_pmu.c"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_rcu.c"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_rtc.c"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_spi.c"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_syscfg.c"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_timer.c"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_usart.c"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Source/gd32e23x_wwdgt.c"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "GD32E23x_inc",
+        "files": [
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Include/gd32e23x_adc.h"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Include/gd32e23x_cmp.h"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Include/gd32e23x_crc.h"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Include/gd32e23x_dbg.h"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Include/gd32e23x_dma.h"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Include/gd32e23x_exti.h"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Include/gd32e23x_fmc.h"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Include/gd32e23x_fwdgt.h"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Include/gd32e23x_gpio.h"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Include/gd32e23x_i2c.h"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Include/gd32e23x_misc.h"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Include/gd32e23x_pmu.h"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Include/gd32e23x_rcu.h"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Include/gd32e23x_rtc.h"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Include/gd32e23x_spi.h"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Include/gd32e23x_syscfg.h"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Include/gd32e23x_timer.h"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Include/gd32e23x_usart.h"
+          },
+          {
+            "path": "../../Firmware/GD32E23x_standard_peripheral/Include/gd32e23x_wwdgt.h"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "common",
+        "files": [
+          {
+            "path": "../../Source/uart/uart.c"
+          },
+          {
+            "path": "../../Source/uart/uart.h"
+          },
+          {
+            "path": "../../Source/adc/adc.c"
+          },
+          {
+            "path": "../../Source/adc/adc.h"
+          },
+          {
+            "path": "../../Source/gpio/gpio.c"
+          },
+          {
+            "path": "../../Source/gpio/gpio.h"
+          },
+          {
+            "path": "../../Source/protocol/protocol.c"
+          },
+          {
+            "path": "../../Source/protocol/protocol.h"
+          },
+          {
+            "path": "../../Source/flash/flash.c"
+          },
+          {
+            "path": "../../Source/flash/flash.h"
+          },
+          {
+            "path": "../../Source/eventbus/eventbus.c"
+          },
+          {
+            "path": "../../Source/eventbus/eventbus.h"
+          },
+          {
+            "path": "../../Source/pwm/pwm.c"
+          },
+          {
+            "path": "../../Source/pwm/pwm.h"
+          },
+          {
+            "path": "../../Source/pwm/curve_table.h"
+          },
+          {
+            "path": "../../Source/watchdog/watchdog.c"
+          },
+          {
+            "path": "../../Source/watchdog/watchdog.h"
+          },
+          {
+            "path": "../../Source/zero/zero.c"
+          },
+          {
+            "path": "../../Source/zero/zero.h"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "device",
+        "files": [
+          {
+            "path": "../../Source/device/jump_device.c"
+          },
+          {
+            "path": "../../Source/device/jump_device.h"
+          },
+          {
+            "path": "../../Source/device/device_manager.h"
+          },
+          {
+            "path": "../../Source/device/quick_box.c"
+          },
+          {
+            "path": "../../Source/device/quick_box.h"
+          },
+          {
+            "path": "../../Source/device/panel_key.c"
+          },
+          {
+            "path": "../../Source/device/panel_key.h"
+          },
+          {
+            "path": "../../Source/config/config.c"
+          },
+          {
+            "path": "../../Source/config/config.h"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "base",
+        "files": [
+          {
+            "path": "../../Source/base/base.h"
+          },
+          {
+            "path": "../../Source/base/debug.h"
+          },
+          {
+            "path": "../../Source/base/panel_base.c"
+          },
+          {
+            "path": "../../Source/base/panel_base.h"
+          },
+          {
+            "path": "../../Source/base/base.c"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "FreeRTOS_src",
+        "files": [
+          {
+            "path": "../../Source/FreeRTOS/src/croutine.c"
+          },
+          {
+            "path": "../../Source/FreeRTOS/src/event_groups.c"
+          },
+          {
+            "path": "../../Source/FreeRTOS/src/list.c"
+          },
+          {
+            "path": "../../Source/FreeRTOS/src/queue.c"
+          },
+          {
+            "path": "../../Source/FreeRTOS/src/stream_buffer.c"
+          },
+          {
+            "path": "../../Source/FreeRTOS/src/tasks.c"
+          },
+          {
+            "path": "../../Source/FreeRTOS/src/timers.c"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "FreeRTOS_inc",
+        "files": [
+          {
+            "path": "../../Source/FreeRTOS/inc/atomic.h"
+          },
+          {
+            "path": "../../Source/FreeRTOS/inc/croutine.h"
+          },
+          {
+            "path": "../../Source/FreeRTOS/inc/deprecated_definitions.h"
+          },
+          {
+            "path": "../../Source/FreeRTOS/inc/event_groups.h"
+          },
+          {
+            "path": "../../Source/FreeRTOS/inc/FreeRTOS.h"
+          },
+          {
+            "path": "../../Source/FreeRTOS/inc/list.h"
+          },
+          {
+            "path": "../../Source/FreeRTOS/inc/message_buffer.h"
+          },
+          {
+            "path": "../../Source/FreeRTOS/inc/mpu_prototypes.h"
+          },
+          {
+            "path": "../../Source/FreeRTOS/inc/mpu_syscall_numbers.h"
+          },
+          {
+            "path": "../../Source/FreeRTOS/inc/mpu_wrappers.h"
+          },
+          {
+            "path": "../../Source/FreeRTOS/inc/newlib-freertos.h"
+          },
+          {
+            "path": "../../Source/FreeRTOS/inc/picolibc-freertos.h"
+          },
+          {
+            "path": "../../Source/FreeRTOS/inc/portable.h"
+          },
+          {
+            "path": "../../Source/FreeRTOS/inc/projdefs.h"
+          },
+          {
+            "path": "../../Source/FreeRTOS/inc/queue.h"
+          },
+          {
+            "path": "../../Source/FreeRTOS/inc/semphr.h"
+          },
+          {
+            "path": "../../Source/FreeRTOS/inc/stack_macros.h"
+          },
+          {
+            "path": "../../Source/FreeRTOS/inc/StackMacros.h"
+          },
+          {
+            "path": "../../Source/FreeRTOS/inc/stream_buffer.h"
+          },
+          {
+            "path": "../../Source/FreeRTOS/inc/task.h"
+          },
+          {
+            "path": "../../Source/FreeRTOS/inc/timers.h"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "FreeRTOS_port",
+        "files": [
+          {
+            "path": "../../Source/FreeRTOS/port/port.c"
+          },
+          {
+            "path": "../../Source/FreeRTOS/port/portasm.h"
+          },
+          {
+            "path": "../../Source/FreeRTOS/port/portmacro.h"
+          },
+          {
+            "path": "../../Source/FreeRTOS/port/portmacrocommon.h"
+          },
+          {
+            "path": "../../Source/FreeRTOS/port/portasm.c"
+          },
+          {
+            "path": "../../Source/FreeRTOS/port/MemMang/heap_1.c"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "::CMSIS",
+        "files": [],
+        "folders": []
+      },
+      {
+        "name": "::RTOS",
+        "files": [],
+        "folders": []
+      }
+    ]
+  },
+  "outDir": "build",
+  "deviceName": null,
+  "packDir": null,
+  "miscInfo": {
+    "uid": "1aafd2e5c4526ac5a914caa7304d3e35"
+  },
+  "targets": {
+    "GD32E23x": {
+      "excludeList": [],
+      "toolchain": "AC6",
+      "compileConfig": {
+        "cpuType": "Cortex-M23",
+        "floatingPointHardware": "none",
+        "scatterFilePath": "output/Project.sct",
+        "useCustomScatterFile": false,
+        "storageLayout": {
+          "RAM": [
+            {
+              "tag": "RAM",
+              "id": 1,
+              "mem": {
+                "startAddr": "0x0",
+                "size": "0x0"
+              },
+              "isChecked": false,
+              "noInit": false
+            },
+            {
+              "tag": "RAM",
+              "id": 2,
+              "mem": {
+                "startAddr": "0x0",
+                "size": "0x0"
+              },
+              "isChecked": false,
+              "noInit": false
+            },
+            {
+              "tag": "RAM",
+              "id": 3,
+              "mem": {
+                "startAddr": "0x0",
+                "size": "0x0"
+              },
+              "isChecked": false,
+              "noInit": false
+            },
+            {
+              "tag": "IRAM",
+              "id": 1,
+              "mem": {
+                "startAddr": "0x20000000",
+                "size": "0x2000"
+              },
+              "isChecked": true,
+              "noInit": false
+            },
+            {
+              "tag": "IRAM",
+              "id": 2,
+              "mem": {
+                "startAddr": "0x0",
+                "size": "0x0"
+              },
+              "isChecked": false,
+              "noInit": false
+            }
+          ],
+          "ROM": [
+            {
+              "tag": "ROM",
+              "id": 1,
+              "mem": {
+                "startAddr": "0x0",
+                "size": "0x0"
+              },
+              "isChecked": false,
+              "isStartup": false
+            },
+            {
+              "tag": "ROM",
+              "id": 2,
+              "mem": {
+                "startAddr": "0x0",
+                "size": "0x0"
+              },
+              "isChecked": false,
+              "isStartup": false
+            },
+            {
+              "tag": "ROM",
+              "id": 3,
+              "mem": {
+                "startAddr": "0x0",
+                "size": "0x0"
+              },
+              "isChecked": false,
+              "isStartup": false
+            },
+            {
+              "tag": "IROM",
+              "id": 1,
+              "mem": {
+                "startAddr": "0x8000000",
+                "size": "0x10000"
+              },
+              "isChecked": true,
+              "isStartup": true
+            },
+            {
+              "tag": "IROM",
+              "id": 2,
+              "mem": {
+                "startAddr": "0x0",
+                "size": "0x0"
+              },
+              "isChecked": false,
+              "isStartup": false
+            }
+          ]
+        },
+        "options": "null"
+      },
+      "uploader": "JLink",
+      "uploadConfig": {
+        "bin": "",
+        "baseAddr": "",
+        "cpuInfo": {
+          "vendor": "GigaDevice",
+          "cpuName": "GD32E230C8"
+        },
+        "proType": 1,
+        "speed": 8000,
+        "otherCmds": ""
+      },
+      "uploadConfigMap": {
+        "JLink": {
+          "bin": "",
+          "baseAddr": "",
+          "cpuInfo": {
+            "vendor": "GigaDevice",
+            "cpuName": "GD32E230C8"
+          },
+          "proType": 1,
+          "speed": 8000,
+          "otherCmds": ""
+        },
+        "OpenOCD": {
+          "bin": "",
+          "target": "stm32f1x",
+          "interface": "stlink",
+          "baseAddr": "0x08000000"
+        },
+        "Custom": {
+          "bin": "",
+          "commandLine": "",
+          "eraseChipCommand": ""
+        },
+        "STLink": {
+          "bin": "",
+          "proType": "SWD",
+          "resetMode": "default",
+          "runAfterProgram": true,
+          "speed": 4000,
+          "address": "0x8000000",
+          "elFile": "None",
+          "optionBytes": ".eide/gd32e23x.st.option.bytes.ini",
+          "otherCmds": ""
+        }
+      },
+      "custom_dep": {
+        "name": "default",
+        "incList": [
+          "../../Firmware/CMSIS",
+          "../../Utilities",
+          "../../Utilities/LCD_Commom",
+          "../../Firmware/GD32E23x_standard_peripheral/Include",
+          "../../Firmware/CMSIS/GD/GD32E23x/Include",
+          "../../Source/FreeRTOS/inc",
+          "../../Source/FreeRTOS/src",
+          "../../Source/FreeRTOS/port",
+          "../../Source/FreeRTOS",
+          "..",
+          ".cmsis/include",
+          "RTE/_GD32E23x"
+        ],
+        "libList": [],
+        "defineList": [
+          "GD32E230"
+        ]
+      },
+      "builderOptions": {
+        "AC6": {
+          "version": 3,
+          "beforeBuildTasks": [],
+          "afterBuildTasks": [],
+          "global": {
+            "use-microLIB": true,
+            "output-debug-info": "enable"
+          },
+          "c/cpp-compiler": {
+            "optimization": "level-2",
+            "language-c": "c99",
+            "language-cpp": "c++11",
+            "one-elf-section-per-function": true,
+            "short-enums#wchar": true,
+            "warnings": "ac5-like-warnings"
+          },
+          "asm-compiler": {
+            "$use": "asm-auto"
+          },
+          "linker": {
+            "output-format": "elf",
+            "ro-base": "0x08000000",
+            "rw-base": "0x20000000",
+            "$disableOutputTask": true
+          }
+        }
+      }
+    }
+  },
+  "version": "3.5"
+}

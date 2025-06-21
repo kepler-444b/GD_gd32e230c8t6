@@ -81,7 +81,7 @@
             <nStopB2X>0</nStopB2X>
           </BeforeMake>
           <AfterMake>
-            <RunUserProg1>1</RunUserProg1>
+            <RunUserProg1>0</RunUserProg1>
             <RunUserProg2>0</RunUserProg2>
             <UserProg1Name>fromelf --bin --output=.\output\@L.bin !L</UserProg1Name>
             <UserProg2Name></UserProg2Name>
@@ -341,7 +341,7 @@
               <MiscControls></MiscControls>
               <Define>GD32E230</Define>
               <Undefine></Undefine>
-              <IncludePath>..\..\Firmware\CMSIS;..\..\Utilities;..\;..\..\Utilities\LCD_Commom;..\..\Firmware\GD32E23x_standard_peripheral\Include;..\..\Firmware\CMSIS\GD\GD32E23x\Include;..\..\Source\FreeRTOS\inc;..\..\Source\FreeRTOS\src;..\..\Source\FreeRTOS\port;..\..\Source\FreeRTOS</IncludePath>
+              <IncludePath>..\..\Firmware\CMSIS;..\..\Utilities;..\..\Utilities\LCD_Commom;..\..\Firmware\GD32E23x_standard_peripheral\Include;..\..\Firmware\CMSIS\GD\GD32E23x\Include;..\..\Source\FreeRTOS\inc;..\..\Source\FreeRTOS\src;..\..\Source\FreeRTOS\port;..\..\Source\FreeRTOS;..\</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
