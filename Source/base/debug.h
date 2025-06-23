@@ -15,9 +15,11 @@
 #if defined APP_DEBUG
 #define APP_PRINTF(...) printf(__VA_ARGS__)
 #define APP_PRINTF_BUF(name, buf, len)                        \
-    do {                                                      \
+    do                                                        \
+    {                                                         \
         APP_PRINTF("%s: ", (name));                           \
-        for (size_t i = 0; i < (len); i++) {                  \
+        for (size_t i = 0; i < (len); i++)                    \
+        {                                                     \
             APP_PRINTF("%02X ", ((const uint8_t *)(buf))[i]); \
         }                                                     \
         APP_PRINTF("\n");                                     \

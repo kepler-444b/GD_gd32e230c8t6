@@ -9,7 +9,7 @@ typedef struct
     uint8_t pwm_duty;
     uint8_t dither_accumulator; // 抖动累加器
     uint8_t pwm_cycle;          // PWM 周期
-    gpio_pin_t gpio;    // 输出的管脚
+    gpio_pin_t gpio;            // 输出的管脚
 } pwm_state;
 static pwm_state my_pwm_state;
 
@@ -31,7 +31,8 @@ uint16_t app_calculate_average(const uint16_t *buffer, uint16_t count)
 
 bool app_uint8_to_uint32(const uint8_t *input, size_t input_count, uint32_t *output, size_t output_count)
 {
-    if (!input || !output) return false;
+    if (!input || !output)
+        return false;
     if (output_count < (input_count + 3) / 4) {
         return false;
     }
@@ -50,7 +51,8 @@ bool app_uint8_to_uint32(const uint8_t *input, size_t input_count, uint32_t *out
 
 bool app_uint32_to_uint8(const uint32_t *input, size_t input_count, uint8_t *output, size_t output_count)
 {
-    if (!input || !output) return false;
+    if (!input || !output)
+        return false;
     if (output_count < input_count * 4) {
         return false;
     }

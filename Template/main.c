@@ -24,8 +24,7 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
 {
     (void)xTask; // 避免未使用变量警告
     APP_ERROR("ERROR: Stack overflow in task %s\n", pcTaskName);
-    while (1)
-        ; // 死循环,便于调试
+    while (1); // 死循环,便于调试
 }
 
 static void app_main_task(void *pvParameters)
@@ -37,10 +36,9 @@ static void app_main_task(void *pvParameters)
     app_proto_init();          // 协议层
     app_watchdog_init();       // 看门狗
 
-    app_load_config();  // 加载配置信息
+    app_load_config(); // 加载配置信息
     app_jump_device_init();
-    while (1)
-    {
+    while (1) {
         app_eventbus_poll();
         vTaskDelay(1); // 延时1ms,让出cpu
 
