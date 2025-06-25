@@ -3,11 +3,11 @@
 #include "jump_device.h"
 
 #if defined PANEL_KEY
-#include "panel_key.h"
+    #include "panel_key.h"
 #endif
 
 #if defined QUICK_BOX
-#include "quick_box.h"
+    #include "quick_box.h"
 #endif
 void app_jump_device_init(void)
 {

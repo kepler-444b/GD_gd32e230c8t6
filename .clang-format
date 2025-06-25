@@ -36,3 +36,4 @@ SortIncludes: false
 AlignConsecutiveMacros: AcrossEmptyLines
 
 AlignConsecutiveAssignments: Consecutive
+IndentPPDirectives: BeforeHash

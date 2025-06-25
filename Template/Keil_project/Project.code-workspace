@@ -7,6 +7,18 @@
             "path": "."
         }
     ],
-    "settings": {},
+    "settings": {
+        "files.associations": {
+            "string.h": "c",
+            "cstddef": "c",
+            "usart.h": "c",
+            "freertos.h": "c",
+            "eventbus.h": "c",
+            "config.h": "c",
+            "flash.h": "c",
+            "base.h": "c",
+            "task.h": "c"
+        }
+    },
     "extensions": {}
 }

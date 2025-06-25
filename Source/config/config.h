@@ -31,21 +31,16 @@ const panel_cfg_t *app_get_panel_cfg_ex(void);
 #endif
 
 #if defined QUICK_BOX
-// 用于quick类型的信息存储
+// 用于quick box类型的信息存储
 typedef struct
 {
-    uint8_t func;      // 按键类型
-    uint8_t group;     // 分组
-    uint8_t area;      // 权限
-    uint8_t perm;      // 总关/场景区域
-    uint8_t key_scene; // 场景
-    uint8_t target[6];
-} packet;
-
-typedef struct
-{
-    uint8_t speed;                       // 调光速率
-    packet key_packet[LED_NUMBER_COUNT]; // 数据包
+    uint8_t func;         // 按键类型
+    uint8_t group;        // 分组
+    uint8_t perm;         // 权限
+    uint8_t area;         // 按键区域
+    uint8_t scene_group;  // 场景分组
+    uint8_t lum;          // 本路调光
+    uint8_t scene_lun[8]; // 场景调光
 } quick_ctg_t;
 
 const quick_ctg_t *app_get_quick_cfg(void);

@@ -5,7 +5,7 @@
 #include "timers.h"
 #include "../gpio/gpio.h"
 #include "../base/debug.h"
-#include "../uart/uart.h"
+#include "../usart/usart.h"
 #include "../protocol/protocol.h"
 #include "../pwm/pwm.h"
 #include "../eventbus/eventbus.h"
@@ -13,8 +13,8 @@
 
 #if defined QUICK_BOX
 
-#define SCALE_100_TO_500(x) ((x) <= 0 ? 0 : ((x) >= 100 ? 500 : ((x) * 500) / 100))
-#define SCALE_5_TO_5000(x)  ((x) <= 0 ? 0 : ((x) >= 5 ? 5000 : ((x) * 5000) / 5))
+    #define SCALE_100_TO_500(x) ((x) <= 0 ? 0 : ((x) >= 100 ? 500 : ((x) * 500) / 100))
+    #define SCALE_5_TO_5000(x)  ((x) <= 0 ? 0 : ((x) >= 5 ? 5000 : ((x) * 5000) / 5))
 
 typedef struct {
     bool key_status;          // 按键状态
@@ -71,19 +71,25 @@ void quick_box_init(void)
         APP_ERROR("CheckZeroTimerHandle error");
     }
 
-    gpio_pin_t led_pins[3] = {PB7, PB6, PB5}; // (led与io口映射)顺序为 led1,led2,led3
-    app_pwm_init(led_pins, 3);
+    app_pwm_init();
 
-    relay_pins[0] = PB13;
-    relay_pins[1] = PB14;
-    relay_pins[2] = PB15;
+    // relay_pins[0] = PB13;
+    // relay_pins[1] = PB14;
+    // relay_pins[2] = PB15;
 
-    // app_set_pwm_fade(0, 10, 1000);
-    // app_set_pwm_fade(1, 10, 1000);
-    // app_set_pwm_fade(2, 10, 1000);
     // APP_SET_GPIO(PB13, true);
     // APP_SET_GPIO(PB14, true);
     // APP_SET_GPIO(PB15, true);
+
+    APP_SET_GPIO(PB5, true);
+    APP_SET_GPIO(PB6, true);
+    APP_SET_GPIO(PB7, true);
+    app_pwm_add_pin(PB5);
+    app_pwm_add_pin(PB6);
+    app_pwm_add_pin(PB7);
+    app_set_pwm_duty(PB5, 0);
+    app_set_pwm_duty(PB6, 0);
+    app_set_pwm_duty(PB7, 0);
 }
 
 void quick_box_gpio_init(void)
@@ -136,6 +142,7 @@ void EXTI4_15_IRQHandler(void)
 // 执行场景
 void quick_led_open(uint8_t scene_num, bool status)
 {
+    #if 0
     const quick_ctg_t *temp_cfg = app_get_quick_cfg();
     if (status) {
         for (uint8_t i = 0; i < 3; i++) {
@@ -152,6 +159,7 @@ void quick_led_open(uint8_t scene_num, bool status)
             my_tigger_relay[i].tigger_relay = true;
         }
     }
+    #endif
 }
 
 // 触发继电器
@@ -176,8 +184,8 @@ void quick_box_data_cb(valid_data_t *data)
 {
     APP_PRINTF_BUF("quick_recv", data->data, data->length);
     const quick_ctg_t *temp_cfg = app_get_quick_cfg();
-
-    for (uint8_t i = 0; i < LED_NUMBER_COUNT; i++) { // 匹配按键
+    #if 0
+    for (uint8_t i = 0; i < LED_NUMBER; i++) { // 匹配按键
         if (temp_cfg->key_packet[i].func == data->data[1] &&
             temp_cfg->key_packet[i].group == data->data[3] &&
             temp_cfg->key_packet[i].area == data->data[6] &&
@@ -190,6 +198,7 @@ void quick_box_data_cb(valid_data_t *data)
             }
         }
     }
+    #endif
 }
 
 void quick_event_handler(event_type_e event, void *params)
@@ -206,7 +215,6 @@ void quick_event_handler(event_type_e event, void *params)
         } break;
         case EVENT_SAVE_SUCCESS:
             my_common_quick.led_filck = true;
-            app_load_config();
             break;
         case EVENT_RECEIVE_CMD: {
             valid_data_t *valid_data = (valid_data_t *)params;
@@ -225,8 +233,9 @@ void quick_box_timer(TimerHandle_t xTimer)
 
     if (my_common_quick.key_status == false) { // 按键按下
         my_common_quick.key_long_count++;
-        if (my_common_quick.key_long_count >= 5000) {       // 触发长按
-            app_send_cmd(0, 0, JD_RECV_APPLY, 0x00, false); // 向上位机发送配置申请
+
+        if (my_common_quick.key_long_count >= 5000) { // 触发长按
+            app_send_cmd(0, 0, APPLY_CONFIG, 0x00, false);
             APP_PRINTF("long_press\n");
             my_common_quick.key_long_count = 0;
         }
@@ -251,14 +260,16 @@ void quick_box_timer(TimerHandle_t xTimer)
 
 void quick_ctrl_led_all(bool status)
 {
+    #if 1
     if (status == true) {
-        app_set_pwm_duty(0, 500);
-        app_set_pwm_duty(1, 500);
-        app_set_pwm_duty(2, 500);
+        app_set_pwm_duty(PB5, 500);
+        app_set_pwm_duty(PB6, 500);
+        app_set_pwm_duty(PB7, 500);
     } else {
-        app_set_pwm_duty(0, 0);
-        app_set_pwm_duty(1, 0);
-        app_set_pwm_duty(2, 0);
+        app_set_pwm_duty(PB5, 0);
+        app_set_pwm_duty(PB6, 0);
+        app_set_pwm_duty(PB7, 0);
     }
+    #endif
 }
 #endif

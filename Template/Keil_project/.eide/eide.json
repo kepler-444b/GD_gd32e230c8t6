@@ -194,12 +194,6 @@
         "name": "common",
         "files": [
           {
-            "path": "../../Source/uart/uart.c"
-          },
-          {
-            "path": "../../Source/uart/uart.h"
-          },
-          {
             "path": "../../Source/adc/adc.c"
           },
           {
@@ -249,6 +243,12 @@
           },
           {
             "path": "../../Source/zero/zero.h"
+          },
+          {
+            "path": "../../Source/usart/usart.c"
+          },
+          {
+            "path": "../../Source/usart/usart.h"
           }
         ],
         "folders": []

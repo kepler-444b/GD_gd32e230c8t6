@@ -3,7 +3,7 @@
 #include <string.h>
 #include "gd32e230c_eval.h"
 #include "gd32e23x_usart.h"
-#include "uart.h"
+#include "usart.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "../base/debug.h"

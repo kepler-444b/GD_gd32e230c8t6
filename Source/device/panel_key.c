@@ -8,7 +8,7 @@
 #include "../base/base.h"
 #include "../adc/adc.h"
 #include "../gpio/gpio.h"
-#include "../uart/uart.h"
+#include "../usart/usart.h"
 #include "../base/panel_base.h"
 #include "../eventbus/eventbus.h"
 #include "../protocol/protocol.h"

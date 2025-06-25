@@ -21,7 +21,7 @@ static bool is_offline = false;
 // 用于保存接收到的有效数据
 typedef struct
 {
-    uint8_t data[160];
+    uint8_t data[128];
     uint8_t length;
 
 } valid_data_t;
@@ -33,23 +33,25 @@ typedef struct
     uint8_t length;
 } at_frame_t;
 
-typedef void (*ValidDataCallback)(valid_data_t *data);
-
 void app_proto_init(void);
-void app_at_send(at_frame_t *at_frame_t);
 void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t cmd, uint8_t func, bool is_ex);
 
 typedef enum {
-    PANEL_HEAD = 0xF1, // 帧头
+
     // 命令类型
     COMMON_CMD  = 0x00, // 普通命令
     SPECIAL_CMD = 0x01, // 特殊命令
 
-    QUICK_SINGLE = 0xE1, // quick (快装盒子)单发串码
+    QUICK_SINGLE = 0xE2, // quick (快装盒子)单发串码
+    QUICK_MULTI  = 0xE3, // quick (快装盒子)群发串码
+    QUICK_END    = 0x30,
+    // 面板帧头
+    PANEL_HEAD   = 0xF1,
     PANEL_SINGLE = 0xF2, // panel (面板)单发串码
     PANEL_MULTI  = 0xF3, // panel (面板)群发串码
     APPLY_CONFIG = 0xF8, // 设置软件回复设置申请
     EXIT_CONFIG  = 0xF9, // 设置软件"退出"配置模式
+    TEST_CMD     = 0xF2,
 
     // 按键功能
     ALL_CLOSE     = 0x00, // 总关
@@ -77,6 +79,5 @@ typedef enum {
     PLAY_PAUSE    = 0x65, // 播放/暂停
     NEXT_SONG     = 0x66, // 下一首
     LAST_SONG     = 0x67, // 上一首
-
 } panel_frame_e;
 #endif

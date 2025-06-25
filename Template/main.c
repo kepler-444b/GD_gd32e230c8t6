@@ -5,7 +5,7 @@
 #include "main.h"
 #include "FreeRTOS.h"
 #include "task.h"
-#include "../Source/uart/uart.h"
+#include "../Source/usart/usart.h"
 #include "../Source/base/debug.h"
 #include "../Source/base/base.h"
 #include "../Source/device/jump_device.h"

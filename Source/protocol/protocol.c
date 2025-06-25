@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "protocol.h"
-#include "../uart/uart.h"
+#include "../usart/usart.h"
 #include "../base/debug.h"
 #include "../flash/flash.h"
 #include "../base/base.h"
@@ -18,8 +18,14 @@
     (uint8_t)(0xFF - _sum + 1);                                 \
 })
 
-static uint8_t extend_data[16]    = {0}; // 灯控面板的第二个校验值所校验的数据
-static valid_data_t my_valid_data = {0};
+#if defined PANEL_KEY
+static uint8_t extend_data[16] = {0}; // 灯控面板的第二个校验值所校验的数据
+#endif
+
+#if defined QUICK_BOX
+static valid_data_t temp_save = {0}; // 快装盒子存储配置信息用到的临时缓冲区
+#endif
+
 // 此结构体用于产品配置相关
 typedef struct
 {
@@ -30,10 +36,12 @@ typedef struct
 static apply_t my_apply;
 
 // 函数声明
-void app_proto_check(uart_rx_buffer_t *my_uart_rx_buffer);
-void app_save_config(valid_data_t *boj, bool is_ex);
-uint16_t calcrc_data_quick(uint8_t *rxbuf, uint8_t len);
-void app_proto_process(valid_data_t *my_valid_data);
+static void app_proto_check(uart_rx_buffer_t *my_uart_rx_buffer);
+static void app_save_panel_cfg(valid_data_t *boj, bool is_ex);
+static void app_save_quick_cfg(valid_data_t *obj);
+static void app_proto_process(valid_data_t *my_valid_data);
+static void app_at_send(at_frame_t *my_at_frame);
+static uint16_t calcrc_data_quick(uint8_t *rxbuf, uint8_t len);
 
 void app_proto_init(void)
 {
@@ -41,8 +49,9 @@ void app_proto_init(void)
 }
 
 // usart 接收到数据首先回调在这里处理
-void app_proto_check(uart_rx_buffer_t *my_uart_rx_buffer)
+static void app_proto_check(uart_rx_buffer_t *my_uart_rx_buffer)
 {
+    APP_PRINTF("%s\n", my_uart_rx_buffer->buffer);
     if (strncmp((char *)my_uart_rx_buffer->buffer, "OK", 2) == 0) {
         is_offline = true;
     }
@@ -68,6 +77,8 @@ void app_proto_check(uart_rx_buffer_t *my_uart_rx_buffer)
     if (hex_len == 0 || hex_len % 2 != 0) {
         return;
     }
+    // 初始化接受数据结构体
+    static valid_data_t my_valid_data = {0};
     // 提取并转换十六进制数据
     my_valid_data.length = hex_len / 2;
     for (uint16_t i = 0; i < my_valid_data.length; i++) {
@@ -76,7 +87,7 @@ void app_proto_check(uart_rx_buffer_t *my_uart_rx_buffer)
     app_proto_process(&my_valid_data);
 }
 
-void app_proto_process(valid_data_t *my_valid_data)
+static void app_proto_process(valid_data_t *my_valid_data)
 {
     switch (my_valid_data->data[0]) {
         case PANEL_HEAD: // 收到其他设备的AT指令
@@ -84,34 +95,49 @@ void app_proto_process(valid_data_t *my_valid_data)
                 app_eventbus_publish(EVENT_RECEIVE_CMD, my_valid_data);
             }
             break;
+#if defined PANEL_KEY
         case PANEL_SINGLE: // panel 串码(单发)
             if (my_apply.enter_apply == true) {
                 if (my_valid_data->data[24] == CALC_CRC(my_valid_data->data, 24)) {
                     memcpy(extend_data, &my_valid_data->data[25], 9);
                     if (extend_data[9] == CALC_CRC(extend_data, 9)) {
-                        app_save_config(my_valid_data, my_apply.is_ex);
+                        app_save_panel_cfg(my_valid_data, my_apply.is_ex);
                     }
                 }
             }
             break;
+
         case PANEL_MULTI: // panel 串码(群发)
             if (my_valid_data->data[24] == CALC_CRC(my_valid_data->data, 24)) {
                 memcpy(extend_data, &my_valid_data->data[25], 9);
                 if (extend_data[9] == CALC_CRC(extend_data, 9)) {
-                    app_save_config(my_valid_data, false);
+                    app_save_panel_cfg(my_valid_data, false);
                 }
             }
             break;
-        case QUICK_SINGLE: // quick 串码(单发)
+#endif
+#if defined QUICK_BOX
+        case QUICK_SINGLE: {
             if (my_apply.enter_apply == true) {
-                if ((my_valid_data->data[1] * 11 + 5) == my_valid_data->length) { // 确定长度
-                    uint16_t crc = (my_valid_data->data[my_valid_data->length - 2] << 8) | my_valid_data->data[my_valid_data->length - 1];
-                    if (crc == calcrc_data_quick(my_valid_data->data, my_valid_data->length - 2)) {
-                        app_save_config(my_valid_data, false);
+                if (((my_valid_data->data[my_valid_data->length - 2] << 8) | (my_valid_data->data[my_valid_data->length - 1])) ==
+                    calcrc_data_quick(my_valid_data->data, my_valid_data->length - 2)) {
+                    uint8_t addr_offset = L_BIT(my_valid_data->data[1]) - 1; // 根据是第几路偏移内存地址
+                    if (my_valid_data->data[1] != QUICK_END) {
+                        for (uint16_t i = 0; i < my_valid_data->length - 4; i++) {
+                            temp_save.data[addr_offset * 14 + i] = my_valid_data->data[i + 2]; // 跳过前2字节
+                            temp_save.length++;
+                            APP_PRINTF("%02X ", temp_save.data[addr_offset * 14 + i]);
+                        }
+
+                    } else if (my_valid_data->data[1] == QUICK_END) {
+                        APP_PRINTF_BUF("data", temp_save.data, temp_save.length);
+                        app_save_quick_cfg(&temp_save);
+                        temp_save = (valid_data_t){0}; // 标准清零写法
                     }
                 }
             }
-            break;
+        } break;
+#endif
         case APPLY_CONFIG: // 设置软件回复(若不是本设备发送的申请,则屏蔽软件的回复)
             if (my_valid_data->data[1] == 0x02 && my_valid_data->data[2] == 0x06 && my_apply.apply_cmd) {
                 app_eventbus_publish(my_apply.is_ex ? EVENT_ENTER_CONFIG_EX : EVENT_ENTER_CONFIG, NULL);
@@ -130,10 +156,12 @@ void app_proto_process(valid_data_t *my_valid_data)
     }
 }
 
-void app_save_config(valid_data_t *obj, bool is_ex)
+// 用于存放 panel 类型的串码
+static void app_save_panel_cfg(valid_data_t *obj, bool is_ex)
 {
+#if defined PANEL_KEY
     APP_PRINTF_BUF("[SAVE]", obj->data, obj->length);
-    static uint32_t output[24] = {0};
+    static uint32_t output[32] = {0};
     if (app_uint8_to_uint32(obj->data, obj->length, output, sizeof(output)) == true) {
 
         __disable_irq(); // flash 写操作,需要关闭中断
@@ -144,10 +172,28 @@ void app_save_config(valid_data_t *obj, bool is_ex)
         __enable_irq();
     }
     app_eventbus_publish(is_ex ? EVENT_SAVE_SUCCESS_EX : EVENT_SAVE_SUCCESS, NULL); // 发布事件
+#endif
 }
 
+// 用于存放 quick_box 类型的串码
+static void app_save_quick_cfg(valid_data_t *obj)
+{
+#if defined QUICK_BOX
+    APP_PRINTF_BUF("[SAVE]", obj->data, obj->length);
+    static uint32_t output[32] = {0};
+    if (app_uint8_to_uint32(obj->data, obj->length, output, sizeof(output)) == true) {
+        __disable_irq();
+        uint32_t flash_addr = CONFIG_START_ADDR; // 根据 addr_offset 偏移地址存储
+        if (app_flash_program(flash_addr, output, sizeof(output), true) != FMC_READY) {
+            APP_ERROR("app_flash_program");
+        }
+        __enable_irq();
+    }
+    app_eventbus_publish(EVENT_SAVE_SUCCESS, NULL); // 发布事件
+#endif
+}
 // 构造发送 AT 帧
-void app_at_send(at_frame_t *my_at_frame)
+static void app_at_send(at_frame_t *my_at_frame)
 {
     APP_PRINTF_BUF("[SEND]", my_at_frame->data, my_at_frame->length);
     // 转换为十六进制字符串
@@ -170,16 +216,15 @@ void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t cmd, uint8_t f
 {
     static at_frame_t my_at_frame = {0};
 
-    const panel_cfg_t *temp_cfg =
-#if defined PANEL_8KEY
-        is_ex ? app_get_panel_cfg_ex() : app_get_panel_cfg();
-#else
-        app_get_panel_cfg();
-#endif
-
     switch (cmd) {
         case PANEL_HEAD: { // 发送通信帧(panel产品用到)
 #if defined PANEL_KEY
+            const panel_cfg_t *temp_cfg =
+    #if defined PANEL_8KEY
+                is_ex ? app_get_panel_cfg_ex() : app_get_panel_cfg();
+    #else
+                app_get_panel_cfg();
+    #endif
             my_at_frame.data[0] = PANEL_HEAD;
 
             if (key_number > KEY_NUMBER) { // 验证按键编号有效性
@@ -233,7 +278,7 @@ void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t cmd, uint8_t f
 }
 
 // 用于快装盒子串码的校验
-uint16_t calcrc_data_quick(uint8_t *rxbuf, uint8_t len)
+static uint16_t calcrc_data_quick(uint8_t *rxbuf, uint8_t len)
 {
     uint16_t wcrc = 0XFFFF; // 16位crc寄存器预置
     uint8_t temp;
