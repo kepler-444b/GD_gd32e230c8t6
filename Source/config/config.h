@@ -41,10 +41,11 @@ typedef struct
     uint8_t scene_group;  // 场景分组
     uint8_t lum;          // 本路调光
     uint8_t scene_lun[8]; // 场景调光
+    gpio_pin_t led_pin;   // led 管脚
 } quick_ctg_t;
 
 const quick_ctg_t *app_get_quick_cfg(void);
 #endif
 
-bool app_load_config(void);
+void app_load_config(void);
 #endif // _CONFIG_H_

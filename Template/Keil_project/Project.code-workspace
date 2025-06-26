@@ -17,7 +17,8 @@
             "config.h": "c",
             "flash.h": "c",
             "base.h": "c",
-            "task.h": "c"
+            "task.h": "c",
+            "device_manager.h": "c"
         }
     },
     "extensions": {}

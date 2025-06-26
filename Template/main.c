@@ -35,8 +35,8 @@ static void app_main_task(void *pvParameters)
     app_eventbus_init();       // 事件总线
     app_proto_init();          // 协议层
     app_watchdog_init();       // 看门狗
+    app_load_config();         // 加载配置信息
 
-    app_load_config(); // 加载配置信息
     app_jump_device_init();
     while (1) {
         app_eventbus_poll();

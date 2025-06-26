@@ -28,31 +28,31 @@ static void app_panel_get_relay_num(uint8_t *data, const gpio_pin_t *relay_map, 
 static void app_set_relay_pin(panel_cfg_t *panel_cfg, uint8_t relay_num, const gpio_pin_t *relay_map);
 #endif
 
-bool app_load_config(void)
+void app_load_config(void)
 {
     // app_flash_mass_erase();  // 擦除整个扇区(测试使用)
     static uint32_t read_data[32] = {0};
     static uint8_t new_data[128]  = {0};
+    memset(read_data, 0, sizeof(read_data));
+    memset(new_data, 0, sizeof(new_data));
     __disable_irq();
     if (app_flash_read(CONFIG_START_ADDR, read_data, sizeof(read_data)) != FMC_READY) {
         APP_ERROR("app_flash_read failed\n");
-        return false;
     }
     if (app_uint32_to_uint8(read_data, sizeof(read_data) / sizeof(read_data[0]), new_data, sizeof(new_data)) != true) {
         APP_ERROR("app_uint32_to_uint8 error\n");
-        return false;
     }
 #if defined PANEL_8KEY
 
     static uint32_t read_data_ex[24] = {0};
     static uint8_t new_data_ex[96]   = {0};
+    memset(read_data_ex, 0, sizeof(read_data_ex));
+    memset(new_data_ex, 0, sizeof(new_data_ex));
     if (app_flash_read(CONFIG_EXTEN_ADDR, read_data_ex, sizeof(read_data_ex)) != FMC_READY) {
         APP_ERROR("app_flash_read failed\n");
-        return false;
     }
     if (app_uint32_to_uint8(read_data_ex, sizeof(read_data_ex) / sizeof(read_data_ex[0]), new_data_ex, sizeof(new_data_ex)) != true) {
         APP_ERROR("app_uint32_to_uint8 error\n");
-        return false;
     }
 #endif
     __enable_irq();
@@ -64,11 +64,9 @@ bool app_load_config(void)
     app_load_panel_8key(new_data, new_data_ex);
     #endif
 #endif
-
 #if defined QUICK_BOX
     app_load_quick_box(new_data);
 #endif
-    return true;
 }
 
 static void app_load_panel_6key(uint8_t *data)
@@ -115,7 +113,7 @@ static void app_load_panel_6key(uint8_t *data)
         }
         APP_PRINTF("\n");
     }
-#endif // PANEL_6KEY
+#endif /* PANEL_6KEY */
 }
 
 static void app_load_panel_8key(uint8_t *data, uint8_t *data_ex)
@@ -183,9 +181,25 @@ static void app_load_panel_8key(uint8_t *data, uint8_t *data_ex)
 static void app_load_quick_box(uint8_t *data)
 {
 #if defined QUICK_BOX
-    APP_PRINTF_BUF("data", data, 128);
-    static const gpio_pin_t LED_GPIO_MAP[LED_NUMBER] = {PB5, PB6, PB7, PB13, PB14, PB15};
-#endif // QUICK_BOX
+
+    // 对于快装盒子,最多支持8路灯,前3路是PWM,后3路是继电器,最后2路保留(顺序依次为 LED1,LED2,LED3,K1,K2,K3)
+    static const gpio_pin_t LED_GPIO_MAP[8] = {PB7, PB6, PB5, PB13, PB14, PB15, DEF, DEF};
+    for (uint8_t i = 0; i < LED_NUMBER; i++) {
+        quick_ctg_t *const p_cfg = &quick_cfg[i];
+        memcpy(p_cfg, &data[i * 14], 14);
+        p_cfg->led_pin = LED_GPIO_MAP[i];
+    }
+    for (uint8_t i = 0; i < LED_NUMBER; i++) {
+        quick_ctg_t *const p_cfg = &quick_cfg[i];
+        APP_PRINTF("%02X %02X %02X %02X %02X %02X ", p_cfg->func, p_cfg->group, p_cfg->perm, p_cfg->area, p_cfg->scene_group, p_cfg->lum);
+        const char *led_name = app_get_gpio_name(p_cfg->led_pin); // led 管脚
+        APP_PRINTF("%-4s | ", led_name);
+        for (uint8_t j = 0; j < LED_NUMBER; j++) {
+            APP_PRINTF("%02X ", p_cfg->scene_lun[j]);
+        }
+        APP_PRINTF("\n");
+    }
+#endif /* QUICK_BOX */
 }
 
 #if defined PANEL_KEY // 辅助函数(将relay的pin映射到key)

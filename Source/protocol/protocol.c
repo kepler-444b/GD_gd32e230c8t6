@@ -12,7 +12,7 @@
 #include "../device/device_manager.h"
 
 // 用于 panel 帧的校验
-#define CALC_CRC(rxbuf, len) ({                                 \
+#define PANEL_CRC(rxbuf, len) ({                                \
     uint8_t _sum = 0;                                           \
     for (uint8_t _i = 0; _i < (len); _i++) _sum += (rxbuf)[_i]; \
     (uint8_t)(0xFF - _sum + 1);                                 \
@@ -31,17 +31,17 @@ typedef struct
 {
     bool apply_cmd;   // 申请配置
     bool enter_apply; // 申请回应
-    bool is_ex;
+    bool is_ex;       // 扩展配置(在8键面板中用到)
 } apply_t;
 static apply_t my_apply;
 
 // 函数声明
-static void app_proto_check(uart_rx_buffer_t *my_uart_rx_buffer);
+static void app_proto_check(uart_rx_buf_t *my_uart_rx_buf);
 static void app_save_panel_cfg(valid_data_t *boj, bool is_ex);
 static void app_save_quick_cfg(valid_data_t *obj);
 static void app_proto_process(valid_data_t *my_valid_data);
 static void app_at_send(at_frame_t *my_at_frame);
-static uint16_t calcrc_data_quick(uint8_t *rxbuf, uint8_t len);
+static uint16_t quick_crc(uint8_t *data, uint8_t len);
 
 void app_proto_init(void)
 {
@@ -49,20 +49,20 @@ void app_proto_init(void)
 }
 
 // usart 接收到数据首先回调在这里处理
-static void app_proto_check(uart_rx_buffer_t *my_uart_rx_buffer)
+static void app_proto_check(uart_rx_buf_t *my_uart_rx_buf)
 {
-    APP_PRINTF("%s\n", my_uart_rx_buffer->buffer);
-    if (strncmp((char *)my_uart_rx_buffer->buffer, "OK", 2) == 0) {
+    // APP_PRINTF("%s\n", my_uart_rx_buf->buffer);
+    if (strncmp((char *)my_uart_rx_buf->buffer, "OK", 2) == 0) {
         is_offline = true;
     }
     // 检查协议头
-    if (strncmp((char *)my_uart_rx_buffer->buffer, "+RECV:", 6) == 0) {
+    if (strncmp((char *)my_uart_rx_buf->buffer, "+RECV:", 6) == 0) {
         is_offline = false;
     } else {
         return;
     }
     // 查找有效数据边界
-    char *start_ptr = strchr((char *)my_uart_rx_buffer->buffer, '"');
+    char *start_ptr = strchr((char *)my_uart_rx_buf->buffer, '"');
     // 检查是否找到起始引号，并且后面还有数据
     if (start_ptr == NULL || *(start_ptr + 1) == '\0') {
         return;
@@ -77,8 +77,9 @@ static void app_proto_check(uart_rx_buffer_t *my_uart_rx_buffer)
     if (hex_len == 0 || hex_len % 2 != 0) {
         return;
     }
-    // 初始化接受数据结构体
-    static valid_data_t my_valid_data = {0};
+    static valid_data_t my_valid_data;                // 不显式初始化
+    memset(&my_valid_data, 0, sizeof(my_valid_data)); // 每次调用都清零
+
     // 提取并转换十六进制数据
     my_valid_data.length = hex_len / 2;
     for (uint16_t i = 0; i < my_valid_data.length; i++) {
@@ -89,51 +90,45 @@ static void app_proto_check(uart_rx_buffer_t *my_uart_rx_buffer)
 
 static void app_proto_process(valid_data_t *my_valid_data)
 {
-    switch (my_valid_data->data[0]) {
+    uint8_t cmd = my_valid_data->data[0];
+    switch (cmd) {
         case PANEL_HEAD: // 收到其他设备的AT指令
-            if (my_valid_data->data[5] == CALC_CRC(my_valid_data->data, 5)) {
+            if (my_valid_data->data[5] == PANEL_CRC(my_valid_data->data, 5)) {
                 app_eventbus_publish(EVENT_RECEIVE_CMD, my_valid_data);
             }
             break;
 #if defined PANEL_KEY
-        case PANEL_SINGLE: // panel 串码(单发)
-            if (my_apply.enter_apply == true) {
-                if (my_valid_data->data[24] == CALC_CRC(my_valid_data->data, 24)) {
+        case PANEL_SINGLE:
+        case PANEL_MULTI:
+            if (cmd == PANEL_MULTI || my_apply.enter_apply) { // 群发直接通过,单发需判断是否进入了配置模式
+                my_apply.enter_apply = true;                  // 这里要进入配置模式
+                if (my_valid_data->data[24] == PANEL_CRC(my_valid_data->data, 24)) {
                     memcpy(extend_data, &my_valid_data->data[25], 9);
-                    if (extend_data[9] == CALC_CRC(extend_data, 9)) {
+                    if (extend_data[9] == PANEL_CRC(extend_data, 9)) {
                         app_save_panel_cfg(my_valid_data, my_apply.is_ex);
                     }
                 }
             }
             break;
-
-        case PANEL_MULTI: // panel 串码(群发)
-            if (my_valid_data->data[24] == CALC_CRC(my_valid_data->data, 24)) {
-                memcpy(extend_data, &my_valid_data->data[25], 9);
-                if (extend_data[9] == CALC_CRC(extend_data, 9)) {
-                    app_save_panel_cfg(my_valid_data, false);
-                }
-            }
-            break;
 #endif
 #if defined QUICK_BOX
-        case QUICK_SINGLE: {
-            if (my_apply.enter_apply == true) {
-                if (((my_valid_data->data[my_valid_data->length - 2] << 8) | (my_valid_data->data[my_valid_data->length - 1])) ==
-                    calcrc_data_quick(my_valid_data->data, my_valid_data->length - 2)) {
-                    uint8_t addr_offset = L_BIT(my_valid_data->data[1]) - 1; // 根据是第几路偏移内存地址
-                    if (my_valid_data->data[1] != QUICK_END) {
+        case QUICK_SINGLE:
+        case QUICK_MULTI: {
+            if (cmd == QUICK_MULTI || my_apply.enter_apply) {
+                my_apply.enter_apply = true;
+                if (my_valid_data->data[1] != QUICK_END) {
+                    if (((my_valid_data->data[my_valid_data->length - 2] << 8) |
+                         (my_valid_data->data[my_valid_data->length - 1])) ==
+                        quick_crc(my_valid_data->data, my_valid_data->length - 2)) { // 校验通过
+                        uint8_t addr_offset = L_BIT(my_valid_data->data[1]) - 1;     // 根据是第几路偏移内存地址
                         for (uint16_t i = 0; i < my_valid_data->length - 4; i++) {
                             temp_save.data[addr_offset * 14 + i] = my_valid_data->data[i + 2]; // 跳过前2字节
                             temp_save.length++;
-                            APP_PRINTF("%02X ", temp_save.data[addr_offset * 14 + i]);
                         }
-
-                    } else if (my_valid_data->data[1] == QUICK_END) {
-                        APP_PRINTF_BUF("data", temp_save.data, temp_save.length);
-                        app_save_quick_cfg(&temp_save);
-                        temp_save = (valid_data_t){0}; // 标准清零写法
                     }
+                } else if (my_valid_data->data[1] == QUICK_END) {
+                    app_save_quick_cfg(&temp_save);
+                    temp_save = (valid_data_t){0}; // 清空临时缓冲区
                 }
             }
         } break;
@@ -214,7 +209,8 @@ static void app_at_send(at_frame_t *my_at_frame)
 // 构造命令
 void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t cmd, uint8_t func, bool is_ex)
 {
-    static at_frame_t my_at_frame = {0};
+    static at_frame_t my_at_frame;
+    memset(&my_at_frame, 0, sizeof(my_at_frame));
 
     switch (cmd) {
         case PANEL_HEAD: { // 发送通信帧(panel产品用到)
@@ -258,7 +254,7 @@ void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t cmd, uint8_t f
             my_at_frame.data[7] = temp_cfg[key_number].scene_group;
 
             // 计算并设置CRC校验
-            my_at_frame.data[5] = CALC_CRC(my_at_frame.data, 5);
+            my_at_frame.data[5] = PANEL_CRC(my_at_frame.data, 5);
             my_at_frame.length  = 8;
             app_at_send(&my_at_frame);
 #endif
@@ -278,27 +274,15 @@ void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t cmd, uint8_t f
 }
 
 // 用于快装盒子串码的校验
-static uint16_t calcrc_data_quick(uint8_t *rxbuf, uint8_t len)
+static uint16_t quick_crc(uint8_t *rxbuf, uint8_t len)
 {
-    uint16_t wcrc = 0XFFFF; // 16位crc寄存器预置
-    uint8_t temp;
-    uint8_t CRC_L; // 定义数组
-    uint8_t CRC_H;
-    uint16_t i = 0, j = 0;
-    for (i = 0; i < len; i++) {
-        temp = *rxbuf & 0X00FF;
-        rxbuf++;
-        wcrc ^= temp;
-        for (j = 0; j < 8; j++) {
-            if (wcrc & 0X0001) {
-                wcrc >>= 1;
-                wcrc ^= 0XA001;
-            } else {
-                wcrc >>= 1;
-            }
+    // CRC-16/MODBUS
+    uint16_t crc = 0xFFFF;
+    while (len--) {
+        crc ^= *rxbuf++;
+        for (uint8_t i = 0; i < 8; i++) {
+            crc = (crc & 1) ? (crc >> 1) ^ 0xA001 : crc >> 1;
         }
     }
-    CRC_L = wcrc & 0xff;
-    CRC_H = wcrc >> 8;
-    return ((CRC_L << 8) | CRC_H);
+    return (crc << 8) | (crc >> 8); // 高低字节交换
 }

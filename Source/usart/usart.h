@@ -4,7 +4,7 @@
 /*
     2025.5.8 舒东升
     两路 usart 的初始化,完成收发功能,
-    暂使用一个固定的缓冲区 uart_rx_buffer_t,
+    暂使用一个固定的缓冲区 uart_rx_buf_t,
     usart0 为业务串口,usart1 为调试串口,
 */
 
@@ -12,11 +12,11 @@
 typedef struct {
     uint8_t buffer[UART_RECV_SIZE];
     uint16_t length;
-} uart_rx_buffer_t;
+} uart_rx_buf_t;
 
-static uart_rx_buffer_t rx_buffer = {0};
+static uart_rx_buf_t rx_buffer = {0};
 
-typedef void (*usart_rx_callback_t)(uart_rx_buffer_t *my_uart_rx_buffer);
+typedef void (*usart_rx_callback_t)(uart_rx_buf_t *my_uart_rx_buf);
 
 // 初始化串口
 void app_usart_init(uint8_t usart_num, uint32_t baudrate);
