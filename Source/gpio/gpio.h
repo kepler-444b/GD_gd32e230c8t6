@@ -37,7 +37,7 @@ const char *app_get_gpio_name(gpio_pin_t gpio);
 #define DEFINE_GPIO(port, pin) ((gpio_pin_t){port, pin})
 
 // 默认无效引脚
-#define DEF  DEFINE_GPIO(0, 0)
+#define DEF   DEFINE_GPIO(0, 0)
 #define PA0  DEFINE_GPIO(GPIOA, GPIO_PIN_0)
 #define PA1  DEFINE_GPIO(GPIOA, GPIO_PIN_1)
 #define PA2  DEFINE_GPIO(GPIOA, GPIO_PIN_2)

@@ -30,17 +30,17 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
 static void app_main_task(void *pvParameters)
 {
     // 初始化硬件和外设
-    app_usart_init(1, 115200); // 调试串口
-    app_usart_init(0, 115200); // 业务串口
-    app_eventbus_init();       // 事件总线
-    app_proto_init();          // 协议层
-    app_watchdog_init();       // 看门狗
-    app_load_config();         // 加载配置信息
+    app_usart_init(USART1, 115200); // 调试串口
+    app_usart_init(USART0, 115200); // 业务串口
+    app_eventbus_init();            // 事件总线
+    app_proto_init();               // 协议层
+    app_watchdog_init();            // 看门狗
+    app_load_config();              // 加载配置信息
 
     app_jump_device_init();
     while (1) {
         app_eventbus_poll();
-        vTaskDelay(1); // 延时1ms,让出cpu
+        vTaskDelay(1);
 
 #if 0 // 打印任务剩余栈空间(word),调试使用
         UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);

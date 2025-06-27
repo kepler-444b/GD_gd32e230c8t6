@@ -4,37 +4,30 @@
 /*
     2025.5.8 舒东升
     两路 usart 的初始化,完成收发功能,
-    暂使用一个固定的缓冲区 uart_rx_buf_t,
+    暂使用一个固定的缓冲区 uart0_rx_buf_t,
     usart0 为业务串口,usart1 为调试串口,
 */
 
-#define UART_RECV_SIZE 256
+#define UART0_RECV_SIZE 256
+#define UART1_RECV_SIZE 128
+
 typedef struct {
-    uint8_t buffer[UART_RECV_SIZE];
+    uint8_t buffer[UART0_RECV_SIZE];
     uint16_t length;
-} uart_rx_buf_t;
+} usart0_rx_buf_t;
 
-static uart_rx_buf_t rx_buffer = {0};
+typedef struct {
+    uint8_t buffer[UART1_RECV_SIZE];
+    uint16_t length;
+} usart1_rx_buf_t;
 
-typedef void (*usart_rx_callback_t)(uart_rx_buf_t *my_uart_rx_buf);
-
+typedef void (*usart_rx0_callback_t)(usart0_rx_buf_t *buf);
+typedef void (*usart_rx1_callback_t)(usart1_rx_buf_t *buf);
 // 初始化串口
-void app_usart_init(uint8_t usart_num, uint32_t baudrate);
+void app_usart_init(uint32_t usart_periph, uint32_t baudrate);
+void app_usart_tx_string(const char *str, uint32_t usart_periph);
 
-// 发送单个字节
-void app_usart_tx_byte(uint8_t data);
+void app_usart0_rx_callback(usart_rx0_callback_t callback);
+void app_usart1_rx_callback(usart_rx1_callback_t callback);
 
-// 发送字符串
-void app_usart_tx_string(const char *str);
-
-// 发送指定长度的数据
-void app_usart_tx_data(const uint8_t *data, uint16_t length);
-
-// 业务串口 USART0 回调函数
-void app_usart_rx_callback(usart_rx_callback_t callback);
-
-void app_usart_poll(void);
-
-// printf 重定向到 物理串口
-int fputc(int ch, FILE *f);
 #endif

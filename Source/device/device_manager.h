@@ -7,8 +7,8 @@
 */
 
 // 设备类型(多选一)
-// #define PANEL_KEY // 灯控面板
-#define QUICK_BOX // 快装盒子
+#define PANEL_KEY // 灯控面板
+// #define QUICK_BOX // 快装盒子
 
 #if defined PANEL_KEY
     // 面板类型(多选一)

@@ -36,7 +36,8 @@ typedef struct
 static apply_t my_apply;
 
 // 函数声明
-static void app_proto_check(uart_rx_buf_t *my_uart_rx_buf);
+static void app_proto_check(usart0_rx_buf_t *buf);
+static void app_proto_check_test(usart1_rx_buf_t *buf);
 static void app_save_panel_cfg(valid_data_t *boj, bool is_ex);
 static void app_save_quick_cfg(valid_data_t *obj);
 static void app_proto_process(valid_data_t *my_valid_data);
@@ -45,24 +46,30 @@ static uint16_t quick_crc(uint8_t *data, uint8_t len);
 
 void app_proto_init(void)
 {
-    app_usart_rx_callback(app_proto_check);
+    app_usart0_rx_callback(app_proto_check);
+    // app_usart1_rx_callback(app_proto_check_test);
+}
+static void app_proto_check_test(usart1_rx_buf_t *buf)
+{
+    // APP_PRINTF("%s\n", buf->buffer);
+    // app_usart_tx_string("1234", USART1);
 }
 
 // usart 接收到数据首先回调在这里处理
-static void app_proto_check(uart_rx_buf_t *my_uart_rx_buf)
+static void app_proto_check(usart0_rx_buf_t *buf)
 {
-    // APP_PRINTF("%s\n", my_uart_rx_buf->buffer);
-    if (strncmp((char *)my_uart_rx_buf->buffer, "OK", 2) == 0) {
+    // APP_PRINTF("%s\n", buf->buffer);
+    if (strncmp((char *)buf->buffer, "OK", 2) == 0) {
         is_offline = true;
     }
     // 检查协议头
-    if (strncmp((char *)my_uart_rx_buf->buffer, "+RECV:", 6) == 0) {
+    if (strncmp((char *)buf->buffer, "+RECV:", 6) == 0) {
         is_offline = false;
     } else {
         return;
     }
     // 查找有效数据边界
-    char *start_ptr = strchr((char *)my_uart_rx_buf->buffer, '"');
+    char *start_ptr = strchr((char *)buf->buffer, '"');
     // 检查是否找到起始引号，并且后面还有数据
     if (start_ptr == NULL || *(start_ptr + 1) == '\0') {
         return;
@@ -199,7 +206,7 @@ static void app_at_send(at_frame_t *my_at_frame)
     }
 
     snprintf(at_frame, sizeof(at_frame), "%s,%d,\"%s\",1\r\n", AT_HEAD, my_at_frame->length * 2, hex_buffer);
-    app_usart_tx_string(at_frame); // 通过 usart0 发送到给 plc 模组
+    app_usart_tx_string(at_frame, USART0); // 通过 usart0 发送到给 plc 模组
 
     if (is_offline == true) { // 如果设备离线,则把数据发送给自己
         app_eventbus_publish(EVENT_RECEIVE_CMD, my_at_frame);

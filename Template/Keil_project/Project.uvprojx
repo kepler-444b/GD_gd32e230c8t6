@@ -340,7 +340,7 @@
               <MiscControls></MiscControls>
               <Define>GD32E230</Define>
               <Undefine></Undefine>
-              <IncludePath>..\..\Firmware\CMSIS;..\..\Utilities;..\..\Utilities\LCD_Commom;..\..\Firmware\GD32E23x_standard_peripheral\Include;..\..\Firmware\CMSIS\GD\GD32E23x\Include;..\..\Source\FreeRTOS\inc;..\..\Source\FreeRTOS\src;..\..\Source\FreeRTOS\port;..\..\Source\FreeRTOS;..\</IncludePath>
+              <IncludePath>..\;..\..\Firmware\CMSIS;..\..\Utilities;..\..\Utilities\LCD_Commom;..\..\Firmware\GD32E23x_standard_peripheral\Include;..\..\Firmware\CMSIS\GD\GD32E23x\Include;..\..\Source\FreeRTOS\inc;..\..\Source\FreeRTOS\src;..\..\Source\FreeRTOS\port;..\..\Source\FreeRTOS;..\..\Source\rtt</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -828,6 +828,26 @@
               <FileName>base.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\Source\base\base.c</FilePath>
+            </File>
+            <File>
+              <FileName>SEGGER_RTT.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Source\rtt\SEGGER_RTT.c</FilePath>
+            </File>
+            <File>
+              <FileName>SEGGER_RTT.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\Source\rtt\SEGGER_RTT.h</FilePath>
+            </File>
+            <File>
+              <FileName>SEGGER_RTT_Conf.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\Source\rtt\SEGGER_RTT_Conf.h</FilePath>
+            </File>
+            <File>
+              <FileName>SEGGER_RTT_printf.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Source\rtt\SEGGER_RTT_printf.c</FilePath>
             </File>
           </Files>
         </Group>

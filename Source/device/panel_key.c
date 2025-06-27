@@ -101,7 +101,7 @@ static panel_status_t my_panel_status_ex[KEY_NUMBER] = {
     [0] = {.vol_range = {0, 15}},
     [1] = {.vol_range = {25, 45}},
     [2] = {.vol_range = {85, 110}},
-    [3] = {.vol_range = {165, 175}},
+    [3] = {.vol_range = {145, 155}},
 };
 
     #endif

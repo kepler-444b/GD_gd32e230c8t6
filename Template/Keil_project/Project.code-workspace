@@ -18,7 +18,14 @@
             "flash.h": "c",
             "base.h": "c",
             "task.h": "c",
-            "device_manager.h": "c"
+            "device_manager.h": "c",
+            "gd32e23x.h": "c",
+            "debug.h": "c",
+            "jump_device.h": "c",
+            "pwm.h": "c",
+            "segger_rtt.h": "c",
+            "watchdog.h": "c",
+            "gd32e23x_usart.h": "c"
         }
     },
     "extensions": {}

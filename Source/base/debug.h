@@ -13,25 +13,27 @@
 #define APP_DEBUG // 此宏用来管理整个工程的 debug 信息
 
 #if defined APP_DEBUG
-#define APP_PRINTF(...) printf(__VA_ARGS__)
-#define APP_PRINTF_BUF(name, buf, len)                        \
-    do                                                        \
-    {                                                         \
-        APP_PRINTF("%s: ", (name));                           \
-        for (size_t i = 0; i < (len); i++)                    \
-        {                                                     \
-            APP_PRINTF("%02X ", ((const uint8_t *)(buf))[i]); \
-        }                                                     \
-        APP_PRINTF("\n");                                     \
-    } while (0)
-#define APP_ERROR(fmt, ...) \
-    APP_PRINTF("[#%s#] \"" fmt "\" ERROR!\n", __func__, ##__VA_ARGS__)
+    // #define USE_RTT
+#endif
+
+#if defined APP_DEBUG
+    #define APP_PRINTF(...) printf(__VA_ARGS__)
+    #define APP_PRINTF_BUF(name, buf, len)                        \
+        do {                                                      \
+            APP_PRINTF("%s: ", (name));                           \
+            for (size_t i = 0; i < (len); i++) {                  \
+                APP_PRINTF("%02X ", ((const uint8_t *)(buf))[i]); \
+            }                                                     \
+            APP_PRINTF("\n");                                     \
+        } while (0)
+    #define APP_ERROR(fmt, ...) \
+        APP_PRINTF("[#%s#] \"" fmt "\" ERROR!\n", __func__, ##__VA_ARGS__)
 
 #else
 
-#define APP_PRINTF(...)
-#define APP_PRINTF_BUF(name, buf, len)
-#define APP_ERROR(fmt, ...)
+    #define APP_PRINTF(...)
+    #define APP_PRINTF_BUF(name, buf, len)
+    #define APP_ERROR(fmt, ...)
 #endif
 
 #endif

@@ -12,10 +12,10 @@ const char *app_get_gpio_name(gpio_pin_t gpio)
 
     // 预定义所有可能的GPIO名称字符串表
     static const char *const gpio_names[] = {
-        "PA0", "PA1", "PA2", "PA3", "PA4", "PA5", "PA6", "PA7",
-        "PA8", "PA9", "PA10", "PA11", "PA12", "PA13", "PA14", "PA15",
-        "PB0", "PB1", "PB2", "PB3", "PB4", "PB5", "PB6", "PB7",
-        "PB8", "PB9", "PB10", "PB11", "PB12", "PB13", "PB14", "PB15"};
+        "A0", "A1", "A2", "A3", "A4", "A5", "A6", "A7",
+        "A8", "A9", "A10", "A11", "A12", "A13", "A14", "A15",
+        "B0", "B1", "B2", "B3", "B4", "B5", "B6", "B7",
+        "B8", "B9", "B10", "B11", "B12", "B13", "B14", "B15"};
 
     // 计算索引
     uint32_t port_offset = (gpio.port == GPIOB) ? 16 : 0;
