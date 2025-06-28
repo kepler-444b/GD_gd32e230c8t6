@@ -144,26 +144,45 @@ void quick_tigger_relay(void)
 void quick_box_data_cb(valid_data_t *data)
 {
     APP_PRINTF_BUF("[RECV]", data->data, data->length);
+    uint8_t cmd   = data->data[1];
+    uint8_t sw    = data->data[2];
+    uint8_t group = data->data[3];
+    uint8_t area  = data->data[4];
+
     const quick_ctg_t *temp_cfg = app_get_quick_cfg();
-    switch (data->data[1]) {
+    switch (cmd) {
         case ALL_CLOSE: {
             for (uint8_t i = 0; i < LED_NUMBER; i++) {
                 const quick_ctg_t *p_cfg = &temp_cfg[i];
                 if ((BIT5(p_cfg->perm) == true) && // "睡眠"被勾选,"总开关分区"相同 或 0xF
-                    ((H_BIT(data->data[4]) == H_BIT(p_cfg->area)) || (H_BIT(data->data[4]) == 0xF))) {
+                    ((H_BIT(area) == H_BIT(p_cfg->area)) || (H_BIT(area) == 0xF))) {
                     quick_fast_exe(i, 0);
                 }
             }
         } break;
         case ALL_ON_OFF: {
             for (uint8_t i = 0; i < LED_NUMBER; i++) {
-                if ((BIT5(temp_cfg[i].perm) == true) && // "总开关"被勾选,"总开关分区"相同 或 0xF
-                    ((H_BIT(data->data[4]) == H_BIT(temp_cfg[i].area)) || (H_BIT(data->data[4]) == 0xF))) {
+                const quick_ctg_t *p_cfg = &temp_cfg[i];
+                if ((BIT5(p_cfg->perm) == true) && // "总开关"被勾选,"总开关分区"相同 或 0xF
+                    ((H_BIT(area) == H_BIT(p_cfg->area)) || (H_BIT(area) == 0xF))) {
+                    quick_fast_exe(i, sw ? p_cfg->lum : 0);
                 }
             }
         } break;
-        default:
-            return;
+        case SCENE_MODE: {
+            for (uint8_t i = 0; i < LED_NUMBER; i++) {
+                const quick_ctg_t *p_cfg = &temp_cfg[i];
+                if ((p_cfg->scene_group != 0x00) && // 屏蔽掉没有勾选任何场景分组的按键
+                    ((L_BIT(area) == L_BIT(p_cfg->area)) || (L_BIT(area) == 0xF))) {
+                    uint8_t mask = data->data[7] & p_cfg->scene_group; // 找出两个字节中同为1的位
+                    if (mask != 0) {                                   // 任意一位同为1,说明勾选了该场景分组,执行动作
+                    }
+                }
+            }
+            break;
+            default:
+                return;
+        }
     }
 }
 
@@ -244,5 +263,8 @@ static void quick_fast_exe(uint8_t len_num, uint16_t lum)
     } else {
         APP_SET_GPIO(temp_cfg[len_num].led_pin, lum != 0);
     }
+}
+static void quick_scene_exe(void)
+{
 }
 #endif

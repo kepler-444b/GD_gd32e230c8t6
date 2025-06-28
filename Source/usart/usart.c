@@ -127,7 +127,6 @@ void app_usart_tx_string(const char *str, uint32_t usart_periph)
     }
 }
 
-// printf 重定向到 USART1
 inline int fputc(int ch, FILE *f)
 {
 #ifndef USE_RTT
