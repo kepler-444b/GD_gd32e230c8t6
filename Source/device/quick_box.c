@@ -14,10 +14,24 @@
 
 #if defined QUICK_BOX
 
-    #define SCALE_100_TO_500(x) ((x) <= 0 ? 0 : ((x) >= 100 ? 500 : ((x) * 500) / 100))
-    #define SCALE_5_TO_5000(x)  ((x) <= 0 ? 0 : ((x) >= 5 ? 5000 : ((x) * 5000) / 5))
+    #define TO_500(x)          ((x) <= 0 ? 0 : ((x) >= 100 ? 500 : ((x) * 500) / 100))
+    #define SCALE_5_TO_5000(x) ((x) <= 0 ? 0 : ((x) >= 5 ? 5000 : ((x) * 5000) / 5))
 
-    #define FADE_TIME           1000
+    #define FUNC_PARAMS        valid_data_t *data, const quick_ctg_t *temp_cfg
+    #define FUNC_ARGS          data, temp_cfg
+
+    // 遍历
+    #define PROCESS(cfg, ...)                             \
+        do {                                              \
+            for (uint8_t _i = 0; _i < LED_NUMBER; _i++) { \
+                const quick_ctg_t *p_cfg = &(cfg)[_i];    \
+                __VA_ARGS__                               \
+            }                                             \
+        } while (0)
+
+    #define FADE_TIME  1000
+    #define LONG_PRESS 3000
+
 typedef struct {
     bool key_status;          // 按键状态
     bool led_filck;           // 闪烁
@@ -45,8 +59,12 @@ void quick_box_timer(TimerHandle_t xTimer);
 void quick_ctrl_led_all(bool status);
 void quick_tigger_relay(void);
 static void quick_fast_exe(uint8_t len_num, uint16_t lum);
-
 static void process_led_flicker(void);
+static void quick_scene_exe(FUNC_PARAMS);
+static void panel_all_close(FUNC_PARAMS);
+static void panel_all_on_off(FUNC_PARAMS);
+static void panel_scene_mode(FUNC_PARAMS);
+static void panel_light_mode(FUNC_PARAMS);
 
 void quick_box_init(void)
 {
@@ -144,45 +162,21 @@ void quick_tigger_relay(void)
 void quick_box_data_cb(valid_data_t *data)
 {
     APP_PRINTF_BUF("[RECV]", data->data, data->length);
-    uint8_t cmd   = data->data[1];
-    uint8_t sw    = data->data[2];
-    uint8_t group = data->data[3];
-    uint8_t area  = data->data[4];
-
     const quick_ctg_t *temp_cfg = app_get_quick_cfg();
-    switch (cmd) {
-        case ALL_CLOSE: {
-            for (uint8_t i = 0; i < LED_NUMBER; i++) {
-                const quick_ctg_t *p_cfg = &temp_cfg[i];
-                if ((BIT5(p_cfg->perm) == true) && // "睡眠"被勾选,"总开关分区"相同 或 0xF
-                    ((H_BIT(area) == H_BIT(p_cfg->area)) || (H_BIT(area) == 0xF))) {
-                    quick_fast_exe(i, 0);
-                }
-            }
-        } break;
-        case ALL_ON_OFF: {
-            for (uint8_t i = 0; i < LED_NUMBER; i++) {
-                const quick_ctg_t *p_cfg = &temp_cfg[i];
-                if ((BIT5(p_cfg->perm) == true) && // "总开关"被勾选,"总开关分区"相同 或 0xF
-                    ((H_BIT(area) == H_BIT(p_cfg->area)) || (H_BIT(area) == 0xF))) {
-                    quick_fast_exe(i, sw ? p_cfg->lum : 0);
-                }
-            }
-        } break;
-        case SCENE_MODE: {
-            for (uint8_t i = 0; i < LED_NUMBER; i++) {
-                const quick_ctg_t *p_cfg = &temp_cfg[i];
-                if ((p_cfg->scene_group != 0x00) && // 屏蔽掉没有勾选任何场景分组的按键
-                    ((L_BIT(area) == L_BIT(p_cfg->area)) || (L_BIT(area) == 0xF))) {
-                    uint8_t mask = data->data[7] & p_cfg->scene_group; // 找出两个字节中同为1的位
-                    if (mask != 0) {                                   // 任意一位同为1,说明勾选了该场景分组,执行动作
-                    }
-                }
-            }
+    switch (data->data[1]) {
+        case ALL_CLOSE: // 总关
+            panel_all_close(FUNC_ARGS);
             break;
-            default:
-                return;
-        }
+        case ALL_ON_OFF: // 总开关
+            panel_all_on_off(FUNC_ARGS);
+            break;
+        case SCENE_MODE: // 场景模式
+            panel_scene_mode(FUNC_ARGS);
+            break;
+        case LIGHT_MODE: // 灯控模式
+            panel_light_mode(FUNC_ARGS);
+        default:
+            return;
     }
 }
 
@@ -242,17 +236,15 @@ void quick_ctrl_led_all(bool status)
         }
     }
 }
-
-static void process_led_flicker(void)
+static void process_led_flicker(void) // led 闪烁
 {
     my_common_quick.led_filck_count++;
     if (my_common_quick.led_filck_count <= 500) {
         quick_ctrl_led_all(false);
     } else {
         quick_ctrl_led_all(true);
-        my_common_quick.led_filck_count = 0; // 重置计数器
-
-        my_common_quick.led_filck = false; // 停止闪烁
+        my_common_quick.led_filck_count = 0;     // 重置计数器
+        my_common_quick.led_filck       = false; // 停止闪烁
     }
 }
 static void quick_fast_exe(uint8_t len_num, uint16_t lum)
@@ -264,7 +256,52 @@ static void quick_fast_exe(uint8_t len_num, uint16_t lum)
         APP_SET_GPIO(temp_cfg[len_num].led_pin, lum != 0);
     }
 }
-static void quick_scene_exe(void)
+static void panel_all_close(FUNC_PARAMS) // 总关
 {
+    PROCESS(temp_cfg, {
+        if ((BIT5(p_cfg->perm) == true) && // "睡眠"被勾选,"总开关分区"相同 或 0xF
+            ((H_BIT(data->data[4]) == H_BIT(p_cfg->area)) || (H_BIT(data->data[4]) == 0xF))) {
+            quick_fast_exe(_i, 0);
+        }
+    });
+}
+static void panel_all_on_off(FUNC_PARAMS) // 总开关
+{
+    PROCESS(temp_cfg, {
+        if ((BIT5(p_cfg->perm) == true) && // "总开关"被勾选,"总开关分区"相同 或 0xF
+            ((H_BIT(data->data[4]) == H_BIT(p_cfg->area)) || (H_BIT(data->data[4]) == 0xF))) {
+            quick_fast_exe(_i, data->data[2] ? TO_500(p_cfg->lum) : 0);
+        }
+    });
+}
+static void panel_scene_mode(FUNC_PARAMS) // 场景模式
+{
+    for (uint8_t bit = 0; bit < 8; bit++) {
+        if ((data->data[7] & (1 << bit)) == false) continue; // 使用位掩码检查bit是否被设置(未设置直接跳过)
+        PROCESS(temp_cfg, {
+            if ((p_cfg->scene_lun[bit] != 0xFF) && // 若亮度为255,则不执行
+                                                   // (p_cfg->scene_group != 0x00) &&    // (可屏蔽此行)
+                ((L_BIT(data->data[4]) == L_BIT(p_cfg->area)) || (L_BIT(data->data[4]) == 0xF))) {
+                if (_i < 3) {
+                    app_set_pwm_fade(p_cfg->led_pin, data->data[2] ? TO_500(p_cfg->scene_lun[bit]) : 0, FADE_TIME);
+                } else {
+                    APP_SET_GPIO(p_cfg->led_pin, data->data[2] ? p_cfg->scene_lun[bit] != 0 : false);
+                }
+            }
+        });
+    }
+}
+static void panel_light_mode(FUNC_PARAMS)
+{
+    PROCESS(temp_cfg, {
+        if (p_cfg->func == LIGHT_MODE &&
+            (data->data[3] == p_cfg->group || data->data[3] == 0xFF)) {
+            if (_i < 3) {
+                app_set_pwm_fade(p_cfg->led_pin, data->data[2] ? TO_500(p_cfg->lum) : 0, FADE_TIME);
+            } else {
+                APP_SET_GPIO(p_cfg->led_pin, data->data[2] ? TO_500(p_cfg->lum) != 0 : false);
+            }
+        }
+    });
 }
 #endif
