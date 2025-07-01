@@ -36,30 +36,25 @@ typedef struct {
     bool key_status;          // 按键状态
     bool led_filck;           // 闪烁
     bool enter_config;        // 进入配置状态
+    bool relay_open[3];       // 继电器状态标志位
+    bool relay_last[3];       // 继电器上次状态
     uint16_t key_long_count;  // 长按计数
     uint32_t led_filck_count; // 闪烁计数
+
 } common_quick_t;
 static common_quick_t my_common_quick = {0};
 
-typedef struct
-{
-    bool tigger_relay;
-    bool relay_status;
-} tigger_relay_t;
-static tigger_relay_t my_tigger_relay[3] = {0};
-
-static gpio_pin_t relay_pins[3] = {0};
-
 // 函数声明
 void quick_box_gpio_init(void);
-void quick_zero_init(void);
-void quick_box_data_cb(valid_data_t *data);
-void quick_event_handler(event_type_e event, void *params);
-void quick_box_timer(TimerHandle_t xTimer);
-void quick_ctrl_led_all(bool status);
-void quick_tigger_relay(void);
+static void quick_zero_init(void);
+static void quick_box_data_cb(valid_data_t *data);
+static void quick_event_handler(event_type_e event, void *params);
+static void quick_box_timer(TimerHandle_t xTimer);
+static void quick_ctrl_led_all(bool status);
+static void quick_tigger_relay(void);
 static void quick_fast_exe(uint8_t len_num, uint16_t lum);
 static void process_led_flicker(void);
+
 static void quick_scene_exe(FUNC_PARAMS);
 static void panel_all_close(FUNC_PARAMS);
 static void panel_all_on_off(FUNC_PARAMS);
@@ -89,7 +84,6 @@ void quick_box_init(void)
     if (xTimerStart(QuickTimerHandle, 0) != pdPASS) { // 启动定时器
         APP_ERROR("QuickTimerHandle error");
     }
-
     app_pwm_init();
     app_pwm_add_pin(PB7);
     app_pwm_add_pin(PB6);
@@ -124,7 +118,7 @@ void quick_box_gpio_init(void)
     gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_15); // OUT7
 }
 
-void quick_zero_init(void)
+static void quick_zero_init(void)
 {
     // (零点检测对实时性要求高,摒弃轮询方式,采用外部中断触发)
     rcu_periph_clock_enable(RCU_CFGCMP);                           // EXIT 线路与 GPIO 相连接
@@ -142,24 +136,17 @@ void EXTI4_15_IRQHandler(void)
 }
 
 // 触发继电器
-void quick_tigger_relay(void)
+static void quick_tigger_relay(void)
 {
     for (uint8_t i = 0; i < 3; i++) {
-        if (my_tigger_relay[i].relay_status == true &&
-            my_tigger_relay[i].tigger_relay == true) {
-
-            APP_SET_GPIO(relay_pins[i], true);
-            my_tigger_relay[i].tigger_relay = false;
-        } else if (my_tigger_relay[i].relay_status == false &&
-                   my_tigger_relay[i].tigger_relay == true) {
-
-            APP_SET_GPIO(relay_pins[i], false);
-            my_tigger_relay[i].tigger_relay = false;
+        if (my_common_quick.relay_last[i] != my_common_quick.relay_open[i]) {
+            APP_SET_GPIO(app_get_quick_cfg()[i + 3].led_pin, my_common_quick.relay_open[i]);
+            my_common_quick.relay_last[i] = my_common_quick.relay_open[i];
         }
     }
 }
 
-void quick_box_data_cb(valid_data_t *data)
+static void quick_box_data_cb(valid_data_t *data)
 {
     APP_PRINTF_BUF("[RECV]", data->data, data->length);
     const quick_ctg_t *temp_cfg = app_get_quick_cfg();
@@ -180,7 +167,7 @@ void quick_box_data_cb(valid_data_t *data)
     }
 }
 
-void quick_event_handler(event_type_e event, void *params)
+static void quick_event_handler(event_type_e event, void *params)
 {
     switch (event) {
         case EVENT_ENTER_CONFIG: { // 进入配置模式
@@ -204,7 +191,7 @@ void quick_event_handler(event_type_e event, void *params)
     }
 }
 
-void quick_box_timer(TimerHandle_t xTimer)
+static void quick_box_timer(TimerHandle_t xTimer)
 {
     my_common_quick.key_status = APP_GET_GPIO(PA0);
 
@@ -218,24 +205,18 @@ void quick_box_timer(TimerHandle_t xTimer)
     } else if (my_common_quick.key_status == true && my_common_quick.key_long_count != 0) {
         my_common_quick.key_long_count = 0;
     }
-
     if (my_common_quick.led_filck == true) { // 开始闪烁
         process_led_flicker();
     }
 }
 
-void quick_ctrl_led_all(bool status)
+static void quick_ctrl_led_all(bool status)
 {
-    const quick_ctg_t *led_cfg = app_get_quick_cfg();
-    for (uint8_t i = 0; i < LED_NUMBER; i++) {
-        const uint16_t pwm_duty = status ? 500 : 0;
-        if (i < 3) {
-            app_set_pwm_duty(led_cfg[i].led_pin, pwm_duty);
-        } else {
-            APP_SET_GPIO(led_cfg[i].led_pin, status);
-        }
+    for (uint8_t i = 0; i < 3; i++) {
+        app_set_pwm_duty(app_get_quick_cfg()[i].led_pin, status ? 500 : 0);
     }
 }
+
 static void process_led_flicker(void) // led 闪烁
 {
     my_common_quick.led_filck_count++;
@@ -247,13 +228,14 @@ static void process_led_flicker(void) // led 闪烁
         my_common_quick.led_filck       = false; // 停止闪烁
     }
 }
+
 static void quick_fast_exe(uint8_t len_num, uint16_t lum)
 {
     const quick_ctg_t *temp_cfg = app_get_quick_cfg();
     if (len_num < 3) {
         app_set_pwm_fade(temp_cfg[len_num].led_pin, lum, FADE_TIME);
     } else {
-        APP_SET_GPIO(temp_cfg[len_num].led_pin, lum != 0);
+        my_common_quick.relay_open[len_num - 3] = lum != 0;
     }
 }
 static void panel_all_close(FUNC_PARAMS) // 总关
@@ -269,11 +251,14 @@ static void panel_all_on_off(FUNC_PARAMS) // 总开关
 {
     PROCESS(temp_cfg, {
         if ((BIT5(p_cfg->perm) == true) && // "总开关"被勾选,"总开关分区"相同 或 0xF
+                                           // (p_cfg->scene_lun[bit] != 0xFF) &&
             ((H_BIT(data->data[4]) == H_BIT(p_cfg->area)) || (H_BIT(data->data[4]) == 0xF))) {
             quick_fast_exe(_i, data->data[2] ? TO_500(p_cfg->lum) : 0);
+            APP_PRINTF("%d %d\n", _i, (p_cfg->lum));
         }
     });
 }
+
 static void panel_scene_mode(FUNC_PARAMS) // 场景模式
 {
     for (uint8_t bit = 0; bit < 8; bit++) {
@@ -285,7 +270,7 @@ static void panel_scene_mode(FUNC_PARAMS) // 场景模式
                 if (_i < 3) {
                     app_set_pwm_fade(p_cfg->led_pin, data->data[2] ? TO_500(p_cfg->scene_lun[bit]) : 0, FADE_TIME);
                 } else {
-                    APP_SET_GPIO(p_cfg->led_pin, data->data[2] ? p_cfg->scene_lun[bit] != 0 : false);
+                    my_common_quick.relay_open[_i - 3] = data->data[2] ? p_cfg->scene_lun[bit] : 0;
                 }
             }
         });
@@ -299,7 +284,7 @@ static void panel_light_mode(FUNC_PARAMS)
             if (_i < 3) {
                 app_set_pwm_fade(p_cfg->led_pin, data->data[2] ? TO_500(p_cfg->lum) : 0, FADE_TIME);
             } else {
-                APP_SET_GPIO(p_cfg->led_pin, data->data[2] ? TO_500(p_cfg->lum) != 0 : false);
+                my_common_quick.relay_open[_i - 3] = data->data[2] ? p_cfg->lum : 0;
             }
         }
     });

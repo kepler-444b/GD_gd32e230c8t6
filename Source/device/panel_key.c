@@ -132,7 +132,6 @@ static panel_status_t my_panel_status_ex[KEY_NUMBER] = {
 
     #endif
 
-// 函数声明
 static void panel_gpio_init(void);
 static void panel_power_status(void);
 static void panel_data_cb(valid_data_t *data);
@@ -144,8 +143,8 @@ static void process_led_flicker(common_panel_t *common_panel, bool is_ex_panel);
 static void panel_fast_exe(panel_status_t *temp_fast, uint8_t flag);
 static void process_exe_status(const panel_cfg_t *temp_cfg, panel_status_t *temp_status);
 static void process_exe_power(const panel_cfg_t *temp_cfg, panel_status_t *temp_status);
-static void process_cmd_check(FUNC_PARAMS);
 static void process_panel_adc(panel_status_t *panel_status, common_panel_t *common_panel, adc_value_t *adc_value, bool is_ex);
+static void process_cmd_check(FUNC_PARAMS);
 static void panel_all_close(FUNC_PARAMS);
 static void panel_all_on_off(FUNC_PARAMS);
 static void panel_curtain_open(FUNC_PARAMS);
@@ -160,6 +159,7 @@ static void panel_service(FUNC_PARAMS);
 static void panel_scene_mode(FUNC_PARAMS);
 static void panel_light_mode(FUNC_PARAMS);
 static void panel_night_light(FUNC_PARAMS);
+// #endregion
 
 void panel_key_init(void)
 {
@@ -627,9 +627,6 @@ static void panel_all_on_off(FUNC_PARAMS) // 总开关
                 case DND_MODE:
                     panel_fast_exe(p_status, (0b00010110 & ~0x01) | (~data->data[2] & 0x01));
                     break;
-                case SCENE_MODE: // 场景模式无法通过"总开关"打开
-                    panel_fast_exe(p_status, (0b00010110 & ~0x01) | 0x00);
-                    break;
                 case LIGHT_MODE:
                 case CLEAN_ROOM:
                     panel_fast_exe(p_status, (0b00010110 & ~0x01) | (data->data[2] & 0x01));
@@ -789,6 +786,9 @@ static void panel_scene_mode(FUNC_PARAMS) // 场景模式
                         break;
                     case CURTAIN_CLOSE:
                         panel_curtain_close(FUNC_ARGS);
+                        break;
+                    case LIGHT_MODE:
+                        panel_light_mode(FUNC_ARGS);
                         break;
                     default:
                         panel_fast_exe(p_status, (0b00010110 & ~0x01) | (data->data[2] & 0x01));
