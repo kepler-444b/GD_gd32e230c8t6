@@ -28,3 +28,8 @@ const char *app_get_gpio_name(gpio_pin_t gpio)
 
     return gpio_names[port_offset + pin_num];
 }
+
+bool app_gpio_equal(gpio_pin_t a, gpio_pin_t b)
+{
+    return (a.port == b.port && a.pin == b.pin);
+}
