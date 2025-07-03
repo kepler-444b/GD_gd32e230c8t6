@@ -83,7 +83,7 @@ void USART0_IRQHandler(void)
     // 侦听空闲中断
     if (usart_interrupt_flag_get(USART0, USART_INT_FLAG_IDLE) != RESET) {
         usart_interrupt_flag_clear(USART0, USART_INT_FLAG_IDLE);
-        if (rx0_buf.length > 0 && rx0_callback != NULL) {
+        if (rx0_buf.length > 0 && rx0_callback) {
             rx0_callback(&rx0_buf);
             rx0_buf.length = 0;
         }
@@ -102,7 +102,7 @@ void USART1_IRQHandler(void)
     }
     if (usart_interrupt_flag_get(USART1, USART_INT_FLAG_IDLE) != RESET) { // 侦听空闲中断
         usart_interrupt_flag_clear(USART1, USART_INT_FLAG_IDLE);
-        if (rx1_buf.length > 0 && rx1_callback != NULL) {
+        if (rx1_buf.length > 0 && rx1_callback) {
             rx1_callback(&rx1_buf);
             rx1_buf.length = 0;
         }

@@ -14,8 +14,8 @@
 
     // 面板类型(多选一)
     // #define PANEL_4KEY
-    #define PANEL_6KEY
-    // #define PANEL_8KEY
+    // #define PANEL_6KEY
+    #define PANEL_8KEY
 
     #define RELAY_NUMBER 4 // 继电器个数
 

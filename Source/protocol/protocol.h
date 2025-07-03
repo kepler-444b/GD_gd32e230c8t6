@@ -34,7 +34,7 @@ typedef struct
 } at_frame_t;
 
 void app_proto_init(void);
-void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t cmd, uint8_t func, bool is_ex);
+void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t frame_head, uint8_t cmd_type, bool is_ex);
 
 typedef enum {
 

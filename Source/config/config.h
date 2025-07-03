@@ -40,7 +40,7 @@ typedef struct
     uint8_t area;         // 按键区域
     uint8_t scene_group;  // 场景分组
     uint8_t lum;          // 本路调光
-    uint8_t scene_lun[8]; // 场景调光
+    uint8_t scene_lun[8]; // 场景调光(对应8个场景的本路调光)
     gpio_pin_t led_pin;   // led 管脚
 } quick_ctg_t;
 

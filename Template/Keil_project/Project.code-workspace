@@ -25,7 +25,8 @@
             "pwm.h": "c",
             "segger_rtt.h": "c",
             "watchdog.h": "c",
-            "gd32e23x_usart.h": "c"
+            "gd32e23x_usart.h": "c",
+            "limits": "c"
         }
     },
     "extensions": {}

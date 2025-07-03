@@ -211,14 +211,14 @@ static void app_panel_get_relay_num(uint8_t *data, const gpio_pin_t *relay_map, 
         uint8_t byte_offset = base_offset + (i / 2);
         uint8_t relay_num   = (i % 2) ? H_BIT(data[byte_offset]) : L_BIT(data[byte_offset]);
 
-        if (is_ex == false) {
+        if (!is_ex) {
             my_panel_cfg[i].relay_pin[0] = BIT0(relay_num) ? relay_map[0] : DEF;
             my_panel_cfg[i].relay_pin[1] = BIT1(relay_num) ? relay_map[1] : DEF;
             my_panel_cfg[i].relay_pin[2] = BIT2(relay_num) ? relay_map[2] : DEF;
             my_panel_cfg[i].relay_pin[3] = BIT3(relay_num) ? relay_map[3] : DEF;
         }
     #if defined PANEL_8KEY
-        else if (is_ex == true) {
+        else if (is_ex) {
             my_panel_cfg_ex[i].relay_pin[0] = BIT0(relay_num) ? relay_map[0] : DEF;
             my_panel_cfg_ex[i].relay_pin[1] = BIT1(relay_num) ? relay_map[1] : DEF;
             my_panel_cfg_ex[i].relay_pin[2] = BIT2(relay_num) ? relay_map[2] : DEF;

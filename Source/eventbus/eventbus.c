@@ -53,7 +53,7 @@ void app_eventbus_poll(void)
 
         // 调用所有订阅者的处理函数
         for (uint8_t i = 0; i < handlerCount; i++) {
-            if (eventHandlers[i] != NULL) {
+            if (eventHandlers[i]) {
                 eventHandlers[i](currentEvent.type, currentEvent.params);
             }
         }

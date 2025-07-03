@@ -109,12 +109,14 @@ static void app_proto_process(valid_data_t *my_valid_data)
         case PANEL_MULTI:
             if (cmd == PANEL_MULTI || my_apply.enter_apply) { // 群发直接通过,单发需判断是否进入了配置模式
                 my_apply.enter_apply = true;                  // 这里要进入配置模式
-                if (my_valid_data->data[24] == PANEL_CRC(my_valid_data->data, 24)) {
-                    memcpy(extend_data, &my_valid_data->data[25], 9);
-                    if (extend_data[9] == PANEL_CRC(extend_data, 9)) {
-                        app_save_panel_cfg(my_valid_data, my_apply.is_ex);
-                    }
+                if (my_valid_data->data[24] != PANEL_CRC(my_valid_data->data, 24)) {
+                    return;
                 }
+                memcpy(extend_data, &my_valid_data->data[25], 9);
+                if (extend_data[9] != PANEL_CRC(extend_data, 9)) {
+                    return;
+                }
+                app_save_panel_cfg(my_valid_data, my_apply.is_ex);
             }
             break;
 #endif
@@ -124,18 +126,20 @@ static void app_proto_process(valid_data_t *my_valid_data)
             if (cmd == QUICK_MULTI || my_apply.enter_apply) {
                 my_apply.enter_apply = true;
                 if (my_valid_data->data[1] != QUICK_END) {
-                    if (((my_valid_data->data[my_valid_data->length - 2] << 8) |
-                         (my_valid_data->data[my_valid_data->length - 1])) ==
-                        quick_crc(my_valid_data->data, my_valid_data->length - 2)) { // 校验通过
-                        uint8_t addr_offset = L_BIT(my_valid_data->data[1]) - 1;     // 根据是第几路偏移内存地址
-                        for (uint16_t i = 0; i < my_valid_data->length - 4; i++) {
-                            temp_save.data[addr_offset * 14 + i] = my_valid_data->data[i + 2]; // 跳过前2字节
-                            temp_save.length++;
-                        }
+                    uint16_t recv_crc = (my_valid_data->data[my_valid_data->length - 2] << 8) | my_valid_data->data[my_valid_data->length - 1];
+                    if (recv_crc != quick_crc(my_valid_data->data, my_valid_data->length - 2)) {
+                        return;
                     }
+                    uint8_t addr_offset = (L_BIT(my_valid_data->data[1]) - 1) * 14; // 根据是第几路偏移内存地址
+                    if (addr_offset + 14 > sizeof(temp_save.data)) {
+                        return;
+                    }
+                    // 收到的每帧18个字节,去除前2个(帧头,地址)和后2个校验,实际需要存储的字节为14个
+                    memcpy(&temp_save.data[addr_offset], &my_valid_data->data[2], 14);
+                    temp_save.length = addr_offset + 14;
                 } else if (my_valid_data->data[1] == QUICK_END) {
                     app_save_quick_cfg(&temp_save);
-                    temp_save = (valid_data_t){0}; // 清空临时缓冲区
+                    temp_save.length = 0;
                 }
             }
         } break;
@@ -164,7 +168,7 @@ static void app_save_panel_cfg(valid_data_t *obj, bool is_ex)
 #if defined PANEL_KEY
     APP_PRINTF_BUF("[SAVE]", obj->data, obj->length);
     static uint32_t output[32] = {0};
-    if (app_uint8_to_uint32(obj->data, obj->length, output, sizeof(output)) == true) {
+    if (app_uint8_to_uint32(obj->data, obj->length, output, sizeof(output))) {
 
         __disable_irq(); // flash 写操作,需要关闭中断
         uint32_t flash_addr = is_ex ? CONFIG_EXTEN_ADDR : CONFIG_START_ADDR;
@@ -183,7 +187,7 @@ static void app_save_quick_cfg(valid_data_t *obj)
 #if defined QUICK_BOX
     APP_PRINTF_BUF("[SAVE]", obj->data, obj->length);
     static uint32_t output[32] = {0};
-    if (app_uint8_to_uint32(obj->data, obj->length, output, sizeof(output)) == true) {
+    if (app_uint8_to_uint32(obj->data, obj->length, output, sizeof(output))) {
         __disable_irq();
         uint32_t flash_addr = CONFIG_START_ADDR; // 根据 addr_offset 偏移地址存储
         if (app_flash_program(flash_addr, output, sizeof(output), true) != FMC_READY) {
@@ -208,18 +212,18 @@ static void app_at_send(at_frame_t *my_at_frame)
     snprintf(at_frame, sizeof(at_frame), "%s,%d,\"%s\",1\r\n", AT_HEAD, my_at_frame->length * 2, hex_buffer);
     app_usart_tx_string(at_frame, USART0); // 通过 usart0 发送到给 plc 模组
 
-    if (is_offline == true) { // 如果设备离线,则把数据发送给自己
+    if (is_offline) { // 如果设备离线,则把数据发送给自己
         app_eventbus_publish(EVENT_RECEIVE_CMD, my_at_frame);
     }
 }
 
 // 构造命令
-void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t cmd, uint8_t func, bool is_ex)
+void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t frame_head, uint8_t cmd_type, bool is_ex)
 {
     static at_frame_t my_at_frame;
     memset(&my_at_frame, 0, sizeof(my_at_frame));
 
-    switch (cmd) {
+    switch (frame_head) {
         case PANEL_HEAD: { // 发送通信帧(panel产品用到)
 #if defined PANEL_KEY
             const panel_cfg_t *temp_cfg =
@@ -228,30 +232,34 @@ void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t cmd, uint8_t f
     #else
                 app_get_panel_cfg();
     #endif
-            my_at_frame.data[0] = PANEL_HEAD;
-
             if (key_number > KEY_NUMBER) { // 验证按键编号有效性
                 APP_ERROR("key_number error: %d", key_number);
                 return;
             }
 
-            if (func == SPECIAL_CMD) { // 特殊命令
-                if (temp_cfg[key_number].func == CURTAIN_OPEN ||
-                    temp_cfg[key_number].func == CURTAIN_CLOSE) {
-                    // 窗帘(开/关)->发送窗帘停
+            my_at_frame.data[0] = PANEL_HEAD;
+            if (cmd_type == SPECIAL_CMD) {
+                // 特殊命令
+                if (temp_cfg[key_number].func == CURTAIN_OPEN || temp_cfg[key_number].func == CURTAIN_CLOSE) {
+                    // 若是窗帘正在"开/关"过程中,则"停止"
                     my_at_frame.data[1] = CURTAIN_STOP;
-                    my_at_frame.data[2] = 0x00;
-                } else if (temp_cfg[key_number].func == LATER_MODE) {
-                    // 请稍后
-                    my_at_frame.data[1] = temp_cfg[key_number].func;
-                    // 勾选了"只开","操作指令"为 ture
-                    my_at_frame.data[2] = BIT4(temp_cfg[key_number].perm) ? true : key_status;
+                    my_at_frame.data[2] = false;
                 }
+            } else if (cmd_type == COMMON_CMD || (cmd_type == SPECIAL_CMD && temp_cfg[key_number].func == LATER_MODE)) {
+                // 普通命令 或 特殊命令里的"请稍后"
 
-            } else if (func == COMMON_CMD) { // 普通命令
                 my_at_frame.data[1] = temp_cfg[key_number].func;
-                // 勾选了"只开","操作指令"为 ture
-                my_at_frame.data[2] = BIT4(temp_cfg[key_number].perm) ? true : key_status;
+                my_at_frame.data[2] = key_status;
+
+                if (BIT4(temp_cfg[key_number].perm) && BIT6(temp_cfg[key_number].perm)) { // "只开" + "取反"
+                    my_at_frame.data[2] = false;
+                } else if (BIT4(temp_cfg[key_number].perm)) { // "只开"
+                    my_at_frame.data[2] = true;
+                } else if (BIT6(temp_cfg[key_number].perm)) { // "取反"
+                    my_at_frame.data[2] = !key_status;
+                } else {
+                    my_at_frame.data[2] = key_status; // 默认
+                }
             }
 
             // 设置分组、区域、权限和场景组信息

@@ -10,7 +10,7 @@ fmc_state_enum app_flash_read(uint32_t address, uint32_t *data, uint32_t length)
 {
     fmc_state_enum state = FMC_READY;
 
-    if ((address % 4 != 0) || (length % 4 != 0) || (data == NULL)) {
+    if ((address % 4) || (length % 4) || !data) {
         return FMC_PGAERR; // 返回编程对齐错误
     }
     fmc_unlock(); // 解锁Flash操作
@@ -33,7 +33,7 @@ fmc_state_enum app_flash_write_word(uint32_t address, uint32_t *data, uint32_t l
 {
     fmc_state_enum state = FMC_READY;
 
-    if ((address % 4 != 0) || (length % 4 != 0) || (data == NULL)) {
+    if ((address % 4) || (length % 4) || !data) {
         return FMC_PGAERR;
     }
 
@@ -57,7 +57,7 @@ fmc_state_enum app_flash_write_doubleword(uint32_t address, uint64_t *data, uint
 {
     fmc_state_enum state = FMC_READY;
 
-    if ((address % 8 != 0) || (length % 8 != 0) || (data == NULL)) {
+    if ((address % 4) || (length % 4) || !data) {
         return FMC_PGAERR;
     }
 
@@ -115,7 +115,7 @@ fmc_state_enum app_flash_verify(uint32_t address, uint32_t *data, uint32_t lengt
     fmc_state_enum state = FMC_READY;
     uint32_t read_data;
 
-    if ((address % 4 != 0) || (length % 4 != 0) || (data == NULL)) {
+    if ((address % 4) || (length % 4) || !data) {
         return FMC_PGAERR;
     }
 

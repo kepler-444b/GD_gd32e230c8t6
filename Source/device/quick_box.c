@@ -129,10 +129,11 @@ static void quick_zero_init(void)
 
 void EXTI4_15_IRQHandler(void)
 {
-    if (exti_interrupt_flag_get(EXTI_11) != RESET) {
-        exti_interrupt_flag_clear(EXTI_11);
-        quick_tigger_relay();
+    if (exti_interrupt_flag_get(EXTI_11) == RESET) {
+        return;
     }
+    exti_interrupt_flag_clear(EXTI_11);
+    quick_tigger_relay();
 }
 
 // 触发继电器
@@ -195,17 +196,17 @@ static void quick_box_timer(TimerHandle_t xTimer)
 {
     my_common_quick.key_status = APP_GET_GPIO(PA0);
 
-    if (my_common_quick.key_status == false) { // 按键按下
+    if (!my_common_quick.key_status) { // 按键按下
         my_common_quick.key_long_count++;
         if (my_common_quick.key_long_count >= 5000) { // 触发长按
             app_send_cmd(0, 0, APPLY_CONFIG, COMMON_CMD, false);
             my_common_quick.key_long_count = 0;
             APP_PRINTF("long_press\n");
         }
-    } else if (my_common_quick.key_status == true && my_common_quick.key_long_count != 0) {
+    } else if (my_common_quick.key_status && my_common_quick.key_long_count) {
         my_common_quick.key_long_count = 0;
     }
-    if (my_common_quick.led_filck == true) { // 开始闪烁
+    if (my_common_quick.led_filck) { // 开始闪烁
         process_led_flicker();
     }
 }
@@ -235,57 +236,72 @@ static void quick_fast_exe(uint8_t len_num, uint16_t lum)
     if (len_num < 3) {
         app_set_pwm_fade(temp_cfg[len_num].led_pin, lum, FADE_TIME);
     } else {
-        my_common_quick.relay_open[len_num - 3] = lum != 0;
+        my_common_quick.relay_open[len_num - 3] = lum;
     }
 }
 static void panel_all_close(FUNC_PARAMS) // 总关
 {
     PROCESS(temp_cfg, {
-        if ((BIT5(p_cfg->perm) == true) && // "睡眠"被勾选,"总开关分区"相同 或 0xF
-            ((H_BIT(data->data[4]) == H_BIT(p_cfg->area)) || (H_BIT(data->data[4]) == 0xF))) {
-            quick_fast_exe(_i, 0);
+        if (!BIT5(p_cfg->perm)) {
+            continue;
         }
+        if (H_BIT(data->data[4]) != H_BIT(p_cfg->area) &&
+            H_BIT(data->data[4]) != 0xF) {
+            continue;
+        }
+        quick_fast_exe(_i, 0);
     });
 }
+
 static void panel_all_on_off(FUNC_PARAMS) // 总开关
 {
     PROCESS(temp_cfg, {
-        if ((BIT5(p_cfg->perm) == true) && // "总开关"被勾选,"总开关分区"相同 或 0xF
-                                           // (p_cfg->scene_lun[bit] != 0xFF) &&
-            ((H_BIT(data->data[4]) == H_BIT(p_cfg->area)) || (H_BIT(data->data[4]) == 0xF))) {
-            quick_fast_exe(_i, data->data[2] ? TO_500(p_cfg->lum) : 0);
-            APP_PRINTF("%d %d\n", _i, (p_cfg->lum));
+        if (!BIT5(p_cfg->perm)) {
+            continue;
         }
+        if (H_BIT(data->data[4]) != H_BIT(p_cfg->area) && H_BIT(data->data[4]) != 0xF) { // 检查分区匹配
+            continue;
+        }
+        quick_fast_exe(_i, data->data[2] ? TO_500(p_cfg->lum) : 0);
     });
 }
 
 static void panel_scene_mode(FUNC_PARAMS) // 场景模式
 {
-    for (uint8_t bit = 0; bit < 8; bit++) {
-        if ((data->data[7] & (1 << bit)) == false) continue; // 使用位掩码检查bit是否被设置(未设置直接跳过)
-        PROCESS(temp_cfg, {
-            if ((p_cfg->scene_lun[bit] != 0xFF) && // 若亮度为255,则不执行
-                                                   // (p_cfg->scene_group != 0x00) &&    // (可屏蔽此行)
-                ((L_BIT(data->data[4]) == L_BIT(p_cfg->area)) || (L_BIT(data->data[4]) == 0xF))) {
-                if (_i < 3) {
-                    app_set_pwm_fade(p_cfg->led_pin, data->data[2] ? TO_500(p_cfg->scene_lun[bit]) : 0, FADE_TIME);
-                } else {
-                    my_common_quick.relay_open[_i - 3] = data->data[2] ? p_cfg->scene_lun[bit] : 0;
-                }
+    PROCESS(temp_cfg, {
+        for (uint8_t i = 0; i < 8; i++) {
+            // i 即 场景分组
+            uint8_t mask = data->data[7] & (1 << i);
+            if (!mask) { // 未勾选该场景分组,跳过
+                continue;
             }
-        });
-    }
+            if (p_cfg->scene_lun[i] == 0xFF) {
+                continue; // 该场景分组的本路调光为0xFF,跳过
+            }
+            if (L_BIT(data->data[4]) != 0xF && L_BIT(data->data[4]) != L_BIT(p_cfg->area)) {
+                continue; // 与本场景的分区不同且场景分区不为0xF,跳过
+            }
+            if (_i < 3) {
+                app_set_pwm_fade(p_cfg->led_pin, data->data[2] ? TO_500(p_cfg->scene_lun[i]) : 0, FADE_TIME);
+            } else {
+                my_common_quick.relay_open[_i - 3] = data->data[2] ? p_cfg->scene_lun[i] : 0;
+            }
+        }
+    });
 }
-static void panel_light_mode(FUNC_PARAMS)
+static void panel_light_mode(FUNC_PARAMS) // 灯控模式
 {
     PROCESS(temp_cfg, {
-        if (p_cfg->func == LIGHT_MODE &&
-            (data->data[3] == p_cfg->group || data->data[3] == 0xFF)) {
-            if (_i < 3) {
-                app_set_pwm_fade(p_cfg->led_pin, data->data[2] ? TO_500(p_cfg->lum) : 0, FADE_TIME);
-            } else {
-                my_common_quick.relay_open[_i - 3] = data->data[2] ? p_cfg->lum : 0;
-            }
+        if (p_cfg->func != LIGHT_MODE) {
+            continue;
+        }
+        if (data->data[3] != p_cfg->group && data->data[3] != 0xFF) {
+            continue;
+        }
+        if (_i < 3) {
+            app_set_pwm_fade(p_cfg->led_pin, data->data[2] ? TO_500(p_cfg->lum) : 0, FADE_TIME);
+        } else {
+            my_common_quick.relay_open[_i - 3] = data->data[2] ? p_cfg->lum : 0;
         }
     });
 }
