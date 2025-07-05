@@ -22,19 +22,19 @@
 
 // PWM控制结构体
 typedef struct {
-    uint16_t current_duty;   // 当前PWM占空比(0-1000)
-    uint16_t target_duty;    // 目标PWM占空比(0-1000)
-    uint16_t fade_counter;   // 渐变计数器
-    uint16_t fade_steps;     // 渐变总步数
-    uint16_t start_duty;     // 渐变起始占空比
-    bool is_fading;          // 是否正在渐变中
-    bool is_active;          // 是否已激活
-    gpio_pin_t gpio; // 对应的GPIO引脚
+    volatile uint16_t current_duty; // 当前PWM占空比(0-1000)
+    volatile uint16_t target_duty;  // 目标PWM占空比(0-1000)
+    volatile bool is_fading;        // 是否正在渐变中
+    volatile uint16_t fade_counter; // 渐变计数器
+    volatile uint16_t fade_steps;   // 渐变总步数
+    bool is_active;                 // 是否已激活
+    gpio_pin_t gpio;                // 对应的GPIO引脚
+    uint16_t start_duty;            // 渐变起始占空比
 } pwm_control_t;
 
-static pwm_control_t pwm_channels[PWM_MAX_CHANNELS]; // PWM通道控制数组
-static uint8_t active_channel_count = 0;             // 已激活的pwm通道数量
-static bool pwm_initialized         = false;         // pwm模块是否已经初始化
+static pwm_control_t pwm_channels[PWM_MAX_CHANNELS];  // PWM通道控制数组
+volatile static uint8_t active_channel_count = 0;     // 已激活的pwm通道数量
+volatile static bool pwm_initialized         = false; // pwm模块是否已经初始化
 
 // 根据引脚查找对应的PWM控制结构体索引
 static int find_pwm_index(gpio_pin_t pin)
@@ -61,17 +61,15 @@ void app_pwm_init(void)
     active_channel_count = 0;
 
     // 配置定时器
-    timer_parameter_struct timer_initpara;
     rcu_periph_clock_enable(RCU_TIMER13); // 开启TIMER13时钟
     timer_deinit(TIMER13);                // 复位TIMER13
-
-    timer_initpara.prescaler        = (SYSTEM_CLOCK_FREQ / 1000000) - 1; // 分频到1MHz
-    timer_initpara.alignedmode      = TIMER_COUNTER_EDGE;
-    timer_initpara.counterdirection = TIMER_COUNTER_UP;
-    timer_initpara.period           = TIMER_PERIOD;
-    timer_initpara.clockdivision    = TIMER_CKDIV_DIV1;
-    timer_init(TIMER13, &timer_initpara);
-
+    timer_parameter_struct timer_cfg;
+    timer_cfg.prescaler        = (SYSTEM_CLOCK_FREQ / 1000000) - 1; // 分频到1MHz
+    timer_cfg.alignedmode      = TIMER_COUNTER_EDGE;
+    timer_cfg.counterdirection = TIMER_COUNTER_UP;
+    timer_cfg.period           = TIMER_PERIOD;
+    timer_cfg.clockdivision    = TIMER_CKDIV_DIV1;
+    timer_init(TIMER13, &timer_cfg);
     // 使能中断
     timer_interrupt_flag_clear(TIMER13, TIMER_INT_FLAG_UP);
     timer_interrupt_enable(TIMER13, TIMER_INT_UP);
@@ -177,58 +175,65 @@ bool app_is_pwm_fading(gpio_pin_t pin)
 // 定时器中断处理函数
 void TIMER13_IRQHandler(void)
 {
-    static uint16_t pwm_counter = 0;
-    static uint16_t fade_timer  = 0;
+    static volatile uint16_t pwm_counter = 0;
+    static volatile uint16_t fade_timer  = 0;
 
-    if (timer_interrupt_flag_get(TIMER13, TIMER_INT_FLAG_UP)) {
-        timer_interrupt_flag_clear(TIMER13, TIMER_INT_FLAG_UP);
+    if (!timer_interrupt_flag_get(TIMER13, TIMER_INT_FLAG_UP)) {
+        return;
+    }
+    timer_interrupt_flag_clear(TIMER13, TIMER_INT_FLAG_UP);
 
-        // PWM生成逻辑
-        pwm_counter = (pwm_counter + 1) % PWM_RESOLUTION;
+    // PWM生成逻辑
+    pwm_counter = (pwm_counter + 1) % PWM_RESOLUTION;
 
-        // 更新所有通道的输出状态
-        for (uint8_t i = 0; i < PWM_MAX_CHANNELS; i++) {
-            if (!pwm_channels[i].is_active) continue; // 跳过未激活的通道
-
-            bool pwm_output = (pwm_counter < pwm_channels[i].current_duty);
-            APP_SET_GPIO(pwm_channels[i].gpio,
-#if defined PWM_DIR
-                         !pwm_output
-#else
-                         pwm_output
-#endif
-            );
+    // 更新所有通道的输出状态
+    for (uint8_t i = 0; i < PWM_MAX_CHANNELS; i++) {
+        if (!pwm_channels[i].is_active) { // 跳过未激活的通道
+            continue;
         }
 
-        // 渐变处理逻辑(每10ms调整一次占空比)
-        if ((fade_timer = (fade_timer + 1) % 660) == 0) {
-            for (int i = 0; i < PWM_MAX_CHANNELS; i++) {
-                if (!pwm_channels[i].is_active || !pwm_channels[i].is_fading) continue;
+        bool pwm_output = (pwm_counter < pwm_channels[i].current_duty);
+        APP_SET_GPIO(pwm_channels[i].gpio,
+#if defined PWM_DIR
+                     !pwm_output
+#else
+                     pwm_output
+#endif
+        );
+    }
 
-                pwm_channels[i].fade_counter++;
+    // 渐变处理逻辑(每10ms调整一次占空比)
+    fade_timer = (fade_timer + 1) % 660;
+    if (fade_timer != 0) {
+        return;
+    }
+    for (int i = 0; i < PWM_MAX_CHANNELS; i++) {
+        if (!pwm_channels[i].is_active || !pwm_channels[i].is_fading) {
+            continue;
+        }
 
-                // 计算进度并限制范围
-                uint16_t progress = (uint16_t)pwm_channels[i].fade_counter * FADE_TABLE_SIZE / pwm_channels[i].fade_steps;
+        pwm_channels[i].fade_counter++;
 
-                progress = MIN(progress, FADE_TABLE_SIZE - 1);
-                // 获取缓入缓出曲线值
-                uint16_t curve_value = fade_table[progress];
-                // 计算新占空比
-                uint16_t start = pwm_channels[i].start_duty;
-                uint16_t end   = pwm_channels[i].target_duty;
-                int16_t range  = end - start;
+        // 计算进度并限制范围
+        uint16_t progress = (uint16_t)pwm_channels[i].fade_counter * FADE_TABLE_SIZE / pwm_channels[i].fade_steps;
 
-                uint16_t new_duty = start + (range * curve_value) / 500;
-                new_duty          = CLAMP(new_duty, 0, PWM_RESOLUTION);
+        progress = MIN(progress, FADE_TABLE_SIZE - 1);
+        // 获取缓入缓出曲线值
+        uint16_t curve_value = fade_table[progress];
+        // 计算新占空比
+        uint16_t start = pwm_channels[i].start_duty;
+        uint16_t end   = pwm_channels[i].target_duty;
+        int16_t range  = end - start;
 
-                pwm_channels[i].current_duty = (uint16_t)new_duty;
+        uint16_t new_duty = start + (range * curve_value) / 500;
+        new_duty          = CLAMP(new_duty, 0, PWM_RESOLUTION);
 
-                // 检查渐变是否完成
-                if (pwm_channels[i].fade_counter >= pwm_channels[i].fade_steps) {
-                    pwm_channels[i].current_duty = end;
-                    pwm_channels[i].is_fading    = false;
-                }
-            }
+        pwm_channels[i].current_duty = (uint16_t)new_duty;
+
+        // 检查渐变是否完成
+        if (pwm_channels[i].fade_counter >= pwm_channels[i].fade_steps) {
+            pwm_channels[i].current_duty = end;
+            pwm_channels[i].is_fading    = false;
         }
     }
 }

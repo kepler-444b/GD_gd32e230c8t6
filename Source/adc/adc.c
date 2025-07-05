@@ -8,9 +8,9 @@
 #include "../base/debug.h"
 
 // 函数声明
-void rcu_config(void);
-void dma_config(adc_channel_t *channel_num);
-void adc_config(adc_channel_t *channel_num);
+static void rcu_config(void);
+static void dma_config(adc_channel_t *channel_num);
+static void adc_config(adc_channel_t *channel_num);
 
 static uint16_t adc_value[4] = {0};
 void app_adc_init(adc_channel_t *adc_channel)
@@ -20,14 +20,14 @@ void app_adc_init(adc_channel_t *adc_channel)
     adc_config(adc_channel);
 }
 
-void rcu_config(void)
+static void rcu_config(void)
 {
     rcu_periph_clock_enable(RCU_GPIOA);
     rcu_periph_clock_enable(RCU_ADC);
     rcu_periph_clock_enable(RCU_DMA);
     rcu_adc_clock_config(RCU_ADCCK_APB2_DIV6);
 }
-void dma_config(adc_channel_t *channel_num)
+static void dma_config(adc_channel_t *channel_num)
 {
     // 计算实际启用的通道数量
     uint8_t active_channels = channel_num->adc_channel_0 +
@@ -58,7 +58,7 @@ uint16_t *app_get_adc_value(void)
     return adc_value;
 }
 
-void adc_config(adc_channel_t *channel_num)
+static void adc_config(adc_channel_t *channel_num)
 {
     adc_special_function_config(ADC_CONTINUOUS_MODE, ENABLE); // 连续模式
     adc_special_function_config(ADC_SCAN_MODE, ENABLE);       // 扫描模式

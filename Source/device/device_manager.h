@@ -7,8 +7,8 @@
 */
 
 // 设备类型(多选一)
-#define PANEL_KEY // 灯控面板
-// #define QUICK_BOX // 快装盒子
+// #define PANEL_KEY // 灯控面板
+#define QUICK_BOX // 快装盒子
 
 #if defined PANEL_KEY
 
@@ -17,7 +17,7 @@
     // #define PANEL_6KEY
     #define PANEL_8KEY
 
-    #define RELAY_NUMBER 4 // 继电器个数
+    #define RELAY_NUMBER 4 // 面板继电器个数
 
     #if defined PANEL_4KEY
         #define KEY_NUMBER 4

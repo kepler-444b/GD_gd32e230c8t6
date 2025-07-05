@@ -13,10 +13,6 @@
 #define APP_DEBUG // 此宏用来管理整个工程的 debug 信息
 
 #if defined APP_DEBUG
-    // #define USE_RTT  // 此宏开启RTT调试,在USART1被占用时使用
-#endif
-
-#if defined APP_DEBUG
     #define APP_PRINTF(...) printf(__VA_ARGS__)
     #define APP_PRINTF_BUF(name, buf, len)                        \
         do {                                                      \

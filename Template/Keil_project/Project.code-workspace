@@ -26,7 +26,10 @@
             "segger_rtt.h": "c",
             "watchdog.h": "c",
             "gd32e23x_usart.h": "c",
-            "limits": "c"
+            "limits": "c",
+            "queue.h": "c",
+            "stdbool.h": "c",
+            "gpio.h": "c"
         }
     },
     "extensions": {}

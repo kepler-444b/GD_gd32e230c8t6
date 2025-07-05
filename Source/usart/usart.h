@@ -6,6 +6,10 @@
     两路 usart 的初始化,完成收发功能,
     暂使用一个固定的缓冲区 uart0_rx_buf_t,
     usart0 为业务串口,usart1 为调试串口,
+
+    2025.5.8 舒东升
+    usart1 也改为业务串口,新增了 uart1_rx_buf_t,
+    增加宏定义 USE_RTT,开启后,debug 会通过RTT输出,
 */
 
 #define UART0_RECV_SIZE 256

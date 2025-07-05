@@ -37,7 +37,7 @@ static apply_t my_apply;
 
 // 函数声明
 static void app_proto_check(usart0_rx_buf_t *buf);
-static void app_proto_check_test(usart1_rx_buf_t *buf);
+static void app_proto_test(usart1_rx_buf_t *buf);
 static void app_save_panel_cfg(valid_data_t *boj, bool is_ex);
 static void app_save_quick_cfg(valid_data_t *obj);
 static void app_proto_process(valid_data_t *my_valid_data);
@@ -47,15 +47,17 @@ static uint16_t quick_crc(uint8_t *data, uint8_t len);
 void app_proto_init(void)
 {
     app_usart0_rx_callback(app_proto_check);
-    // app_usart1_rx_callback(app_proto_check_test);
-}
-static void app_proto_check_test(usart1_rx_buf_t *buf)
-{
-    // APP_PRINTF("%s\n", buf->buffer);
-    // app_usart_tx_string("1234", USART1);
+    app_usart1_rx_callback(app_proto_test);
 }
 
-// usart 接收到数据首先回调在这里处理
+// usart1 接收到的数据首先回调在这里处理
+static void app_proto_test(usart1_rx_buf_t *buf)
+{
+    APP_PRINTF("%s\n", buf->buffer);
+    // app_usart_tx_string((const char *)buf->buffer, USART1);
+}
+
+// usart0 接收到数据首先回调在这里处理
 static void app_proto_check(usart0_rx_buf_t *buf)
 {
     // APP_PRINTF("%s\n", buf->buffer);

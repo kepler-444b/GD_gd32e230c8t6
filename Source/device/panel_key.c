@@ -320,43 +320,6 @@ static void process_panel_adc(panel_status_t *panel_status, common_panel_t *comm
             common_panel->key_long_press = false;
         }
     }
-    #if 0
-    for (uint8_t i = 0; i < KEY_NUMBER; i++) {
-        if (adc_value->vol >= panel_status[i].vol_range.min && adc_value->vol <= panel_status[i].vol_range.max) {
-            // 填充满buffer才会执行下面的代码
-            adc_value->vol_buf[adc_value->buf_idx++] = adc_value->vol;
-            if (adc_value->buf_idx >= ADC_VOL_NUMBER) {
-                adc_value->buf_idx = 0;
-                uint16_t new_value = app_calculate_average(adc_value->vol_buf, ADC_VOL_NUMBER);
-                if (new_value >= panel_status[i].vol_range.min && new_value <= panel_status[i].vol_range.max) {
-                    if (!panel_status[i].key_press) {
-                        if (!common_panel->enter_config) {
-                            panel_status[i].key_status = !panel_status[i].key_status;
-                            if (panel_status[i].relay_short != false) { // 有继电器正在短开,发送特殊命令
-                                app_send_cmd(i, 0x00, PANEL_HEAD, SPECIAL_CMD, is_ex);
-                            } else {
-                                app_send_cmd(i, panel_status[i].key_status, PANEL_HEAD, COMMON_CMD, is_ex);
-                            }
-                            panel_status[i].key_press = true;
-                        }
-                        common_panel->key_long_press = true;
-                        common_panel->key_long_count = 0;
-                    } else if (common_panel->key_long_press) {
-                        common_panel->key_long_count++;
-                        if (common_panel->key_long_count >= LONG_PRESS) {
-                            app_send_cmd(0, 0, APPLY_CONFIG, 0x00, is_ex);
-                            common_panel->key_long_press = false;
-                        }
-                    }
-                }
-            }
-        } else if (adc_value->vol >= MIN_VOL && adc_value->vol <= MAX_VOL) {
-            panel_status[i].key_press    = false;
-            common_panel->key_long_press = false;
-            common_panel->key_long_count = 0;
-        }
-    }
-    #endif
 }
 
 static void process_led_flicker(common_panel_t *common_panel, bool is_ex_panel)

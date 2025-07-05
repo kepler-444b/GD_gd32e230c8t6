@@ -15,7 +15,7 @@
 */
 
 // 检查GPIO是否有效
-#define GPIO_IS_VALID(obj) (obj).pin || (obj).port
+#define GPIO_IS_VALID(obj) ((obj).pin || (obj).port)
 
 // 设置GPIO
 #define APP_SET_GPIO(obj, status) \

@@ -11,8 +11,11 @@
 #include "../eventbus/eventbus.h"
 #include "../config/config.h"
 #include "../base/base.h"
+#include "../zero/zero.h"
 
 #if defined QUICK_BOX
+    #define SYSTEM_CLOCK_FREQ  72000000 // 系统时钟频率(72MHz)
+    #define TIMER_PERIOD       999      // 定时器周期(1ms中断)
 
     #define TO_500(x)          ((x) <= 0 ? 0 : ((x) >= 100 ? 500 : ((x) * 500) / 100))
     #define SCALE_5_TO_5000(x) ((x) <= 0 ? 0 : ((x) >= 5 ? 5000 : ((x) * 5000) / 5))
@@ -33,11 +36,11 @@
     #define LONG_PRESS 3000
 
 typedef struct {
-    bool key_status;          // 按键状态
-    bool led_filck;           // 闪烁
-    bool enter_config;        // 进入配置状态
-    bool relay_open[3];       // 继电器状态标志位
-    bool relay_last[3];       // 继电器上次状态
+    bool key_status;   // 按键状态
+    bool led_filck;    // 闪烁
+    bool enter_config; // 进入配置状态
+    // bool relay_open[3];       // 继电器状态标志位
+    // bool relay_last[3];       // 继电器上次状态
     uint16_t key_long_count;  // 长按计数
     uint32_t led_filck_count; // 闪烁计数
 
@@ -51,7 +54,6 @@ static void quick_box_data_cb(valid_data_t *data);
 static void quick_event_handler(event_type_e event, void *params);
 static void quick_box_timer(TimerHandle_t xTimer);
 static void quick_ctrl_led_all(bool status);
-static void quick_tigger_relay(void);
 static void quick_fast_exe(uint8_t len_num, uint16_t lum);
 static void process_led_flicker(void);
 
@@ -88,7 +90,10 @@ void quick_box_init(void)
     app_pwm_add_pin(PB7);
     app_pwm_add_pin(PB6);
     app_pwm_add_pin(PB5);
+
+    app_zero_init(EXTI_11);
 }
+
 void quick_box_gpio_init(void)
 {
     rcu_periph_clock_enable(RCU_GPIOA);
@@ -120,32 +125,54 @@ void quick_box_gpio_init(void)
 
 static void quick_zero_init(void)
 {
-    // (零点检测对实时性要求高,摒弃轮询方式,采用外部中断触发)
+    #if 0
+    // 过零检测外部中断配置(PB11)
     rcu_periph_clock_enable(RCU_CFGCMP);                           // EXIT 线路与 GPIO 相连接
     syscfg_exti_line_config(EXTI_SOURCE_GPIOB, EXTI_SOURCE_PIN11); // GPIO 配置为外部中断
     exti_init(EXTI_11, EXTI_INTERRUPT, EXTI_TRIG_RISING);          // 上升沿触发
     nvic_irq_enable(EXTI4_15_IRQn, 3);
+
+    // 定时器配置,用于精准延时(TIMER5)
+    rcu_periph_clock_enable(RCU_TIMER5);
+    timer_deinit(TIMER5);
+    timer_parameter_struct timer_cfg;
+    timer_cfg.prescaler        = (SYSTEM_CLOCK_FREQ / 1000000) - 1;
+    timer_cfg.alignedmode      = TIMER_COUNTER_EDGE;
+    timer_cfg.counterdirection = TIMER_COUNTER_UP;
+    timer_cfg.period           = TIMER_PERIOD;
+    timer_cfg.clockdivision    = TIMER_CKDIV_DIV1;
+    timer_init(TIMER5, &timer_cfg);
+    timer_interrupt_flag_clear(TIMER5, TIMER_INT_FLAG_UP);
+    timer_interrupt_enable(TIMER5, TIMER_INT_UP);
+    timer_enable(TIMER5);
+    nvic_irq_enable(TIMER5_IRQn, 3);
+    #endif
 }
 
+    #if 0 
 void EXTI4_15_IRQHandler(void)
 {
     if (exti_interrupt_flag_get(EXTI_11) == RESET) {
         return;
     }
     exti_interrupt_flag_clear(EXTI_11);
-    quick_tigger_relay();
-}
-
-// 触发继电器
-static void quick_tigger_relay(void)
-{
     for (uint8_t i = 0; i < 3; i++) {
-        if (my_common_quick.relay_last[i] != my_common_quick.relay_open[i]) {
-            APP_SET_GPIO(app_get_quick_cfg()[i + 3].led_pin, my_common_quick.relay_open[i]);
-            my_common_quick.relay_last[i] = my_common_quick.relay_open[i];
+        if (my_common_quick.relay_last[i] == my_common_quick.relay_open[i]) {
+            continue;
         }
+        APP_SET_GPIO(app_get_quick_cfg()[i + 3].led_pin, my_common_quick.relay_open[i]);
+        my_common_quick.relay_last[i] = my_common_quick.relay_open[i];
     }
 }
+
+void TIMER5_IRQHandler(void)
+{
+    if (timer_interrupt_flag_get(TIMER5, TIMER_INT_FLAG_UP)) {
+        timer_interrupt_flag_clear(TIMER5, TIMER_INT_FLAG_UP);
+        APP_PRINTF("TIMER5_IRQHandler\n");
+    }
+}
+    #endif
 
 static void quick_box_data_cb(valid_data_t *data)
 {
@@ -236,7 +263,8 @@ static void quick_fast_exe(uint8_t len_num, uint16_t lum)
     if (len_num < 3) {
         app_set_pwm_fade(temp_cfg[len_num].led_pin, lum, FADE_TIME);
     } else {
-        my_common_quick.relay_open[len_num - 3] = lum;
+        // my_common_quick.relay_open[len_num - 3] = lum;
+        zero_set_gpio(temp_cfg[len_num - 3].led_pin, lum);
     }
 }
 static void panel_all_close(FUNC_PARAMS) // 总关
@@ -284,7 +312,8 @@ static void panel_scene_mode(FUNC_PARAMS) // 场景模式
             if (_i < 3) {
                 app_set_pwm_fade(p_cfg->led_pin, data->data[2] ? TO_500(p_cfg->scene_lun[i]) : 0, FADE_TIME);
             } else {
-                my_common_quick.relay_open[_i - 3] = data->data[2] ? p_cfg->scene_lun[i] : 0;
+                // my_common_quick.relay_open[_i - 3] = data->data[2] ? p_cfg->scene_lun[i] : 0;
+                zero_set_gpio(p_cfg->led_pin, (data->data[2] ? p_cfg->scene_lun[i] : 0));
             }
         }
     });
@@ -301,7 +330,8 @@ static void panel_light_mode(FUNC_PARAMS) // 灯控模式
         if (_i < 3) {
             app_set_pwm_fade(p_cfg->led_pin, data->data[2] ? TO_500(p_cfg->lum) : 0, FADE_TIME);
         } else {
-            my_common_quick.relay_open[_i - 3] = data->data[2] ? p_cfg->lum : 0;
+            // my_common_quick.relay_open[_i - 3] = data->data[2] ? p_cfg->lum : 0;
+            zero_set_gpio(p_cfg->led_pin, (data->data[2] ? p_cfg->lum : 0));
         }
     });
 }
