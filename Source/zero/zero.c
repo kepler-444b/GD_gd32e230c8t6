@@ -9,7 +9,7 @@
 
 #define SYSTEM_CLOCK_FREQ 72000000 // 系统时钟频率
 #define TIMER_PERIOD      99       // 定时器周期(100us触发中断)
-#define DELAY_TIME        50       // 延时触发继电器 5ms(50 * 100us)
+#define DELAY_TIME        0        // 延时触发继电器 5ms(50 * 100us)
 #define QUEUE_SIZE        6        // 队列容量
 
 #define ZERO_TIMEOUT      400 // 过零超时 40ms (400 × 100us)
@@ -34,7 +34,6 @@ static volatile uint16_t delay_count = 0;     // 延时计数器
 
 void app_zero_init(exti_line_enum exti_pin)
 {
-    // 过零检测外部中断配置(PB11)
     rcu_periph_clock_enable(RCU_CFGCMP);                           // EXIT 线路与 GPIO 相连接
     syscfg_exti_line_config(EXTI_SOURCE_GPIOB, EXTI_SOURCE_PIN11); // GPIO 配置为外部中断
     exti_init(exti_pin, EXTI_INTERRUPT, EXTI_TRIG_RISING);         // 上升沿触发
@@ -65,8 +64,8 @@ void EXTI4_15_IRQHandler(void) // 过零点触发中断服务函数
         return; // 未捕捉到上升沿直接返回
     }
     exti_interrupt_flag_clear(EXTI_11);
-    zero_timeout_count = 0; // 重置过零超时计数器
-
+    zero_timeout_count = 0;     // 重置过零超时计数器
+    zero_failed        = false; // 零点检测电路已恢复
     if (is_delaying) {
         return; // 正在延时时直接返回
     }

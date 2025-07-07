@@ -827,14 +827,15 @@ static void panel_curtain_stop(FUNC_PARAMS) // 窗帘停
 static void panel_scene_mode(FUNC_PARAMS) // 场景模式
 {
     PROCESS_OUTER(temp_cfg, temp_status, {
-        if (((L_BIT(data->data[4]) != L_BIT(p_cfg->area)) &&
-             (L_BIT(data->data[4]) != 0xF))) { // 匹配场景区域
+        if (L_BIT(data->data[4]) != 0xF &&
+            L_BIT(data->data[4]) != L_BIT(p_cfg->area)) { // 匹配场景区域
             continue;
         }
-        panel_fast_exe(p_status, 0b00010110 | 0x00); // 关闭该场景区域所有的按键
+        // 关闭此面板的该"场景区域"的所有按键
+        panel_fast_exe(p_status, 0b00010110 | 0x00);
 
-        uint8_t mask = data->data[7] & p_cfg->scene_group; // 找出两个字节中同为1的位
-        if (!mask) {                                       // 任意一位同为1,说明勾选了该场景分组,执行动作
+        uint8_t mask = data->data[7] & p_cfg->scene_group;
+        if (!mask) { // 若未勾选该场景分组,跳过
             continue;
         }
         switch (p_cfg->func) {
