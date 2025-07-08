@@ -29,7 +29,10 @@
             "limits": "c",
             "queue.h": "c",
             "stdbool.h": "c",
-            "gpio.h": "c"
+            "gpio.h": "c",
+            "zero.h": "c",
+            "gd32e23x_dbg.h": "c",
+            "curve_table.h": "c"
         }
     },
     "extensions": {}

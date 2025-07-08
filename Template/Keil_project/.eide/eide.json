@@ -282,6 +282,12 @@
           },
           {
             "path": "../../Source/config/config.h"
+          },
+          {
+            "path": "../../Source/device/pcb_device.c"
+          },
+          {
+            "path": "../../Source/device/pcb_device.h"
           }
         ],
         "folders": []

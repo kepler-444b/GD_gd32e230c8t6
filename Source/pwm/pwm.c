@@ -10,7 +10,7 @@
 #include "../device/device_manager.h"
 
 #define SYSTEM_CLOCK_FREQ 72000000 // 系统时钟频率(72MHz)
-#define TIMER_PERIOD      14       // 定时器周期(15us中断,不可再低)
+#define TIMER_PERIOD      5        // 定时器周期(10us中断,不可再低)
 #define PWM_RESOLUTION    500      // PWM分辨率(500)
 #define MAX_FADE_TIME_MS  5000     // 最大渐变时间(5秒)
 #define FADE_UPDATE_MS    10       // 渐变更新间隔(10ms)
@@ -203,7 +203,7 @@ void TIMER13_IRQHandler(void)
     }
 
     // 渐变处理逻辑(每10ms调整一次占空比)
-    fade_timer = (fade_timer + 1) % 660;
+    fade_timer = (fade_timer + 1) % 2000;
     if (fade_timer != 0) {
         return;
     }
@@ -216,7 +216,6 @@ void TIMER13_IRQHandler(void)
 
         // 计算进度并限制范围
         uint16_t progress = (uint16_t)pwm_channels[i].fade_counter * FADE_TABLE_SIZE / pwm_channels[i].fade_steps;
-
         progress = MIN(progress, FADE_TABLE_SIZE - 1);
         // 获取缓入缓出曲线值
         uint16_t curve_value = fade_table[progress];

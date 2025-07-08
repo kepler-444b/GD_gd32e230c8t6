@@ -14,6 +14,7 @@
 #include "../protocol/protocol.h"
 #include "../pwm/pwm.h"
 #include "../config/config.h"
+#include "../device/pcb_device.h"
 
 #if defined PANEL_KEY
 
@@ -31,8 +32,11 @@
     #define FADE_TIME           500
 
     // 函数参数
-    #define FUNC_PARAMS valid_data_t *data, const panel_cfg_t *temp_cfg, panel_status_t *temp_status
-    #define FUNC_ARGS   data, temp_cfg, temp_status
+    #define FUNC_PARAMS  valid_data_t *data, const panel_cfg_t *temp_cfg, panel_status_t *temp_status
+    #define FUNC_ARGS    data, temp_cfg, temp_status
+
+    #define TIMER_PARAMS const panel_cfg_t *temp_cfg, panel_status_t *temp_status, common_panel_t *temp_common
+    #define ADC_PARAMS   panel_status_t *temp_status, common_panel_t *temp_common, adc_value_t *adc_value, bool is_ex
 
     // 外层遍历
     #define PROCESS_OUTER(cfg, status, ...)               \
@@ -90,6 +94,8 @@ typedef struct { // 用于每个按键的状态
 
 typedef struct
 {
+    bool bl_close;            // 总关背光
+    uint16_t bl_delay_count;  // 总关背光延时执行
     bool led_filck;           // 闪烁
     bool key_long_press;      // 长按状态
     bool enter_config;        // 进入配置状态
@@ -101,37 +107,17 @@ typedef struct
 static common_panel_t my_common_panel;
 static adc_value_t my_adc_value;
 static panel_status_t my_panel_status[KEY_NUMBER] = {
-
-    #if defined PANEL_6KEY
-    [0] = {.vol_range = {0, 15}},
-    [1] = {.vol_range = {25, 45}},
-    [2] = {.vol_range = {85, 110}},
-    [3] = {.vol_range = {145, 155}},
-    [4] = {.vol_range = {195, 210}},
-    [5] = {.vol_range = {230, 255}},
-    #endif
-
-    #if defined PANEL_8KEY
-    [0] = {.vol_range = {0, 15}},
-    [1] = {.vol_range = {25, 45}},
-    [2] = {.vol_range = {85, 110}},
-    [3] = {.vol_range = {145, 155}},
-    #endif
+    PANEL_VOL_RANGE_DEF,
 };
 
-    #if defined PANEL_8KEY // 8键采用两组4键的方式
+    #if defined PANEL_8KEY_A13 // 8键采用两组4键的方式
 static common_panel_t my_common_panel_ex;
 static adc_value_t my_adc_value_ex;
 static panel_status_t my_panel_status_ex[KEY_NUMBER] = {
-    [0] = {.vol_range = {0, 15}},
-    [1] = {.vol_range = {25, 45}},
-    [2] = {.vol_range = {85, 110}},
-    [3] = {.vol_range = {145, 155}},
+    PANEL_VOL_RANGE_DEF,
 };
-
     #endif
 
-static void panel_gpio_init(void);
 static void panel_power_status(void);
 static void panel_data_cb(valid_data_t *data);
 static void panel_read_adc(TimerHandle_t xTimer);
@@ -140,9 +126,10 @@ static void panel_ctrl_led_all(bool led_state, bool is_ex);
 static void panel_event_handler(event_type_e event, void *params);
 static void process_led_flicker(common_panel_t *common_panel, bool is_ex_panel);
 static void panel_fast_exe(panel_status_t *temp_fast, uint8_t flag);
-static void process_exe_status(const panel_cfg_t *temp_cfg, panel_status_t *temp_status);
+static void process_exe_status(TIMER_PARAMS);
 static void process_exe_power(const panel_cfg_t *temp_cfg, panel_status_t *temp_status);
-static void process_panel_adc(panel_status_t *panel_status, common_panel_t *common_panel, adc_value_t *adc_value, bool is_ex);
+static void panel_backlight_status(const panel_cfg_t *temp_cfg, panel_status_t *temp_status, bool status);
+static void process_panel_adc(ADC_PARAMS);
 static void process_cmd_check(FUNC_PARAMS);
 static void panel_all_close(FUNC_PARAMS);
 static void panel_all_on_off(FUNC_PARAMS);
@@ -165,19 +152,18 @@ void panel_key_init(void)
     panel_gpio_init();
     adc_channel_t my_adc_channel = {0};
     app_pwm_init(); // 初始化 PWM 模块
-    #if defined PANEL_4KEY
+    #if defined PANEL_4KEY_A11
 
     #endif
 
-    #if defined PANEL_6KEY
+    #if defined PANEL_6KEY_A11
     my_adc_channel.adc_channel_0 = true;
     app_adc_init(&my_adc_channel);
-
     app_pwm_add_pin(PA8);
     app_set_pwm_fade(PA8, 500, 3000);
     #endif
 
-    #if defined PANEL_8KEY
+    #if defined PANEL_8KEY_A13
     my_adc_channel.adc_channel_0 = true;
     my_adc_channel.adc_channel_1 = true;
     app_adc_init(&my_adc_channel);
@@ -187,12 +173,12 @@ void panel_key_init(void)
         app_pwm_add_pin(app_get_panel_cfg_ex()[i].led_y_pin);
     };
 
-    for (uint8_t i = 0; i < KEY_NUMBER; i++) { // 上电点亮所有背光灯
-        app_set_pwm_fade(app_get_panel_cfg()[i].led_y_pin, 500, 3000);
-        app_set_pwm_fade(app_get_panel_cfg_ex()[i].led_y_pin, 500, 3000);
-    }
+    // 上电先开启背光灯
+    panel_backlight_status(app_get_panel_cfg(), my_panel_status, true);
+    panel_backlight_status(app_get_panel_cfg_ex(), my_panel_status_ex, true);
+
     #endif
-    panel_power_status();
+    panel_power_status(); // 执行上电参数
 
     app_eventbus_subscribe(panel_event_handler); // 订阅事件总线
     // 创建一个静态定时器用于读取adc值
@@ -214,58 +200,6 @@ void panel_key_init(void)
     APP_PRINTF("panel_key_init[%d]\n", KEY_NUMBER);
 }
 
-static void panel_gpio_init(void)
-{
-    rcu_periph_clock_enable(RCU_GPIOA);
-    rcu_periph_clock_enable(RCU_GPIOB);
-
-    #if defined PANEL_4KEY
-
-    #endif
-
-    #if defined PANEL_6KEY
-    gpio_mode_set(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_8); // 背光灯 GPIOA8
-
-    gpio_mode_set(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_15); // 6个白灯
-    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_3);
-    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_4);
-    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_5);
-    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_6);
-    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_8);
-
-    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_12); // 4个继电器
-    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_13);
-    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_14);
-    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_15);
-    #endif
-
-    #if defined PANEL_8KEY
-    // 8 个黄灯
-    gpio_mode_set(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_4);
-    gpio_mode_set(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_5);
-    gpio_mode_set(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_6);
-    gpio_mode_set(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_7);
-    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_6);
-    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_7);
-    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_8);
-    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_9);
-    // 8 个白灯
-    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_0);
-    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_1);
-    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_2);
-    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_10);
-    gpio_mode_set(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_15);
-    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_3);
-    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_4);
-    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_5);
-    // 4 s个继电器
-    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_12);
-    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_13);
-    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_14);
-    gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_15);
-    #endif
-}
-
 static void panel_read_adc(TimerHandle_t xTimer)
 {
     my_adc_value.vol = ADC_TO_VOL(app_get_adc_value()[0]);
@@ -273,7 +207,7 @@ static void panel_read_adc(TimerHandle_t xTimer)
     if (my_common_panel.led_filck) {
         process_led_flicker(&my_common_panel, false);
     }
-    #if defined PANEL_8KEY
+    #if defined PANEL_8KEY_A13
     my_adc_value_ex.vol = ADC_TO_VOL(app_get_adc_value()[1]);
     process_panel_adc(my_panel_status_ex, &my_common_panel_ex, &my_adc_value_ex, true);
     if (my_common_panel_ex.led_filck) {
@@ -282,15 +216,15 @@ static void panel_read_adc(TimerHandle_t xTimer)
     #endif
 }
 
-static void process_panel_adc(panel_status_t *panel_status, common_panel_t *common_panel, adc_value_t *adc_value, bool is_ex)
+static void process_panel_adc(ADC_PARAMS)
 {
     for (uint8_t i = 0; i < KEY_NUMBER; i++) {
-        panel_status_t *p_status = &panel_status[i];
+        panel_status_t *p_status = &temp_status[i];
         if (adc_value->vol < p_status->vol_range.min || adc_value->vol > p_status->vol_range.max) {
             if (adc_value->vol >= MIN_VOL && adc_value->vol <= MAX_VOL) {
-                p_status->key_press          = false;
-                common_panel->key_long_press = false;
-                common_panel->key_long_count = 0;
+                p_status->key_press         = false;
+                temp_common->key_long_press = false;
+                temp_common->key_long_count = 0;
             }
             continue;
         }
@@ -304,20 +238,20 @@ static void process_panel_adc(panel_status_t *panel_status, common_panel_t *comm
         if (new_value < p_status->vol_range.min || new_value > p_status->vol_range.max) {
             continue; // 检查平均值是否在有效范围
         }
-        if (!p_status->key_press && !common_panel->enter_config) { // 处理按键按下
+        if (!p_status->key_press && !temp_common->enter_config) { // 处理按键按下
             p_status->key_status ^= 1;
             const bool is_special = p_status->relay_short;
             app_send_cmd(i, (is_special ? 0x00 : p_status->key_status), PANEL_HEAD, (is_special ? SPECIAL_CMD : COMMON_CMD), is_ex);
 
-            p_status->key_press          = true;
-            common_panel->key_long_press = true;
-            common_panel->key_long_count = 0;
+            p_status->key_press         = true;
+            temp_common->key_long_press = true;
+            temp_common->key_long_count = 0;
             continue;
         }
         // 处理长按
-        if (common_panel->key_long_press && ++common_panel->key_long_count >= LONG_PRESS) {
+        if (temp_common->key_long_press && ++temp_common->key_long_count >= LONG_PRESS) {
             app_send_cmd(0, 0, APPLY_CONFIG, 0x00, is_ex);
-            common_panel->key_long_press = false;
+            temp_common->key_long_press = false;
         }
     }
 }
@@ -341,15 +275,24 @@ static void process_led_flicker(common_panel_t *common_panel, bool is_ex_panel)
 static void panel_proce_cmd(TimerHandle_t xTimer)
 {
     const panel_cfg_t *temp_cfg = app_get_panel_cfg();
-    process_exe_status(temp_cfg, my_panel_status);
-    #if defined PANEL_8KEY
+    process_exe_status(temp_cfg, my_panel_status, &my_common_panel);
+
+    #if defined PANEL_8KEY_A13
     const panel_cfg_t *temp_cfg_ex = app_get_panel_cfg_ex();
-    process_exe_status(temp_cfg_ex, my_panel_status_ex);
+    process_exe_status(temp_cfg_ex, my_panel_status_ex, &my_common_panel_ex);
     #endif
 }
 
-static void process_exe_status(const panel_cfg_t *temp_cfg, panel_status_t *temp_status)
+static void process_exe_status(TIMER_PARAMS)
 {
+    if (temp_common->bl_close) { // 处理背光总关
+        if (++temp_common->bl_delay_count >= 1000) {
+            panel_backlight_status(temp_cfg, temp_status, false);
+            temp_common->bl_close       = false;
+            temp_common->bl_delay_count = 0;
+        }
+    }
+
     PROCESS_OUTER(temp_cfg, temp_status, {
         if (p_status->led_w_short) { // 白灯短亮逻辑
             if (p_status->led_w_short_count++ == 0) {
@@ -376,7 +319,7 @@ static void process_exe_status(const panel_cfg_t *temp_cfg, panel_status_t *temp
         if (p_status->led_w_open != p_status->led_w_last) { // 白灯状态更新
             APP_SET_GPIO(p_cfg->led_w_pin, p_status->led_w_open);
             p_status->led_w_last = p_status->led_w_open;
-            app_set_pwm_fade(p_cfg->led_y_pin, p_status->led_w_open ? 0 : 500, FADE_TIME);
+            panel_backlight_status(temp_cfg, temp_status, true);
         }
 
         if (p_status->relay_open != p_status->relay_last) { // 继电器状态更新
@@ -398,7 +341,7 @@ static void panel_data_cb(valid_data_t *data)
     const panel_cfg_t *temp_cfg = app_get_panel_cfg();
     process_cmd_check(data, temp_cfg, my_panel_status);
 
-    #if defined PANEL_8KEY
+    #if defined PANEL_8KEY_A13
     const panel_cfg_t *temp_cfg_ex = app_get_panel_cfg_ex();
     process_cmd_check(data, temp_cfg_ex, my_panel_status_ex);
     #endif
@@ -479,10 +422,10 @@ static void process_cmd_check(FUNC_PARAMS)
 static void panel_ctrl_led_all(bool led_state, bool is_ex)
 {
     panel_status_t *temp = NULL;
-    #ifndef PANEL_8KEY
+    #ifndef PANEL_8KEY_A13
     temp = my_panel_status;
     #endif
-    #if defined PANEL_8KEY
+    #if defined PANEL_8KEY_A13
     temp = is_ex ? my_panel_status_ex : my_panel_status;
     #endif
     for (uint8_t i = 0; i < KEY_NUMBER; i++) {
@@ -505,7 +448,7 @@ static void panel_event_handler(event_type_e event, void *params)
         case EVENT_SAVE_SUCCESS: {
             my_common_panel.led_filck = true;
         } break;
-    #if defined PANEL_8KEY
+    #if defined PANEL_8KEY_A13
         case EVENT_ENTER_CONFIG_EX:
             panel_ctrl_led_all(true, true);
             my_common_panel_ex.enter_config = true;
@@ -532,7 +475,7 @@ static void panel_event_handler(event_type_e event, void *params)
 static void panel_power_status(void)
 {
     process_exe_power(app_get_panel_cfg(), my_panel_status);
-    #if defined PANEL_8KEY
+    #if defined PANEL_8KEY_A13
     process_exe_power(app_get_panel_cfg_ex(), my_panel_status_ex);
     #endif
 }
@@ -578,9 +521,39 @@ static void panel_fast_exe(panel_status_t *temp_fast, uint8_t flag)
     }
 }
 
+static void panel_backlight_status(const panel_cfg_t *temp_cfg, panel_status_t *temp_status, bool status)
+{
+    #if defined PANEL_8KEY_A13
+    for (uint8_t i = 0; i < KEY_NUMBER; i++) {
+        if (status) {
+            app_set_pwm_fade(temp_cfg[i].led_y_pin, temp_status[i].led_w_open ? 0 : 500, 500);
+        } else {
+            app_set_pwm_fade(temp_cfg[i].led_y_pin, 0, 3000);
+        }
+    }
+    #endif
+    #if defined PANEL_6KEY_A11
+    uint8_t no_w_led = 0;
+    for (uint8_t i = 0; i < KEY_NUMBER; i++) {
+        no_w_led += temp_status[i].led_w_open;
+    }
+    if (status) {
+        app_set_pwm_fade(PA8, no_w_led ? 500 : 50, 3000);
+    } else {
+        app_set_pwm_fade(PA8, 0, 3000);
+    }
+    #endif
+}
+
 /* ***************************************** 处理按键类型 ***************************************** */
 static void panel_all_close(FUNC_PARAMS) // 总关
 {
+    if (BIT1(data->data[6])) {
+        my_common_panel.bl_close = true;
+    #if defined PANEL_8KEY_A13
+        my_common_panel_ex.bl_close = true;
+    #endif
+    }
     PROCESS_OUTER(temp_cfg, temp_status, {
         if (!BIT5(p_cfg->perm)) {
             continue; // 无"睡眠"权限,跳过
@@ -624,6 +597,12 @@ static void panel_all_close(FUNC_PARAMS) // 总关
 
 static void panel_all_on_off(FUNC_PARAMS) // 总开关
 {
+    if (BIT1(data->data[6])) {
+        my_common_panel.bl_close = true;
+    #if defined PANEL_8KEY_A13
+        my_common_panel_ex.bl_close = true;
+    #endif
+    }
     PROCESS_OUTER(temp_cfg, temp_status, {
         if (!BIT0(p_cfg->perm)) {
             continue; // 无"总开关"权限跳过
@@ -635,11 +614,11 @@ static void panel_all_on_off(FUNC_PARAMS) // 总开关
         switch (p_cfg->func) {
             case ALL_ON_OFF:
                 if (data->data[3] == p_cfg->group) {
-                    if (BIT4(temp_cfg[_i].perm) && BIT6(temp_cfg[_i].perm)) { //"只开" + "取反"
+                    if (BIT4(p_cfg->perm) && BIT6(p_cfg->perm)) { //"只开" + "取反"
                         panel_fast_exe(p_status, 0b00011010 | 0x00);
-                    } else if (BIT4(temp_cfg[_i].perm)) { //"只开"
+                    } else if (BIT4(p_cfg->perm)) { // "只开"
                         panel_fast_exe(p_status, 0b00010110 | 0x01);
-                    } else if (BIT6(temp_cfg[_i].perm)) { // "取反"
+                    } else if (BIT6(p_cfg->perm)) { // "取反"
                         panel_fast_exe(p_status, 0b00010110 | (~data->data[2] & 0x01));
                     } else { // 默认
                         panel_fast_exe(p_status, 0b00010110 | (data->data[2] & 0x01));

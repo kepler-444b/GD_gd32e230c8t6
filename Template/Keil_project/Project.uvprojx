@@ -799,6 +799,16 @@
               <FileType>5</FileType>
               <FilePath>..\..\Source\config\config.h</FilePath>
             </File>
+            <File>
+              <FileName>pcb_device.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Source\device\pcb_device.c</FilePath>
+            </File>
+            <File>
+              <FileName>pcb_device.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\Source\device\pcb_device.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

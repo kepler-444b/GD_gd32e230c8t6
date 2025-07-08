@@ -13,17 +13,17 @@
 #if defined PANEL_KEY
 
     // 面板类型(多选一)
-    // #define PANEL_4KEY
-    // #define PANEL_6KEY
-    #define PANEL_8KEY
+    // #define PANEL_4KEY_A11
+    // #define PANEL_6KEY_A11
+    #define PANEL_8KEY_A13
 
     #define RELAY_NUMBER 4 // 面板继电器个数
 
-    #if defined PANEL_4KEY
+    #if defined PANEL_4KEY_A11
         #define KEY_NUMBER 4
-    #elif defined PANEL_6KEY
+    #elif defined PANEL_6KEY_A11
         #define KEY_NUMBER 6
-    #elif defined PANEL_8KEY
+    #elif defined PANEL_8KEY_A13
         #define KEY_NUMBER 4
     #endif
 #endif

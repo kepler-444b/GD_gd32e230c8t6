@@ -5,11 +5,12 @@
 #include "../flash/flash.h"
 #include "../base/base.h"
 #include "../device/device_manager.h"
+#include "../device/pcb_device.h"
 
 #if defined PANEL_KEY
-    #if defined PANEL_6KEY
+    #if defined PANEL_6KEY_A11
 static panel_cfg_t my_panel_cfg[KEY_NUMBER] = {0};
-    #elif defined PANEL_8KEY
+    #elif defined PANEL_8KEY_A13
 static panel_cfg_t my_panel_cfg[KEY_NUMBER]    = {0};
 static panel_cfg_t my_panel_cfg_ex[KEY_NUMBER] = {0};
     #endif
@@ -42,7 +43,7 @@ void app_load_config(void)
     if (app_uint32_to_uint8(read_data, sizeof(read_data) / sizeof(read_data[0]), new_data, sizeof(new_data)) != true) {
         APP_ERROR("app_uint32_to_uint8 error\n");
     }
-#if defined PANEL_8KEY
+#if defined PANEL_8KEY_A13
 
     static uint32_t read_data_ex[24] = {0};
     static uint8_t new_data_ex[96]   = {0};
@@ -58,9 +59,9 @@ void app_load_config(void)
     __enable_irq();
 
 #if defined PANEL_KEY
-    #if defined PANEL_6KEY
+    #if defined PANEL_6KEY_A11
     app_load_panel_6key(new_data);
-    #elif defined PANEL_8KEY
+    #elif defined PANEL_8KEY_A13
     app_load_panel_8key(new_data, new_data_ex);
     #endif
 #endif
@@ -71,9 +72,9 @@ void app_load_config(void)
 
 static void app_load_panel_6key(uint8_t *data)
 {
-#if defined PANEL_6KEY
-    static const gpio_pin_t LED_W_GPIO_MAP[KEY_NUMBER] = {PA15, PB3, PB4, PB5, PB6, PB8};
-    static const gpio_pin_t RELAY_GPIO_MAP[KEY_NUMBER] = {PB12, PB13, PB14, PB15};
+#if defined PANEL_6KEY_A11
+    static const gpio_pin_t RELAY_GPIO_MAP[RELAY_NUMBER] = RELAY_GPIO_MAP_DEF;
+    static const gpio_pin_t LED_W_GPIO_MAP[KEY_NUMBER]   = LED_W_GPIO_MAP_DEF;
 
     for (uint8_t i = 0; i < KEY_NUMBER; i++) {
         panel_cfg_t *const p_cfg = &my_panel_cfg[i];
@@ -113,17 +114,17 @@ static void app_load_panel_6key(uint8_t *data)
         }
         APP_PRINTF("\n");
     }
-#endif /* PANEL_6KEY */
+#endif /* PANEL_6KEY_A11 */
 }
 
 static void app_load_panel_8key(uint8_t *data, uint8_t *data_ex)
 {
-#if defined PANEL_8KEY
-    static const gpio_pin_t RELAY_GPIO_MAP[]              = {PB12, PB13, PB14, PB15};
-    static const gpio_pin_t LED_W_GPIO_MAP[KEY_NUMBER]    = {PB0, PB1, PB2, PB10};
-    static const gpio_pin_t LED_W_GPIO_MAP_EX[KEY_NUMBER] = {PA15, PB3, PB4, PB5};
-    static const gpio_pin_t LED_Y_GPIO_MAP[KEY_NUMBER]    = {PA4, PA5, PA6, PA7};
-    static const gpio_pin_t LED_Y_GPIO_MAP_EX[KEY_NUMBER] = {PB6, PB7, PB8, PB9};
+#if defined PANEL_8KEY_A13
+    static const gpio_pin_t RELAY_GPIO_MAP[RELAY_NUMBER]  = RELAY_GPIO_MAP_DEF;
+    static const gpio_pin_t LED_W_GPIO_MAP[KEY_NUMBER]    = LED_W_GPIO_MAP_DEF;
+    static const gpio_pin_t LED_W_GPIO_MAP_EX[KEY_NUMBER] = LED_W_GPIO_MAP_EX_DEF;
+    static const gpio_pin_t LED_Y_GPIO_MAP[KEY_NUMBER]    = LED_Y_GPIO_MAP_DEF;
+    static const gpio_pin_t LED_Y_GPIO_MAP_EX[KEY_NUMBER] = LED_Y_GPIO_MAP_EX_DEF;
 
     for (uint8_t i = 0; i < KEY_NUMBER; i++) {
         panel_cfg_t *const p_cfg    = &my_panel_cfg[i];
@@ -175,7 +176,7 @@ static void app_load_panel_8key(uint8_t *data, uint8_t *data_ex)
         }
         APP_PRINTF("\n");
     }
-#endif // PANEL_8KEY
+#endif // PANEL_8KEY_A13
 }
 
 static void app_load_quick_box(uint8_t *data)
@@ -183,7 +184,7 @@ static void app_load_quick_box(uint8_t *data)
 #if defined QUICK_BOX
 
     // 对于快装盒子,最多支持8路灯,前3路是PWM,后3路是继电器,最后2路保留(顺序依次为 LED1,LED2,LED3,K1,K2,K3)
-    static const gpio_pin_t LED_GPIO_MAP[8] = {PB7, PB6, PB5, PB13, PB14, PB15, DEF, DEF};
+    static const gpio_pin_t LED_GPIO_MAP[LED_NUMBER] = LED_GPIO_MAP_DEF;
     for (uint8_t i = 0; i < LED_NUMBER; i++) {
         quick_ctg_t *const p_cfg = &quick_cfg[i];
         memcpy(p_cfg, &data[i * 14], 14);
@@ -217,7 +218,7 @@ static void app_panel_get_relay_num(uint8_t *data, const gpio_pin_t *relay_map, 
             my_panel_cfg[i].relay_pin[2] = BIT2(relay_num) ? relay_map[2] : DEF;
             my_panel_cfg[i].relay_pin[3] = BIT3(relay_num) ? relay_map[3] : DEF;
         }
-    #if defined PANEL_8KEY
+    #if defined PANEL_8KEY_A13
         else if (is_ex) {
             my_panel_cfg_ex[i].relay_pin[0] = BIT0(relay_num) ? relay_map[0] : DEF;
             my_panel_cfg_ex[i].relay_pin[1] = BIT1(relay_num) ? relay_map[1] : DEF;
@@ -242,7 +243,7 @@ const panel_cfg_t *app_get_panel_cfg(void)
 {
     return my_panel_cfg;
 }
-    #if defined PANEL_8KEY
+    #if defined PANEL_8KEY_A13
 const panel_cfg_t *app_get_panel_cfg_ex(void)
 {
     return my_panel_cfg_ex;

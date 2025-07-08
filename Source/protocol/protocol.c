@@ -229,7 +229,7 @@ void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t frame_head, ui
         case PANEL_HEAD: { // 发送通信帧(panel产品用到)
 #if defined PANEL_KEY
             const panel_cfg_t *temp_cfg =
-    #if defined PANEL_8KEY
+    #if defined PANEL_8KEY_A13
                 is_ex ? app_get_panel_cfg_ex() : app_get_panel_cfg();
     #else
                 app_get_panel_cfg();
