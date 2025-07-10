@@ -30,7 +30,7 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
 static void app_main_task(void *pvParameters)
 {
     // 初始化硬件和外设
-    app_usart_init(USART1, 115200); // 调试串口
+    // app_usart_init(USART1, 115200); // 调试串口
     app_usart_init(USART0, 115200); // 业务串口
     app_eventbus_init();            // 事件总线
     app_proto_init();               // 协议层

@@ -110,7 +110,7 @@ static panel_status_t my_panel_status[KEY_NUMBER] = {
     PANEL_VOL_RANGE_DEF,
 };
 
-    #if defined PANEL_8KEY_A13 // 8键采用两组4键的方式
+    #if defined PANEL_8KEY_A13_WZR // 8键采用两组4键的方式
 static common_panel_t my_common_panel_ex;
 static adc_value_t my_adc_value_ex;
 static panel_status_t my_panel_status_ex[KEY_NUMBER] = {
@@ -152,18 +152,64 @@ void panel_key_init(void)
     panel_gpio_init();
     adc_channel_t my_adc_channel = {0};
     app_pwm_init(); // 初始化 PWM 模块
-    #if defined PANEL_4KEY_A11
+
+    #if defined PANEL_4KEY_A13_LHW
+    my_adc_channel.adc_channel_0 = true;
+    app_adc_init(&my_adc_channel);
+
+    // for (uint8_t i = 0; i < KEY_NUMBER; i++) {
+    //     app_pwm_add_pin(app_get_panel_cfg()[i].led_y_pin);
+    // };
+    // panel_backlight_status(app_get_panel_cfg(), my_panel_status, true);
+    APP_SET_GPIO(PB0, true);
+    APP_SET_GPIO(PB1, true);
+    APP_SET_GPIO(PB6, true);
+    APP_SET_GPIO(PB7, true);
+
+    APP_SET_GPIO(PA15, true);
+    APP_SET_GPIO(PB3, true);
+    APP_SET_GPIO(PB4, true);
+    APP_SET_GPIO(PB5, true);
+
+    APP_PRINTF("%d\n", gpio_input_bit_get(GPIOA, GPIO_PIN_15));
+    APP_PRINTF("%d\n", gpio_input_bit_get(GPIOB, GPIO_PIN_3));
+    APP_PRINTF("%d\n", gpio_input_bit_get(GPIOB, GPIO_PIN_4));
+    APP_PRINTF("%d\n", gpio_input_bit_get(GPIOB, GPIO_PIN_5));
+
+    APP_PRINTF("%d\n", gpio_input_bit_get(GPIOB, GPIO_PIN_0));
+    APP_PRINTF("%d\n", gpio_input_bit_get(GPIOB, GPIO_PIN_1));
+    APP_PRINTF("%d\n", gpio_input_bit_get(GPIOB, GPIO_PIN_6));
+    APP_PRINTF("%d\n", gpio_input_bit_get(GPIOB, GPIO_PIN_7));
+    #endif
+
+    #if defined PANEL_6KEY_A13_LHW
+    my_adc_channel.adc_channel_0 = true;
+    app_adc_init(&my_adc_channel);
+
+    APP_SET_GPIO(PB0, true);
+    APP_SET_GPIO(PB1, true);
+    APP_SET_GPIO(PB6, true);
+    APP_SET_GPIO(PB7, true);
+    APP_SET_GPIO(PA3, true);
+    APP_SET_GPIO(PA8, true);
+
+    APP_SET_GPIO(PA15, true);
+    APP_SET_GPIO(PB3, true);
+    APP_SET_GPIO(PB4, true);
+    APP_SET_GPIO(PB5, true);
+    APP_SET_GPIO(PA1, true);
+    APP_SET_GPIO(PA2, true);
 
     #endif
 
-    #if defined PANEL_6KEY_A11
+    #if defined PANEL_6KEY_A11_WZR
     my_adc_channel.adc_channel_0 = true;
     app_adc_init(&my_adc_channel);
     app_pwm_add_pin(PA8);
     app_set_pwm_fade(PA8, 500, 3000);
     #endif
 
-    #if defined PANEL_8KEY_A13
+    #if defined PANEL_8KEY_A13_WZR
     my_adc_channel.adc_channel_0 = true;
     my_adc_channel.adc_channel_1 = true;
     app_adc_init(&my_adc_channel);
@@ -176,8 +222,8 @@ void panel_key_init(void)
     // 上电先开启背光灯
     panel_backlight_status(app_get_panel_cfg(), my_panel_status, true);
     panel_backlight_status(app_get_panel_cfg_ex(), my_panel_status_ex, true);
-
     #endif
+
     panel_power_status(); // 执行上电参数
 
     app_eventbus_subscribe(panel_event_handler); // 订阅事件总线
@@ -207,7 +253,7 @@ static void panel_read_adc(TimerHandle_t xTimer)
     if (my_common_panel.led_filck) {
         process_led_flicker(&my_common_panel, false);
     }
-    #if defined PANEL_8KEY_A13
+    #if defined PANEL_8KEY_A13_WZR
     my_adc_value_ex.vol = ADC_TO_VOL(app_get_adc_value()[1]);
     process_panel_adc(my_panel_status_ex, &my_common_panel_ex, &my_adc_value_ex, true);
     if (my_common_panel_ex.led_filck) {
@@ -218,6 +264,7 @@ static void panel_read_adc(TimerHandle_t xTimer)
 
 static void process_panel_adc(ADC_PARAMS)
 {
+    // APP_PRINTF("%d\n", adc_value->vol);
     for (uint8_t i = 0; i < KEY_NUMBER; i++) {
         panel_status_t *p_status = &temp_status[i];
         if (adc_value->vol < p_status->vol_range.min || adc_value->vol > p_status->vol_range.max) {
@@ -277,7 +324,7 @@ static void panel_proce_cmd(TimerHandle_t xTimer)
     const panel_cfg_t *temp_cfg = app_get_panel_cfg();
     process_exe_status(temp_cfg, my_panel_status, &my_common_panel);
 
-    #if defined PANEL_8KEY_A13
+    #if defined PANEL_8KEY_A13_WZR
     const panel_cfg_t *temp_cfg_ex = app_get_panel_cfg_ex();
     process_exe_status(temp_cfg_ex, my_panel_status_ex, &my_common_panel_ex);
     #endif
@@ -341,7 +388,7 @@ static void panel_data_cb(valid_data_t *data)
     const panel_cfg_t *temp_cfg = app_get_panel_cfg();
     process_cmd_check(data, temp_cfg, my_panel_status);
 
-    #if defined PANEL_8KEY_A13
+    #if defined PANEL_8KEY_A13_WZR
     const panel_cfg_t *temp_cfg_ex = app_get_panel_cfg_ex();
     process_cmd_check(data, temp_cfg_ex, my_panel_status_ex);
     #endif
@@ -422,10 +469,10 @@ static void process_cmd_check(FUNC_PARAMS)
 static void panel_ctrl_led_all(bool led_state, bool is_ex)
 {
     panel_status_t *temp = NULL;
-    #ifndef PANEL_8KEY_A13
+    #ifndef PANEL_8KEY_A13_WZR
     temp = my_panel_status;
     #endif
-    #if defined PANEL_8KEY_A13
+    #if defined PANEL_8KEY_A13_WZR
     temp = is_ex ? my_panel_status_ex : my_panel_status;
     #endif
     for (uint8_t i = 0; i < KEY_NUMBER; i++) {
@@ -448,7 +495,7 @@ static void panel_event_handler(event_type_e event, void *params)
         case EVENT_SAVE_SUCCESS: {
             my_common_panel.led_filck = true;
         } break;
-    #if defined PANEL_8KEY_A13
+    #if defined PANEL_8KEY_A13_WZR
         case EVENT_ENTER_CONFIG_EX:
             panel_ctrl_led_all(true, true);
             my_common_panel_ex.enter_config = true;
@@ -475,7 +522,7 @@ static void panel_event_handler(event_type_e event, void *params)
 static void panel_power_status(void)
 {
     process_exe_power(app_get_panel_cfg(), my_panel_status);
-    #if defined PANEL_8KEY_A13
+    #if defined PANEL_8KEY_A13_WZR
     process_exe_power(app_get_panel_cfg_ex(), my_panel_status_ex);
     #endif
 }
@@ -523,7 +570,7 @@ static void panel_fast_exe(panel_status_t *temp_fast, uint8_t flag)
 
 static void panel_backlight_status(const panel_cfg_t *temp_cfg, panel_status_t *temp_status, bool status)
 {
-    #if defined PANEL_8KEY_A13
+    #if defined PANEL_8KEY_A13_WZR || defined PANEL_4KEY_A13_LHW
     for (uint8_t i = 0; i < KEY_NUMBER; i++) {
         if (status) {
             app_set_pwm_fade(temp_cfg[i].led_y_pin, temp_status[i].led_w_open ? 0 : 500, 500);
@@ -532,7 +579,7 @@ static void panel_backlight_status(const panel_cfg_t *temp_cfg, panel_status_t *
         }
     }
     #endif
-    #if defined PANEL_6KEY_A11
+    #if defined PANEL_6KEY_A11_WZR
     uint8_t no_w_led = 0;
     for (uint8_t i = 0; i < KEY_NUMBER; i++) {
         no_w_led += temp_status[i].led_w_open;
@@ -550,7 +597,7 @@ static void panel_all_close(FUNC_PARAMS) // 总关
 {
     if (BIT1(data->data[6])) {
         my_common_panel.bl_close = true;
-    #if defined PANEL_8KEY_A13
+    #if defined PANEL_8KEY_A13_WZR
         my_common_panel_ex.bl_close = true;
     #endif
     }
@@ -599,7 +646,7 @@ static void panel_all_on_off(FUNC_PARAMS) // 总开关
 {
     if (BIT1(data->data[6])) {
         my_common_panel.bl_close = true;
-    #if defined PANEL_8KEY_A13
+    #if defined PANEL_8KEY_A13_WZR
         my_common_panel_ex.bl_close = true;
     #endif
     }

@@ -22,7 +22,7 @@
 static uint8_t extend_data[16] = {0}; // 灯控面板的第二个校验值所校验的数据
 #endif
 
-#if defined QUICK_BOX
+#if defined QUICK_BOX_WZR
 static valid_data_t temp_save = {0}; // 快装盒子存储配置信息用到的临时缓冲区
 #endif
 
@@ -60,7 +60,7 @@ static void app_proto_test(usart1_rx_buf_t *buf)
 // usart0 接收到数据首先回调在这里处理
 static void app_proto_check(usart0_rx_buf_t *buf)
 {
-    // APP_PRINTF("%s\n", buf->buffer);
+    APP_PRINTF("1234%s\n", buf->buffer);
     if (strncmp((char *)buf->buffer, "OK", 2) == 0) {
         is_offline = true;
     }
@@ -122,7 +122,7 @@ static void app_proto_process(valid_data_t *my_valid_data)
             }
             break;
 #endif
-#if defined QUICK_BOX
+#if defined QUICK_BOX_WZR
         case QUICK_SINGLE:
         case QUICK_MULTI: {
             if (cmd == QUICK_MULTI || my_apply.enter_apply) {
@@ -186,7 +186,7 @@ static void app_save_panel_cfg(valid_data_t *obj, bool is_ex)
 // 用于存放 quick_box 类型的串码
 static void app_save_quick_cfg(valid_data_t *obj)
 {
-#if defined QUICK_BOX
+#if defined QUICK_BOX_WZR
     APP_PRINTF_BUF("[SAVE]", obj->data, obj->length);
     static uint32_t output[32] = {0};
     if (app_uint8_to_uint32(obj->data, obj->length, output, sizeof(output))) {
@@ -229,7 +229,7 @@ void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t frame_head, ui
         case PANEL_HEAD: { // 发送通信帧(panel产品用到)
 #if defined PANEL_KEY
             const panel_cfg_t *temp_cfg =
-    #if defined PANEL_8KEY_A13
+    #if defined PANEL_8KEY_A13_WZR
                 is_ex ? app_get_panel_cfg_ex() : app_get_panel_cfg();
     #else
                 app_get_panel_cfg();

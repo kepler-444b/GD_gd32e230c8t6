@@ -14,7 +14,7 @@
 #include "../zero/zero.h"
 #include "../device/pcb_device.h"
 
-#if defined QUICK_BOX
+#if defined QUICK_BOX_WZR
     #define SYSTEM_CLOCK_FREQ  72000000 // 系统时钟频率(72MHz)
     #define TIMER_PERIOD       999      // 定时器周期(1ms中断)
 

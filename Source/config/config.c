@@ -8,19 +8,20 @@
 #include "../device/pcb_device.h"
 
 #if defined PANEL_KEY
-    #if defined PANEL_6KEY_A11
+    #ifndef PANEL_8KEY_A13_WZR
 static panel_cfg_t my_panel_cfg[KEY_NUMBER] = {0};
-    #elif defined PANEL_8KEY_A13
+    #endif
+    #if defined PANEL_8KEY_A13_WZR
 static panel_cfg_t my_panel_cfg[KEY_NUMBER]    = {0};
 static panel_cfg_t my_panel_cfg_ex[KEY_NUMBER] = {0};
     #endif
-#endif
-
-#if defined QUICK_BOX
+    #if defined QUICK_BOX
 static quick_ctg_t quick_cfg[LED_NUMBER] = {0};
+    #endif
 #endif
 
 // 函数声明
+static void app_load_panel_4key(uint8_t *data);
 static void app_load_panel_6key(uint8_t *data);
 static void app_load_panel_8key(uint8_t *data, uint8_t *data_ex);
 static void app_load_quick_box(uint8_t *data);
@@ -43,7 +44,7 @@ void app_load_config(void)
     if (app_uint32_to_uint8(read_data, sizeof(read_data) / sizeof(read_data[0]), new_data, sizeof(new_data)) != true) {
         APP_ERROR("app_uint32_to_uint8 error\n");
     }
-#if defined PANEL_8KEY_A13
+#if defined PANEL_8KEY_A13_WZR
 
     static uint32_t read_data_ex[24] = {0};
     static uint8_t new_data_ex[96]   = {0};
@@ -59,10 +60,14 @@ void app_load_config(void)
     __enable_irq();
 
 #if defined PANEL_KEY
-    #if defined PANEL_6KEY_A11
+    #if defined PANEL_6KEY_A11_WZR || defined PANEL_6KEY_A13_LHW
     app_load_panel_6key(new_data);
-    #elif defined PANEL_8KEY_A13
+    #endif
+    #if defined PANEL_8KEY_A13_WZR
     app_load_panel_8key(new_data, new_data_ex);
+    #endif
+    #if defined PANEL_4KEY_A13_LHW
+    app_load_panel_4key(new_data);
     #endif
 #endif
 #if defined QUICK_BOX
@@ -70,9 +75,42 @@ void app_load_config(void)
 #endif
 }
 
+static void app_load_panel_4key(uint8_t *data)
+{
+#if defined PANEL_4KEY_A13_LHW
+    static const gpio_pin_t RELAY_GPIO_MAP[RELAY_NUMBER] = RELAY_GPIO_MAP_DEF;
+    static const gpio_pin_t LED_W_GPIO_MAP[KEY_NUMBER]   = LED_W_GPIO_MAP_DEF;
+    static const gpio_pin_t LED_Y_GPIO_MAP[KEY_NUMBER]   = LED_Y_GPIO_MAP_DEF;
+    for (uint8_t i = 0; i < KEY_NUMBER; i++) {
+        panel_cfg_t *const p_cfg = &my_panel_cfg[i];
+        p_cfg->func              = data[i + 1];
+        p_cfg->group             = data[i + 5];
+        p_cfg->area              = data[i + 9];
+        p_cfg->perm              = data[i + 13];
+        p_cfg->scene_group       = data[i + 17];
+        p_cfg->led_w_pin         = LED_W_GPIO_MAP[i];
+        p_cfg->led_y_pin         = LED_Y_GPIO_MAP[i];
+    }
+    app_panel_get_relay_num(data, RELAY_GPIO_MAP, false);
+    for (uint8_t i = 0; i < KEY_NUMBER; i++) {
+        panel_cfg_t *const p_cfg = &my_panel_cfg[i];
+
+        APP_PRINTF("%02X %02X %02X %02X ", p_cfg->func, p_cfg->group, p_cfg->area, p_cfg->perm);
+        const char *led_w_name = app_get_gpio_name(p_cfg->led_w_pin);
+        const char *led_y_name = app_get_gpio_name(p_cfg->led_y_pin);
+        APP_PRINTF("%-4s %-4s| ", led_w_name, led_y_name);
+        for (uint8_t j = 0; j < 4; j++) {
+            const char *relay_name = app_get_gpio_name(p_cfg->relay_pin[j]);
+            APP_PRINTF("%-4s ", relay_name);
+        }
+        APP_PRINTF("\n");
+    }
+    APP_PRINTF("\n");
+#endif
+}
 static void app_load_panel_6key(uint8_t *data)
 {
-#if defined PANEL_6KEY_A11
+#if defined PANEL_6KEY_A11_WZR || defined PANEL_6KEY_A13_LHW
     static const gpio_pin_t RELAY_GPIO_MAP[RELAY_NUMBER] = RELAY_GPIO_MAP_DEF;
     static const gpio_pin_t LED_W_GPIO_MAP[KEY_NUMBER]   = LED_W_GPIO_MAP_DEF;
 
@@ -114,12 +152,12 @@ static void app_load_panel_6key(uint8_t *data)
         }
         APP_PRINTF("\n");
     }
-#endif /* PANEL_6KEY_A11 */
+#endif /* PANEL_6KEY_A11_WZR */
 }
 
 static void app_load_panel_8key(uint8_t *data, uint8_t *data_ex)
 {
-#if defined PANEL_8KEY_A13
+#if defined PANEL_8KEY_A13_WZR
     static const gpio_pin_t RELAY_GPIO_MAP[RELAY_NUMBER]  = RELAY_GPIO_MAP_DEF;
     static const gpio_pin_t LED_W_GPIO_MAP[KEY_NUMBER]    = LED_W_GPIO_MAP_DEF;
     static const gpio_pin_t LED_W_GPIO_MAP_EX[KEY_NUMBER] = LED_W_GPIO_MAP_EX_DEF;
@@ -176,7 +214,7 @@ static void app_load_panel_8key(uint8_t *data, uint8_t *data_ex)
         }
         APP_PRINTF("\n");
     }
-#endif // PANEL_8KEY_A13
+#endif // PANEL_8KEY_A13_WZR
 }
 
 static void app_load_quick_box(uint8_t *data)
@@ -218,7 +256,8 @@ static void app_panel_get_relay_num(uint8_t *data, const gpio_pin_t *relay_map, 
             my_panel_cfg[i].relay_pin[2] = BIT2(relay_num) ? relay_map[2] : DEF;
             my_panel_cfg[i].relay_pin[3] = BIT3(relay_num) ? relay_map[3] : DEF;
         }
-    #if defined PANEL_8KEY_A13
+
+    #if defined PANEL_8KEY_A13_WZR
         else if (is_ex) {
             my_panel_cfg_ex[i].relay_pin[0] = BIT0(relay_num) ? relay_map[0] : DEF;
             my_panel_cfg_ex[i].relay_pin[1] = BIT1(relay_num) ? relay_map[1] : DEF;
@@ -243,7 +282,7 @@ const panel_cfg_t *app_get_panel_cfg(void)
 {
     return my_panel_cfg;
 }
-    #if defined PANEL_8KEY_A13
+    #if defined PANEL_8KEY_A13_WZR
 const panel_cfg_t *app_get_panel_cfg_ex(void)
 {
     return my_panel_cfg_ex;

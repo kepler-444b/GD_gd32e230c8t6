@@ -8,13 +8,13 @@
 #include "task.h"
 #include "../base/debug.h"
 #include "../base/base.h"
+#include "../device/device_manager.h"
 #include "../rtt/SEGGER_RTT.h"
 
-// #define USE_RTT // 使用RTT进行调试(默认不使用)
-
 static usart0_rx_buf_t rx0_buf           = {0};
-static usart1_rx_buf_t rx1_buf           = {0};
 static usart_rx0_callback_t rx0_callback = NULL;
+
+static usart1_rx_buf_t rx1_buf           = {0};
 static usart_rx1_callback_t rx1_callback = NULL;
 
 // 函数声明
@@ -27,7 +27,6 @@ void app_usart1_rx_callback(usart_rx1_callback_t callback)
 {
     rx1_callback = callback;
 }
-
 void app_usart_init(uint32_t usart_com, uint32_t baudrate)
 {
     rcu_periph_clock_enable(RCU_GPIOA);
@@ -87,7 +86,6 @@ void USART0_IRQHandler(void)
         }
     }
 }
-
 void USART1_IRQHandler(void)
 {
     // 接收缓冲区非空中断
@@ -106,7 +104,6 @@ void USART1_IRQHandler(void)
         }
     }
 }
-
 // 发送一个字节
 static void usart_tx_byte(uint8_t data, uint32_t usart_periph)
 {
@@ -127,8 +124,7 @@ void app_usart_tx_string(const char *str, uint32_t usart_periph)
 
 inline int fputc(int ch, FILE *f)
 {
-
-#if defined USE_RTT
+#if defined RTT_ENABLE
     SEGGER_RTT_PutChar(0, ch);
 #else
     usart_data_transmit(USART1, (uint8_t)ch);
