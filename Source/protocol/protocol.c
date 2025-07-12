@@ -11,18 +11,21 @@
 #include "../config/config.h"
 #include "../device/device_manager.h"
 
-// 用于 panel 帧的校验
-#define PANEL_CRC(rxbuf, len) ({                                \
-    uint8_t _sum = 0;                                           \
-    for (uint8_t _i = 0; _i < (len); _i++) _sum += (rxbuf)[_i]; \
-    (uint8_t)(0xFF - _sum + 1);                                 \
-})
+#if defined PLC_HI
+    #define AT_HEAD "AT+SEND=FFFFFFFFFFFF" // AT 指令固定帧头
+static bool is_offline = false;
+#endif
+
+#if defined PLC_LHW
+    #define AT_HEAD 0x1b, 0x1b, 0x1b, 0x1b, 0x1b, 0x0a, 0x1b, 0x0a, 0x52, 0x02, 0x03, 0x00, 0x00, 0x33, 0xff, 0xad, 0x08, 0x40, 0x31, 0x2e
+    #define TG_MAC  0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x2f, 0x31, 0x30, 0x34, 0x2f, 0x33, 0x11, 0x2a, 0xff
+#endif
 
 #if defined PANEL_KEY
 static uint8_t extend_data[16] = {0}; // 灯控面板的第二个校验值所校验的数据
 #endif
 
-#if defined QUICK_BOX_WZR
+#if defined QUICK_BOX
 static valid_data_t temp_save = {0}; // 快装盒子存储配置信息用到的临时缓冲区
 #endif
 
@@ -42,6 +45,7 @@ static void app_save_panel_cfg(valid_data_t *boj, bool is_ex);
 static void app_save_quick_cfg(valid_data_t *obj);
 static void app_proto_process(valid_data_t *my_valid_data);
 static void app_at_send(at_frame_t *my_at_frame);
+static uint8_t panel_crc(uint8_t *rxbuf, uint8_t len);
 static uint16_t quick_crc(uint8_t *data, uint8_t len);
 
 void app_proto_init(void)
@@ -54,13 +58,18 @@ void app_proto_init(void)
 static void app_proto_test(usart1_rx_buf_t *buf)
 {
     APP_PRINTF("%s\n", buf->buffer);
+    APP_PRINTF_BUF("", buf->buffer, buf->length);
     // app_usart_tx_string((const char *)buf->buffer, USART1);
 }
 
 // usart0 接收到数据首先回调在这里处理
 static void app_proto_check(usart0_rx_buf_t *buf)
 {
-    APP_PRINTF("1234%s\n", buf->buffer);
+    // APP_PRINTF("%s\n", buf->buffer);
+    // APP_PRINTF_BUF("recv", buf->buffer, buf->length);
+    static valid_data_t my_valid_data;                // 不显式初始化
+    memset(&my_valid_data, 0, sizeof(my_valid_data)); // 每次调用都清零
+#if defined PLC_HI
     if (strncmp((char *)buf->buffer, "OK", 2) == 0) {
         is_offline = true;
     }
@@ -86,14 +95,16 @@ static void app_proto_check(usart0_rx_buf_t *buf)
     if (hex_len == 0 || hex_len % 2 != 0) {
         return;
     }
-    static valid_data_t my_valid_data;                // 不显式初始化
-    memset(&my_valid_data, 0, sizeof(my_valid_data)); // 每次调用都清零
-
     // 提取并转换十六进制数据
     my_valid_data.length = hex_len / 2;
     for (uint16_t i = 0; i < my_valid_data.length; i++) {
         my_valid_data.data[i] = HEX_TO_BYTE(start_ptr + 1 + i * 2);
     }
+#endif
+#if defined PLC_LHW
+    memcpy(my_valid_data.data, &buf->buffer[41], buf->length - 41);
+    my_valid_data.length = buf->length - 41;
+#endif
     app_proto_process(&my_valid_data);
 }
 
@@ -102,7 +113,7 @@ static void app_proto_process(valid_data_t *my_valid_data)
     uint8_t cmd = my_valid_data->data[0];
     switch (cmd) {
         case PANEL_HEAD: // 收到其他设备的AT指令
-            if (my_valid_data->data[5] == PANEL_CRC(my_valid_data->data, 5)) {
+            if (my_valid_data->data[5] == panel_crc(my_valid_data->data, 5)) {
                 app_eventbus_publish(EVENT_RECEIVE_CMD, my_valid_data);
             }
             break;
@@ -111,18 +122,18 @@ static void app_proto_process(valid_data_t *my_valid_data)
         case PANEL_MULTI:
             if (cmd == PANEL_MULTI || my_apply.enter_apply) { // 群发直接通过,单发需判断是否进入了配置模式
                 my_apply.enter_apply = true;                  // 这里要进入配置模式
-                if (my_valid_data->data[24] != PANEL_CRC(my_valid_data->data, 24)) {
+                if (my_valid_data->data[24] != panel_crc(my_valid_data->data, 24)) {
                     return;
                 }
                 memcpy(extend_data, &my_valid_data->data[25], 9);
-                if (extend_data[9] != PANEL_CRC(extend_data, 9)) {
+                if (extend_data[9] != panel_crc(extend_data, 9)) {
                     return;
                 }
                 app_save_panel_cfg(my_valid_data, my_apply.is_ex);
             }
             break;
 #endif
-#if defined QUICK_BOX_WZR
+#if defined QUICK_BOX
         case QUICK_SINGLE:
         case QUICK_MULTI: {
             if (cmd == QUICK_MULTI || my_apply.enter_apply) {
@@ -186,7 +197,7 @@ static void app_save_panel_cfg(valid_data_t *obj, bool is_ex)
 // 用于存放 quick_box 类型的串码
 static void app_save_quick_cfg(valid_data_t *obj)
 {
-#if defined QUICK_BOX_WZR
+#if defined QUICK_BOX
     APP_PRINTF_BUF("[SAVE]", obj->data, obj->length);
     static uint32_t output[32] = {0};
     if (app_uint8_to_uint32(obj->data, obj->length, output, sizeof(output))) {
@@ -204,19 +215,26 @@ static void app_save_quick_cfg(valid_data_t *obj)
 static void app_at_send(at_frame_t *my_at_frame)
 {
     APP_PRINTF_BUF("[SEND]", my_at_frame->data, my_at_frame->length);
-    // 转换为十六进制字符串
-    static char hex_buffer[64] = {0};
+
+// 转换为十六进制字符串
+#if defined PLC_HI
     static char at_frame[64]   = {0};
+    static char hex_buffer[64] = {0};
     for (int i = 0; i < my_at_frame->length; i++) {
         snprintf(hex_buffer + 2 * i, 3, "%02X", my_at_frame->data[i]);
     }
-
     snprintf(at_frame, sizeof(at_frame), "%s,%d,\"%s\",1\r\n", AT_HEAD, my_at_frame->length * 2, hex_buffer);
     app_usart_tx_string(at_frame, USART0); // 通过 usart0 发送到给 plc 模组
-
-    if (is_offline) { // 如果设备离线,则把数据发送给自己
+    if (is_offline) {                      // 如果设备离线,把数据发送给自己
         app_eventbus_publish(EVENT_RECEIVE_CMD, my_at_frame);
     }
+#endif
+#if defined PLC_LHW
+    uint8_t at_frame[64] = {AT_HEAD, TG_MAC};
+    memcpy(at_frame + 41, my_at_frame->data, my_at_frame->length);
+    app_eventbus_publish(EVENT_RECEIVE_CMD, my_at_frame);
+    app_usart_tx_buf(at_frame, 41 + my_at_frame->length, USART0);
+#endif
 }
 
 // 构造命令
@@ -229,16 +247,11 @@ void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t frame_head, ui
         case PANEL_HEAD: { // 发送通信帧(panel产品用到)
 #if defined PANEL_KEY
             const panel_cfg_t *temp_cfg =
-    #if defined PANEL_8KEY_A13_WZR
+    #if defined PANEL_8KEY_A13
                 is_ex ? app_get_panel_cfg_ex() : app_get_panel_cfg();
     #else
                 app_get_panel_cfg();
     #endif
-            if (key_number > KEY_NUMBER) { // 验证按键编号有效性
-                APP_ERROR("key_number error: %d", key_number);
-                return;
-            }
-
             my_at_frame.data[0] = PANEL_HEAD;
             if (cmd_type == SPECIAL_CMD) {
                 // 特殊命令
@@ -271,7 +284,7 @@ void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t frame_head, ui
             my_at_frame.data[7] = temp_cfg[key_number].scene_group;
 
             // 计算并设置CRC校验
-            my_at_frame.data[5] = PANEL_CRC(my_at_frame.data, 5);
+            my_at_frame.data[5] = panel_crc(my_at_frame.data, 5);
             my_at_frame.length  = 8;
             app_at_send(&my_at_frame);
 #endif
@@ -302,4 +315,14 @@ static uint16_t quick_crc(uint8_t *rxbuf, uint8_t len)
         }
     }
     return (crc << 8) | (crc >> 8); // 高低字节交换
+}
+
+// 用于 panel 帧的校验
+static uint8_t panel_crc(uint8_t *rxbuf, uint8_t len)
+{
+    uint8_t sum = 0;
+    for (uint8_t i = 0; i < len; i++) {
+        sum += rxbuf[i];
+    }
+    return (uint8_t)(0xFF - sum + 1);
 }

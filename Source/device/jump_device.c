@@ -6,7 +6,7 @@
     #include "panel_key.h"
 #endif
 
-#if defined QUICK_BOX_WZR
+#if defined QUICK_BOX
     #include "quick_box.h"
 #endif
 void app_jump_device_init(void)
@@ -17,7 +17,7 @@ void app_jump_device_init(void)
 
 #endif
 
-#if defined QUICK_BOX_WZR
+#if defined QUICK_BOX
     quick_box_init();
 #endif
 }

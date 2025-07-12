@@ -14,9 +14,6 @@
     如果按下按键发送命令,没有收到CCO的回复,则进入"无头模式",会在"构造发送 AT 帧"的时候通过
     app_eventbus_publish 把数据发送给自己,然后执行动作
 */
-#define AT_HEAD "AT+SEND=FFFFFFFFFFFF" // AT 指令固定帧头
-
-static bool is_offline = false;
 
 // 用于保存接收到的有效数据
 typedef struct

@@ -30,7 +30,7 @@ const panel_cfg_t *app_get_panel_cfg(void);
 const panel_cfg_t *app_get_panel_cfg_ex(void);
 #endif
 
-#if defined QUICK_BOX_WZR
+#if defined QUICK_BOX
 // 用于quick box类型的信息存储
 typedef struct
 {
@@ -48,4 +48,5 @@ const quick_ctg_t *app_get_quick_cfg(void);
 #endif
 
 void app_load_config(void);
+
 #endif // _CONFIG_H_
