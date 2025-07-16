@@ -17,8 +17,12 @@ static bool is_offline = false;
 #endif
 
 #if defined PLC_LHW
-    #define AT_HEAD 0x1b, 0x1b, 0x1b, 0x1b, 0x1b, 0x0a, 0x1b, 0x0a, 0x52, 0x02, 0x03, 0x00, 0x00, 0x33, 0xff, 0xad, 0x08, 0x40, 0x31, 0x2e
-    #define TG_MAC  0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x2f, 0x31, 0x30, 0x34, 0x2f, 0x33, 0x11, 0x2a, 0xff
+    // #define AT_HEAD 0x1b, 0x1b, 0x1b, 0x1b, 0x1b, 0x0a, 0x1b, 0x0a, 0x52, 0x02, 0x03, 0x00, 0x00, 0x33, 0xff, 0xad, 0x08, 0x40, 0x31, 0x2e
+    // #define TG_MAC  0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x2f, 0x31, 0x30, 0x34, 0x2f, 0x33, 0x11, 0x2a, 0xff
+    #define ESCAPE_SEQ  0x1b, 0x1b, 0x1b, 0x1b, 0x1b, 0x0a, 0x1b, 0x0a
+    #define MAC_ADDRESS 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46
+    #define SERVICE_ID  0x31, 0x30, 0x34 // "104"
+
 #endif
 
 #if defined PANEL_KEY
@@ -44,7 +48,7 @@ static void app_proto_test(usart1_rx_buf_t *buf);
 static void app_save_panel_cfg(valid_data_t *boj, bool is_ex);
 static void app_save_quick_cfg(valid_data_t *obj);
 static void app_proto_process(valid_data_t *my_valid_data);
-static void app_at_send(at_frame_t *my_at_frame);
+static void app_at_send(at_frame_t *send_frame);
 static uint8_t panel_crc(uint8_t *rxbuf, uint8_t len);
 static uint16_t quick_crc(uint8_t *data, uint8_t len);
 
@@ -65,8 +69,8 @@ static void app_proto_test(usart1_rx_buf_t *buf)
 // usart0 接收到数据首先回调在这里处理
 static void app_proto_check(usart0_rx_buf_t *buf)
 {
+    // APP_PRINTF_BUF("", buf->buffer, buf->length);
     // APP_PRINTF("%s\n", buf->buffer);
-    // APP_PRINTF_BUF("recv", buf->buffer, buf->length);
     static valid_data_t my_valid_data;                // 不显式初始化
     memset(&my_valid_data, 0, sizeof(my_valid_data)); // 每次调用都清零
 #if defined PLC_HI
@@ -114,7 +118,10 @@ static void app_proto_process(valid_data_t *my_valid_data)
     switch (cmd) {
         case PANEL_HEAD: // 收到其他设备的AT指令
             if (my_valid_data->data[5] == panel_crc(my_valid_data->data, 5)) {
-                app_eventbus_publish(EVENT_RECEIVE_CMD, my_valid_data);
+                static at_frame_t recv_frame;
+                memcpy(recv_frame.data, my_valid_data->data, my_valid_data->length);
+                recv_frame.length = my_valid_data->length;
+                app_eventbus_publish(EVENT_RECEIVE_CMD, &recv_frame);
             }
             break;
 #if defined PANEL_KEY
@@ -212,36 +219,69 @@ static void app_save_quick_cfg(valid_data_t *obj)
 #endif
 }
 // 构造发送 AT 帧
-static void app_at_send(at_frame_t *my_at_frame)
+static void app_at_send(at_frame_t *send_frame)
 {
-    APP_PRINTF_BUF("[SEND]", my_at_frame->data, my_at_frame->length);
+    APP_PRINTF_BUF("[SEND]", send_frame->data, send_frame->length);
 
 // 转换为十六进制字符串
 #if defined PLC_HI
     static char at_frame[64]   = {0};
     static char hex_buffer[64] = {0};
-    for (int i = 0; i < my_at_frame->length; i++) {
-        snprintf(hex_buffer + 2 * i, 3, "%02X", my_at_frame->data[i]);
+    for (int i = 0; i < send_frame->length; i++) {
+        snprintf(hex_buffer + 2 * i, 3, "%02X", send_frame->data[i]);
     }
-    snprintf(at_frame, sizeof(at_frame), "%s,%d,\"%s\",1\r\n", AT_HEAD, my_at_frame->length * 2, hex_buffer);
+    snprintf(at_frame, sizeof(at_frame), "%s,%d,\"%s\",1\r\n", AT_HEAD, send_frame->length * 2, hex_buffer);
     app_usart_tx_string(at_frame, USART0); // 通过 usart0 发送到给 plc 模组
     if (is_offline) {                      // 如果设备离线,把数据发送给自己
-        app_eventbus_publish(EVENT_RECEIVE_CMD, my_at_frame);
+        app_eventbus_publish(EVENT_RECEIVE_CMD, send_frame);
+        APP_ERROR("is_offline");
     }
 #endif
 #if defined PLC_LHW
-    uint8_t at_frame[64] = {AT_HEAD, TG_MAC};
-    memcpy(at_frame + 41, my_at_frame->data, my_at_frame->length);
-    app_eventbus_publish(EVENT_RECEIVE_CMD, my_at_frame);
-    app_usart_tx_buf(at_frame, 41 + my_at_frame->length, USART0);
+    app_eventbus_publish(EVENT_RECEIVE_CMD, send_frame); // 先把数据发送给自己
+    static uint8_t at_frame[64] = {0};
+
+    const uint8_t escape[] = {ESCAPE_SEQ};
+    memcpy(&at_frame[0], escape, sizeof(escape));
+    // 报文头域 (6字节)
+    at_frame[8]  = 0x52; // head
+    at_frame[9]  = 0x02; // request
+    at_frame[10] = 0x00; // id高字节
+    at_frame[11] = 0x03; // id低字节
+    at_frame[12] = 0x00; // token高字节
+    at_frame[13] = 0x33; // token低字节
+    // 选项域 (3字节)
+    at_frame[14] = 0xff; // spe
+    at_frame[15] = 0xad; // opt
+    at_frame[16] = 0x08; // ext_len
+    // RSL数据域 (20字节)
+    at_frame[17]        = 0x40; // port_mark ("@")
+    at_frame[18]        = 0x31; // port_number ("1")
+    at_frame[19]        = 0x2e; // addr_spe (".")
+    const uint8_t mac[] = {MAC_ADDRESS};
+    memcpy(&at_frame[20], mac, sizeof(mac)); // MAC地址 (12字节)
+    at_frame[32] = 0x2f;                     // path_spe ("/")
+
+    const uint8_t service[] = {SERVICE_ID};
+    memcpy(&at_frame[33], service, sizeof(service)); // 服务ID (3字节)
+
+    at_frame[36] = 0x2f; // path_sub_spe ("/")
+    at_frame[37] = 0x33; // func_sub ("3")
+
+    // 内容选项域 (3字节)
+    at_frame[38] = 0x11; // data_size
+    at_frame[39] = 0x2a; // data_format
+    at_frame[40] = 0xff; // end_mark
+    memcpy(&at_frame[41], send_frame->data, send_frame->length);
+    app_usart_tx_buf(at_frame, 41 + send_frame->length, USART0);
 #endif
 }
 
 // 构造命令
 void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t frame_head, uint8_t cmd_type, bool is_ex)
 {
-    static at_frame_t my_at_frame;
-    memset(&my_at_frame, 0, sizeof(my_at_frame));
+    static at_frame_t send_frame;
+    memset(&send_frame, 0, sizeof(send_frame));
 
     switch (frame_head) {
         case PANEL_HEAD: { // 发送通信帧(panel产品用到)
@@ -252,49 +292,49 @@ void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t frame_head, ui
     #else
                 app_get_panel_cfg();
     #endif
-            my_at_frame.data[0] = PANEL_HEAD;
+            send_frame.data[0] = PANEL_HEAD;
             if (cmd_type == SPECIAL_CMD) {
                 // 特殊命令
                 if (temp_cfg[key_number].func == CURTAIN_OPEN || temp_cfg[key_number].func == CURTAIN_CLOSE) {
                     // 若是窗帘正在"开/关"过程中,则"停止"
-                    my_at_frame.data[1] = CURTAIN_STOP;
-                    my_at_frame.data[2] = false;
+                    send_frame.data[1] = CURTAIN_STOP;
+                    send_frame.data[2] = false;
                 }
             } else if (cmd_type == COMMON_CMD || (cmd_type == SPECIAL_CMD && temp_cfg[key_number].func == LATER_MODE)) {
                 // 普通命令 或 特殊命令里的"请稍后"
 
-                my_at_frame.data[1] = temp_cfg[key_number].func;
-                my_at_frame.data[2] = key_status;
+                send_frame.data[1] = temp_cfg[key_number].func;
+                send_frame.data[2] = key_status;
 
                 if (BIT4(temp_cfg[key_number].perm) && BIT6(temp_cfg[key_number].perm)) { // "只开" + "取反"
-                    my_at_frame.data[2] = false;
+                    send_frame.data[2] = false;
                 } else if (BIT4(temp_cfg[key_number].perm)) { // "只开"
-                    my_at_frame.data[2] = true;
+                    send_frame.data[2] = true;
                 } else if (BIT6(temp_cfg[key_number].perm)) { // "取反"
-                    my_at_frame.data[2] = !key_status;
+                    send_frame.data[2] = !key_status;
                 } else {
-                    my_at_frame.data[2] = key_status; // 默认
+                    send_frame.data[2] = key_status; // 默认
                 }
             }
 
             // 设置分组、区域、权限和场景组信息
-            my_at_frame.data[3] = temp_cfg[key_number].group;
-            my_at_frame.data[4] = temp_cfg[key_number].area;
-            my_at_frame.data[6] = temp_cfg[key_number].perm;
-            my_at_frame.data[7] = temp_cfg[key_number].scene_group;
+            send_frame.data[3] = temp_cfg[key_number].group;
+            send_frame.data[4] = temp_cfg[key_number].area;
+            send_frame.data[6] = temp_cfg[key_number].perm;
+            send_frame.data[7] = temp_cfg[key_number].scene_group;
 
             // 计算并设置CRC校验
-            my_at_frame.data[5] = panel_crc(my_at_frame.data, 5);
-            my_at_frame.length  = 8;
-            app_at_send(&my_at_frame);
+            send_frame.data[5] = panel_crc(send_frame.data, 5);
+            send_frame.length  = 8;
+            app_at_send(&send_frame);
 #endif
         } break;
         case APPLY_CONFIG: { // 申请进入设置模式(所有产品通用)
-            my_at_frame.data[0] = APPLY_CONFIG;
-            my_at_frame.data[1] = 0x01;
-            my_at_frame.data[2] = 0x07;
-            my_at_frame.length  = 3;
-            app_at_send(&my_at_frame);
+            send_frame.data[0] = APPLY_CONFIG;
+            send_frame.data[1] = 0x01;
+            send_frame.data[2] = 0x07;
+            send_frame.length  = 3;
+            app_at_send(&send_frame);
             my_apply.apply_cmd = true;
             my_apply.is_ex     = is_ex;
         } break;

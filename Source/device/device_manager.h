@@ -10,38 +10,39 @@
 #define PLC_LHW
 // #define PLC_HI
 
-// 设备类型(多选一)
-// #define PANEL_KEY // 灯控面板
-#define QUICK_BOX // 快装盒子
+#if defined PLC_LHW || defined PLC_HI
+    // 设备类型(多选一)
+    #define PANEL_KEY // 灯控面板
+    // #define QUICK_BOX // 快装盒子
 
-#if defined PANEL_KEY
+    #if defined PANEL_KEY
 
-    // 面板类型(多选一)
-    // #define PANEL_4KEY_A11
-    // #define PANEL_6KEY_A11
+        // 面板类型(多选一)
+        // #define PANEL_4KEY_A11
+        // #define PANEL_6KEY_A11
 
-    // #define PANEL_4KEY_A13
-    #define PANEL_6KEY_A13
-    // #define PANEL_8KEY_A13
+        // #define PANEL_4KEY_A13
+        #define PANEL_6KEY_A13
+        // #define PANEL_8KEY_A13
 
-    /* *********** 确定继电器数量 *********** */
-    #define RELAY_NUMBER 4
+        /* *********** 确定继电器数量 *********** */
+        #define RELAY_NUMBER 4
 
-    /* ************ 确定按键数量 ************ */
-    #if defined PANEL_4KEY_A11 || defined PANEL_4KEY_A13 || defined PANEL_8KEY_A13
-        #define KEY_NUMBER 4
+        /* ************ 确定按键数量 ************ */
+        #if defined PANEL_4KEY_A11 || defined PANEL_4KEY_A13 || defined PANEL_8KEY_A13
+            #define KEY_NUMBER 4
+        #endif
+        #if defined PANEL_6KEY_A11 || defined PANEL_6KEY_A13
+            #define KEY_NUMBER 6
+        #endif
+
     #endif
-    #if defined PANEL_6KEY_A11 || defined PANEL_6KEY_A13
-        #define KEY_NUMBER 6
+
+    #if defined QUICK_BOX
+
+        #define LED_NUMBER 6
+        #define PWM_DIR    // pwm 方向(开启为反,关闭为正)
+
     #endif
-
 #endif
-
-#if defined QUICK_BOX
-
-    #define LED_NUMBER 6
-    #define PWM_DIR    // pwm 方向(开启为反,关闭为正)
-
-#endif
-
 #endif //_DEVICE_MANAGER_H_

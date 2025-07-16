@@ -14,6 +14,7 @@
 #include "../protocol/protocol.h"
 #include "../pwm/pwm.h"
 #include "../config/config.h"
+#include "../zero/zero.h"
 #include "../device/pcb_device.h"
 
 #if defined PANEL_KEY
@@ -32,7 +33,7 @@
     #define FADE_TIME           500
 
     // 函数参数
-    #define FUNC_PARAMS  valid_data_t *data, const panel_cfg_t *temp_cfg, panel_status_t *temp_status
+    #define FUNC_PARAMS  at_frame_t *data, const panel_cfg_t *temp_cfg, panel_status_t *temp_status
     #define FUNC_ARGS    data, temp_cfg, temp_status
 
     #define TIMER_PARAMS const panel_cfg_t *temp_cfg, panel_status_t *temp_status, common_panel_t *temp_common
@@ -119,7 +120,7 @@ static panel_status_t my_panel_status_ex[KEY_NUMBER] = {
     #endif
 
 static void panel_power_status(void);
-static void panel_data_cb(valid_data_t *data);
+static void panel_data_cb(at_frame_t *data);
 static void panel_read_adc(TimerHandle_t xTimer);
 static void panel_proce_cmd(TimerHandle_t xTimer);
 static void panel_ctrl_led_all(bool led_state, bool is_ex);
@@ -161,6 +162,7 @@ void panel_key_init(void)
         app_pwm_add_pin(app_get_panel_cfg()[i].led_y_pin);
     };
     panel_backlight_status(app_get_panel_cfg(), my_panel_status, true);
+    app_zero_init(EXTI_11);
     #endif
 
     #if defined PANEL_6KEY_A11
@@ -325,6 +327,7 @@ static void process_exe_status(TIMER_PARAMS)
             }
         }
         if (p_status->led_w_open != p_status->led_w_last) { // 白灯状态更新
+            // zero_set_gpio(p_cfg->led_w_pin, p_status->led_w_open);
             APP_SET_GPIO(p_cfg->led_w_pin, p_status->led_w_open);
             p_status->led_w_last = p_status->led_w_open;
             panel_backlight_status(temp_cfg, temp_status, true);
@@ -333,19 +336,21 @@ static void process_exe_status(TIMER_PARAMS)
         if (p_status->relay_open != p_status->relay_last) { // 继电器状态更新
             for (uint8_t i = 0; i < RELAY_NUMBER; i++) {
                 if (!app_gpio_equal(p_cfg->relay_pin[i], DEF)) { // 只操作勾选的继电器
-                    APP_SET_GPIO(p_cfg->relay_pin[i], p_status->relay_open);
+                    zero_set_gpio(p_cfg->relay_pin[i], p_status->relay_open);
+                    // APP_SET_GPIO(p_cfg->relay_pin[i], p_status->relay_open);
                 }
             }
             p_status->relay_last = p_status->relay_open;
-            APP_PRINTF("%d %d %d %d\n", APP_GET_GPIO(PB12), APP_GET_GPIO(PB13), APP_GET_GPIO(PB14), APP_GET_GPIO(PB15));
+            // APP_PRINTF("%d %d %d %d\n", APP_GET_GPIO(PB12), APP_GET_GPIO(PB13), APP_GET_GPIO(PB14), APP_GET_GPIO(PB15));
         }
     });
 }
 
-static void panel_data_cb(valid_data_t *data)
+static void panel_data_cb(at_frame_t *data)
 {
     // 0:固定码,1:按键功能,2:操作指令,3:分组,4:总关/场景区域,5:校验码,6:按键权限,7:场景分组
     APP_PRINTF_BUF("[RECV]", data->data, data->length);
+    // APP_PRINTF("len:%d\n", data->length);
     const panel_cfg_t *temp_cfg = app_get_panel_cfg();
     process_cmd_check(data, temp_cfg, my_panel_status);
 
@@ -471,8 +476,8 @@ static void panel_event_handler(event_type_e event, void *params)
         } break;
     #endif
         case EVENT_RECEIVE_CMD: {
-            valid_data_t *valid_data = (valid_data_t *)params;
-            panel_data_cb(valid_data);
+            at_frame_t *frame = (at_frame_t *)params;
+            panel_data_cb(frame);
         } break;
         default:
             return;

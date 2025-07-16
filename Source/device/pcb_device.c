@@ -6,6 +6,7 @@ void panel_gpio_init(void)
 {
     rcu_periph_clock_enable(RCU_GPIOA);
     rcu_periph_clock_enable(RCU_GPIOB);
+    gpio_mode_set(GPIOB, GPIO_MODE_INPUT, GPIO_PUPD_NONE, GPIO_PIN_11); // DET0 过零点检测
 
     #if defined PANEL_4KEY_A11
 
@@ -73,6 +74,7 @@ void panel_gpio_init(void)
     #endif
 
     #if defined PANEL_6KEY_A13
+
     // 6 个黄灯
     gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_0);
     gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_1);

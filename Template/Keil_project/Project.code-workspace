@@ -1,39 +1,12 @@
 {
     "folders": [
         {
-            "path": "../.."
+            "path": "."
         },
         {
-            "path": "."
+            "path": "../.."
         }
     ],
-    "settings": {
-        "files.associations": {
-            "string.h": "c",
-            "cstddef": "c",
-            "usart.h": "c",
-            "freertos.h": "c",
-            "eventbus.h": "c",
-            "config.h": "c",
-            "flash.h": "c",
-            "base.h": "c",
-            "task.h": "c",
-            "device_manager.h": "c",
-            "gd32e23x.h": "c",
-            "debug.h": "c",
-            "jump_device.h": "c",
-            "pwm.h": "c",
-            "segger_rtt.h": "c",
-            "watchdog.h": "c",
-            "gd32e23x_usart.h": "c",
-            "limits": "c",
-            "queue.h": "c",
-            "stdbool.h": "c",
-            "gpio.h": "c",
-            "zero.h": "c",
-            "gd32e23x_dbg.h": "c",
-            "curve_table.h": "c"
-        }
-    },
+    "settings": {},
     "extensions": {}
 }

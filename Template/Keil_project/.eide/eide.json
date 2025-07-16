@@ -631,6 +631,7 @@
       "custom_dep": {
         "name": "default",
         "incList": [
+          "..",
           "../../Firmware/CMSIS",
           "../../Utilities",
           "../../Utilities/LCD_Commom",
@@ -640,7 +641,7 @@
           "../../Source/FreeRTOS/src",
           "../../Source/FreeRTOS/port",
           "../../Source/FreeRTOS",
-          "..",
+          "../../Source/rtt",
           ".cmsis/include",
           "RTE/_GD32E23x"
         ],
@@ -653,7 +654,20 @@
         "AC6": {
           "version": 3,
           "beforeBuildTasks": [],
-          "afterBuildTasks": [],
+          "afterBuildTasks": [
+            {
+              "name": "[Copy linker output for Keil User Commands]",
+              "command": "mkdir ${KEIL_OUTPUT_DIR} & copy \"${OutDir}\\${ProjectName}.axf\" \"${KEIL_OUTPUT_DIR}\\${ProjectName}.axf\"",
+              "disable": true,
+              "abortAfterFailed": true
+            },
+            {
+              "name": "fromelf --bin --output=.\\output\\@L.bin !L",
+              "command": "fromelf --bin --output=.\\output\\${ProjectName}.bin ${KEIL_OUTPUT_DIR}\\${ProjectName}.axf",
+              "disable": true,
+              "abortAfterFailed": true
+            }
+          ],
           "global": {
             "use-microLIB": true,
             "output-debug-info": "enable"
@@ -662,6 +676,7 @@
             "optimization": "level-2",
             "language-c": "c99",
             "language-cpp": "c++11",
+            "link-time-optimization": false,
             "one-elf-section-per-function": true,
             "short-enums#wchar": true,
             "warnings": "ac5-like-warnings"
@@ -671,6 +686,8 @@
           },
           "linker": {
             "output-format": "elf",
+            "misc-controls": "--diag_suppress=L6329",
+            "xo-base": "",
             "ro-base": "0x08000000",
             "rw-base": "0x20000000",
             "$disableOutputTask": true

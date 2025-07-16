@@ -110,7 +110,9 @@ static void usart_tx_byte(uint8_t data, uint32_t usart_periph)
     usart_data_transmit(usart_periph, data);
     while (RESET == usart_flag_get(usart_periph, USART_FLAG_TBE));
     if (usart_periph == USART0) {
-        // vTaskDelay(1);
+#if defined PLC_HI
+        vTaskDelay(1);
+#endif
     }
 }
 
@@ -126,7 +128,7 @@ void app_usart_tx_string(const char *str, uint32_t usart_periph)
 void app_usart_tx_buf(const uint8_t *data, uint8_t length, uint32_t usart_periph)
 {
     for (uint32_t i = 0; i < length; i++) {
-        usart_tx_byte(data[i], usart_periph); // 直接调用你的单字节发送函数
+        usart_tx_byte(data[i], usart_periph);
     }
 }
 
