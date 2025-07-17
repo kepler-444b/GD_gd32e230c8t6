@@ -288,6 +288,12 @@
           },
           {
             "path": "../../Source/device/pcb_device.h"
+          },
+          {
+            "path": "../../Source/device/plcp_panel.c"
+          },
+          {
+            "path": "../../Source/device/plcp_panel.h"
           }
         ],
         "folders": []
@@ -446,6 +452,105 @@
         "folders": []
       },
       {
+        "name": "PLCP_panel_src",
+        "files": [
+          {
+            "path": "../../Source/plcp/Src/APP_RxBuffer.c"
+          },
+          {
+            "path": "../../Source/plcp/Src/APP_Timer.c"
+          },
+          {
+            "path": "../../Source/plcp/Src/APP_TxBuffer.c"
+          },
+          {
+            "path": "../../Source/plcp/Src/APP_UserProcess.c"
+          },
+          {
+            "path": "../../Source/plcp/Src/CmdDemo.c"
+          },
+          {
+            "path": "../../Source/plcp/Src/LmeUtils.c"
+          },
+          {
+            "path": "../../Source/plcp/Src/MseProcess.c"
+          },
+          {
+            "path": "../../Source/plcp/Src/PLCP_ota.c"
+          },
+          {
+            "path": "../../Source/plcp/Src/Uapps.c"
+          },
+          {
+            "path": "../../Source/plcp/Src/UappsRSL.c"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "PLCP_panel_inc",
+        "files": [
+          {
+            "path": "../../Source/plcp/Inc/APP_RxBuffer.h"
+          },
+          {
+            "path": "../../Source/plcp/Inc/APP_Timer.h"
+          },
+          {
+            "path": "../../Source/plcp/Inc/APP_TxBuffer.h"
+          },
+          {
+            "path": "../../Source/plcp/Inc/MseProcess.h"
+          },
+          {
+            "path": "../../Source/plcp/Inc/PLCP_ota.h"
+          },
+          {
+            "path": "../../Source/plcp/Inc/plcp_panel.h"
+          },
+          {
+            "path": "../../Source/plcp/Inc/plcp_panel_api.h"
+          },
+          {
+            "path": "../../Source/plcp/Inc/Uapps.h"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "PLCP_panel_port",
+        "files": [
+          {
+            "path": "../../Source/plcp/port/plcp_panel_port.c"
+          },
+          {
+            "path": "../../Source/plcp/port/LTM32F103CB_ota.h"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "cJSON",
+        "files": [
+          {
+            "path": "../../Source/plcp/cJSON/cJSON.c"
+          },
+          {
+            "path": "../../Source/plcp/cJSON/cJSON.h"
+          },
+          {
+            "path": "../../Source/plcp/cJSON/cJSON_Utils.c"
+          },
+          {
+            "path": "../../Source/plcp/cJSON/cJSON_Utils.h"
+          },
+          {
+            "path": "../../Source/plcp/cJSON/README.md"
+          }
+        ],
+        "folders": []
+      },
+      {
         "name": "::CMSIS",
         "files": [],
         "folders": []
@@ -465,7 +570,9 @@
   },
   "targets": {
     "GD32E23x": {
-      "excludeList": [],
+      "excludeList": [
+        "<virtual_root>/cJSON"
+      ],
       "toolchain": "AC6",
       "compileConfig": {
         "cpuType": "Cortex-M23",
@@ -642,6 +749,8 @@
           "../../Source/FreeRTOS/port",
           "../../Source/FreeRTOS",
           "../../Source/rtt",
+          "../../Source/plcp/cJSON",
+          "../../Source/plcp/Inc",
           ".cmsis/include",
           "RTE/_GD32E23x"
         ],

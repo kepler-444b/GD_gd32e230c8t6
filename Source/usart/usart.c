@@ -125,7 +125,7 @@ void app_usart_tx_string(const char *str, uint32_t usart_periph)
 }
 
 // 发送指定长度的字节
-void app_usart_tx_buf(const uint8_t *data, uint8_t length, uint32_t usart_periph)
+void app_usart_tx_buf(const uint8_t *data, uint16_t length, uint32_t usart_periph)
 {
     for (uint32_t i = 0; i < length; i++) {
         usart_tx_byte(data[i], usart_periph);

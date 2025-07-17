@@ -340,7 +340,7 @@
               <MiscControls></MiscControls>
               <Define>GD32E230</Define>
               <Undefine></Undefine>
-              <IncludePath>..\;..\..\Firmware\CMSIS;..\..\Utilities;..\..\Utilities\LCD_Commom;..\..\Firmware\GD32E23x_standard_peripheral\Include;..\..\Firmware\CMSIS\GD\GD32E23x\Include;..\..\Source\FreeRTOS\inc;..\..\Source\FreeRTOS\src;..\..\Source\FreeRTOS\port;..\..\Source\FreeRTOS;..\..\Source\rtt</IncludePath>
+              <IncludePath>..\;..\..\Firmware\CMSIS;..\..\Utilities;..\..\Utilities\LCD_Commom;..\..\Firmware\GD32E23x_standard_peripheral\Include;..\..\Firmware\CMSIS\GD\GD32E23x\Include;..\..\Source\FreeRTOS\inc;..\..\Source\FreeRTOS\src;..\..\Source\FreeRTOS\port;..\..\Source\FreeRTOS;..\..\Source\rtt;..\..\Source\plcp\Inc</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -809,6 +809,16 @@
               <FileType>5</FileType>
               <FilePath>..\..\Source\device\pcb_device.h</FilePath>
             </File>
+            <File>
+              <FileName>plcp_panel.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Source\device\plcp_panel.c</FilePath>
+            </File>
+            <File>
+              <FileName>plcp_panel.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\Source\device\plcp_panel.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -1043,6 +1053,121 @@
               <FileName>heap_1.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\Source\FreeRTOS\port\MemMang\heap_1.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>PLCP_panel_src</GroupName>
+          <Files>
+            <File>
+              <FileName>APP_RxBuffer.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Source\plcp\Src\APP_RxBuffer.c</FilePath>
+            </File>
+            <File>
+              <FileName>APP_Timer.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Source\plcp\Src\APP_Timer.c</FilePath>
+            </File>
+            <File>
+              <FileName>APP_TxBuffer.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Source\plcp\Src\APP_TxBuffer.c</FilePath>
+            </File>
+            <File>
+              <FileName>APP_UserProcess.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Source\plcp\Src\APP_UserProcess.c</FilePath>
+            </File>
+            <File>
+              <FileName>CmdDemo.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Source\plcp\Src\CmdDemo.c</FilePath>
+            </File>
+            <File>
+              <FileName>LmeUtils.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Source\plcp\Src\LmeUtils.c</FilePath>
+            </File>
+            <File>
+              <FileName>MseProcess.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Source\plcp\Src\MseProcess.c</FilePath>
+            </File>
+            <File>
+              <FileName>PLCP_ota.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Source\plcp\Src\PLCP_ota.c</FilePath>
+            </File>
+            <File>
+              <FileName>Uapps.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Source\plcp\Src\Uapps.c</FilePath>
+            </File>
+            <File>
+              <FileName>UappsRSL.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Source\plcp\Src\UappsRSL.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>PLCP_panel_inc</GroupName>
+          <Files>
+            <File>
+              <FileName>APP_RxBuffer.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\Source\plcp\Inc\APP_RxBuffer.h</FilePath>
+            </File>
+            <File>
+              <FileName>APP_Timer.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\Source\plcp\Inc\APP_Timer.h</FilePath>
+            </File>
+            <File>
+              <FileName>APP_TxBuffer.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\Source\plcp\Inc\APP_TxBuffer.h</FilePath>
+            </File>
+            <File>
+              <FileName>MseProcess.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\Source\plcp\Inc\MseProcess.h</FilePath>
+            </File>
+            <File>
+              <FileName>PLCP_ota.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\Source\plcp\Inc\PLCP_ota.h</FilePath>
+            </File>
+            <File>
+              <FileName>plcp_panel.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\Source\plcp\Inc\plcp_panel.h</FilePath>
+            </File>
+            <File>
+              <FileName>plcp_panel_api.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\Source\plcp\Inc\plcp_panel_api.h</FilePath>
+            </File>
+            <File>
+              <FileName>Uapps.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\Source\plcp\Inc\Uapps.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>PLCP_panel_port</GroupName>
+          <Files>
+            <File>
+              <FileName>plcp_panel_port.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Source\plcp\port\plcp_panel_port.c</FilePath>
+            </File>
+            <File>
+              <FileName>LTM32F103CB_ota.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\..\Source\plcp\port\LTM32F103CB_ota.h</FilePath>
             </File>
           </Files>
         </Group>

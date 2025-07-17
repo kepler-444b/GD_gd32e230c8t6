@@ -104,12 +104,21 @@ static void app_proto_check(usart0_rx_buf_t *buf)
     for (uint16_t i = 0; i < my_valid_data.length; i++) {
         my_valid_data.data[i] = HEX_TO_BYTE(start_ptr + 1 + i * 2);
     }
+    app_proto_process(&my_valid_data);
 #endif
 #if defined PLC_LHW
     memcpy(my_valid_data.data, &buf->buffer[41], buf->length - 41);
     my_valid_data.length = buf->length - 41;
-#endif
     app_proto_process(&my_valid_data);
+#endif
+
+#if defined PLCP_LHW
+
+    memcpy(my_valid_data.data, buf->buffer, buf->length);
+    my_valid_data.length = buf->length;
+    app_eventbus_publish(EVENT_RECEIVE_CMD, &my_valid_data);
+    // APP_PRINTF_BUF("rc", buf->buffer, buf->length);
+#endif
 }
 
 static void app_proto_process(valid_data_t *my_valid_data)

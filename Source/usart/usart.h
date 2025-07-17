@@ -32,7 +32,7 @@ typedef void (*usart_rx1_callback_t)(usart1_rx_buf_t *buf);
 // 初始化串口
 void app_usart_init(uint32_t usart_periph, uint32_t baudrate);
 void app_usart_tx_string(const char *str, uint32_t usart_periph);
-void app_usart_tx_buf(const uint8_t *data, uint8_t length, uint32_t usart_periph);
+void app_usart_tx_buf(const uint8_t *data, uint16_t length, uint32_t usart_periph);
 
 void app_usart0_rx_callback(usart_rx0_callback_t callback);
 void app_usart1_rx_callback(usart_rx1_callback_t callback);

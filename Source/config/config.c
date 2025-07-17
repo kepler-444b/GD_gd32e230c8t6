@@ -71,9 +71,26 @@ void app_load_config(void)
 #endif
 }
 
+void app_plcp_map(void)
+{
+#if defined PLCP_PANEL_4KEY
+    static const gpio_pin_t RELAY_GPIO_MAP[RELAY_NUMBER] = RELAY_GPIO_MAP_DEF;
+    static const gpio_pin_t LED_W_GPIO_MAP[KEY_NUMBER]   = LED_W_GPIO_MAP_DEF;
+    static const gpio_pin_t LED_Y_GPIO_MAP[KEY_NUMBER]   = LED_Y_GPIO_MAP_DEF;
+
+    for (uint8_t i = 0; i < KEY_NUMBER; i++) {
+        panel_cfg_t *const p_cfg = &my_panel_cfg[i];
+
+        p_cfg->led_w_pin    = LED_W_GPIO_MAP[i];
+        p_cfg->led_y_pin    = LED_Y_GPIO_MAP[i];
+        p_cfg->relay_pin[0] = RELAY_GPIO_MAP[i];
+    }
+#endif
+}
+
 static void app_load_panel_4key(uint8_t *data)
 {
-#if defined PANEL_4KEY_A13
+#if defined PANEL_4KEY_A13 || defined PLCP_PANEL_4KEY
     static const gpio_pin_t RELAY_GPIO_MAP[RELAY_NUMBER] = RELAY_GPIO_MAP_DEF;
     static const gpio_pin_t LED_W_GPIO_MAP[KEY_NUMBER]   = LED_W_GPIO_MAP_DEF;
     static const gpio_pin_t LED_Y_GPIO_MAP[KEY_NUMBER]   = LED_Y_GPIO_MAP_DEF;

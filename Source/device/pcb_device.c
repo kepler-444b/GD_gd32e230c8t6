@@ -56,7 +56,7 @@ void panel_gpio_init(void)
     gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_15);
     #endif
 
-    #if defined PANEL_4KEY_A13
+    #if defined PANEL_4KEY_A13 || defined PLCP_PANEL_4KEY
     // 4 个黄灯
     gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_0);
     gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_1);

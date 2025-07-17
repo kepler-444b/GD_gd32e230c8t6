@@ -26,7 +26,7 @@ typedef struct
 // 用于构造发送的at帧
 typedef struct
 {
-    uint8_t data[32];
+    uint8_t data[64];
     uint8_t length;
 } at_frame_t;
 

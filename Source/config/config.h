@@ -28,6 +28,7 @@ typedef struct
 } panel_cfg_t;
 const panel_cfg_t *app_get_panel_cfg(void);
 const panel_cfg_t *app_get_panel_cfg_ex(void);
+
 #endif
 
 #if defined QUICK_BOX
@@ -46,7 +47,7 @@ typedef struct
 
 const quick_ctg_t *app_get_quick_cfg(void);
 #endif
-
+void app_plcp_map(void);
 void app_load_config(void);
 
 #endif // _CONFIG_H_

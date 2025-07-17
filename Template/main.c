@@ -16,7 +16,7 @@
 #include "../Source/watchdog/watchdog.h"
 #include "../device/device_manager.h"
 
-StackType_t AppInitStackBuffer[128]; // 分配128字(word)的栈空间
+StackType_t AppInitStackBuffer[256]; // 分配128字(word)的栈空间
 StaticTask_t AppInitStaticBuffer;
 
 // FreeRTOS 检测堆栈溢出的钩子函数,在这里实现
@@ -35,7 +35,11 @@ static void app_main_task(void *pvParameters)
     app_eventbus_init();            // 事件总线
     app_proto_init();               // 协议层
     app_watchdog_init();            // 看门狗
-    app_load_config();              // 加载配置信息
+#ifndef PLCP_LHW
+    app_load_config(); // 加载配置信息
+#else
+    app_plcp_map();
+#endif
 
     app_jump_device_init();
     while (1) {
@@ -56,7 +60,7 @@ int main(void)
     TaskHandle_t AppInitTaskHandle = xTaskCreateStatic(
         app_main_task,            // 主任务
         "app_init_task",          // 任务名称
-        128,                      // 任务堆栈大小(128个word)
+        256,                      // 任务堆栈大小(128个word)
         NULL,                     // 任务参数(可传递给任务函数的void指针)
         configMAX_PRIORITIES - 1, // 优先级
         AppInitStackBuffer,       // 静态分配的堆栈空间数组
