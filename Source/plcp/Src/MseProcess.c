@@ -8,9 +8,9 @@
  * author :
  * date   : 2023/09/24
  * version: v1.0
- * description: ±¾ÎÄ¼şÊÇÊÕµ½Êı¾İºó½øĞĞ½âÎöÅĞ¶ÏÊÇ·ñÎªUapps±¨ÎÄÔÙ½øĞĞ·Ö°ü´¦Àí²Î¿¼Àı³Ì
+ * description: æœ¬æ–‡ä»¶æ˜¯æ”¶åˆ°æ•°æ®åè¿›è¡Œè§£æåˆ¤æ–­æ˜¯å¦ä¸ºUappsæŠ¥æ–‡å†è¿›è¡Œåˆ†åŒ…å¤„ç†å‚è€ƒä¾‹ç¨‹
  *
- * modify record:Ö÷Òª½øĞĞ½âÎöUapps±¨ÎÄ²¢ÒÀ¾İ¶ÔÓ¦µÄ¹¦ÄÜ½øĞĞ´¦ÀíÏìÓ¦
+ * modify record:ä¸»è¦è¿›è¡Œè§£æUappsæŠ¥æ–‡å¹¶ä¾æ®å¯¹åº”çš„åŠŸèƒ½è¿›è¡Œå¤„ç†å“åº”
  *****************************************************************************/
 #include "MseProcess.h"
 #include "PLCP_ota.h"
@@ -19,7 +19,7 @@
 #include "../base/debug.h"
 #include "../device/plcp_panel.h"
 
-#define MSE_DEVICE_SET_STATE "/_state" // ÉèÖÃ×´Ì¬
+#define MSE_DEVICE_SET_STATE "/_state" // è®¾ç½®çŠ¶æ€
 
 /*OTA*/
 #define MSE_OTA_UPDATE "/mcu/update"
@@ -41,14 +41,14 @@ uint8_t PLCP_write_state(char *aei, uint8_t *stateParam, uint16_t stateParamLen)
     uint8_t index;
     index = 3;
     if (stateParam[0] == 0x05) {
-        for (id = 0; id < 8; id++) { // ÉèÖÃÖ¸Ê¾µÆ
+        for (id = 0; id < 8; id++) { // è®¾ç½®æŒ‡ç¤ºç¯
             if (stateParam[1] & (0x80 >> id)) {
                 // printf("id %d, index %d\n", id, index);
                 // plcp_panel_bk_process(id, stateParam[index]);
                 index++;
             }
         }
-        for (id = 0; id < 8; id++) { // ÉèÖÃ±³¹âµÆ
+        for (id = 0; id < 8; id++) { // è®¾ç½®èƒŒå…‰ç¯
             if (stateParam[2] & (0x80 >> id)) {
                 // printf("led id %d, index %d\n", id, index);
                 // plcp_panel_led_process(id, stateParam[index]);
@@ -57,7 +57,7 @@ uint8_t PLCP_write_state(char *aei, uint8_t *stateParam, uint16_t stateParamLen)
         }
         sycn_flag = 1;
     } else if (stateParam[0] == 0x04) {
-        for (id = 0; id < 4; id++) { // ÉèÖÃ¼ÌµçÆ÷
+        for (id = 0; id < 4; id++) { // è®¾ç½®ç»§ç”µå™¨
             if (stateParam[1] & (0x80 >> id)) {
                 // printf("relay id %d, index %d\n", id, index);
                 // plcp_panel_realy_process(id, stateParam[index]);
@@ -70,18 +70,18 @@ uint8_t PLCP_write_state(char *aei, uint8_t *stateParam, uint16_t stateParamLen)
 }
 
 /*---------------------------------------------------------------
-º¯ÊıÃû³Æ£ºAps_UartSendMessage
-º¯Êı¹¦ÄÜ£ºAPS²ãÍ¨¹ıÓÃ»§´®¿Ú·¢ËÍUapps±¨ÎÄ¡£
-ÊäÈë²ÎÊı£ºpMsg-´ı·¢ËÍµÄUapps±¨ÎÄ½á¹¹ÌåÖ¸Õë
-         sendBuff-×ª»¯ºóµÄÊı¾İÊı×é
-         sendBuffMaxSize-Êı×é´óĞ¡
-·µ»ØÖµ£º  len-Êı¾İ³¤¶È
-±¸ ×¢£º´®¿Ú·¢ËÍUapps±¨ÎÄĞè¼ÓÉÏEscapeÇ°µ¼ĞòÁĞ
+å‡½æ•°åç§°ï¼šAps_UartSendMessage
+å‡½æ•°åŠŸèƒ½ï¼šAPSå±‚é€šè¿‡ç”¨æˆ·ä¸²å£å‘é€UappsæŠ¥æ–‡ã€‚
+è¾“å…¥å‚æ•°ï¼špMsg-å¾…å‘é€çš„UappsæŠ¥æ–‡ç»“æ„ä½“æŒ‡é’ˆ
+         sendBuff-è½¬åŒ–åçš„æ•°æ®æ•°ç»„
+         sendBuffMaxSize-æ•°ç»„å¤§å°
+è¿”å›å€¼ï¼š  len-æ•°æ®é•¿åº¦
+å¤‡ æ³¨ï¼šä¸²å£å‘é€UappsæŠ¥æ–‡éœ€åŠ ä¸ŠEscapeå‰å¯¼åºåˆ—
 ---------------------------------------------------------------*/
 uint16_t Aps_UartMessage(UappsMessage *pMsg, uint8_t *sendBuff, uint16_t sendBuffMaxSize)
 {
     uint16_t len               = 0;
-    uint8_t escapeStr[ESC_LEN] = ESC_STRING; // ±¨ÎÄ¹Ì¶¨Ö¡Í·
+    uint8_t escapeStr[ESC_LEN] = ESC_STRING; // æŠ¥æ–‡å›ºå®šå¸§å¤´
 
     memset(sendBuff, 0, sendBuffMaxSize * sizeof(uint8_t));
     memcpy(sendBuff, escapeStr, ESC_LEN * sizeof(uint8_t));
@@ -93,13 +93,13 @@ uint16_t Aps_UartMessage(UappsMessage *pMsg, uint8_t *sendBuff, uint16_t sendBuf
 }
 
 /*--------------------------------11-----------------------------
-º¯ÊıÃû³Æ£ºAPP_SendACK
-º¯Êı¹¦ÄÜ£ºAPP²ãack»Ø¸´
-ÊäÈë²ÎÊı£º reqMsg-UappsÇëÇó±¨ÎÄ½á¹¹Ìå£¬ payloadFlag - »Ø¸´µÄACKÊÇ·ñ´øÔØºÉ£¬scratch - »Ø¸´ÔØºÉ£¬
-            type-»Ø¸´Ö¡±¨ÎÄÍ·µÄ±¨ÎÄÀàĞÍ£¬repondCode - »Ø¸´Âë
-Êä³ö²ÎÊı£ºresMsg-Éú³ÉµÄUapps±¨ÎÄ½á¹¹Ìå
-·µ»ØÖµ£º   ÎŞ
-±¸ ×¢£º
+å‡½æ•°åç§°ï¼šAPP_SendACK
+å‡½æ•°åŠŸèƒ½ï¼šAPPå±‚ackå›å¤
+è¾“å…¥å‚æ•°ï¼š reqMsg-Uappsè¯·æ±‚æŠ¥æ–‡ç»“æ„ä½“ï¼Œ payloadFlag - å›å¤çš„ACKæ˜¯å¦å¸¦è½½è·ï¼Œscratch - å›å¤è½½è·ï¼Œ
+            type-å›å¤å¸§æŠ¥æ–‡å¤´çš„æŠ¥æ–‡ç±»å‹ï¼ŒrepondCode - å›å¤ç 
+è¾“å‡ºå‚æ•°ï¼šresMsg-ç”Ÿæˆçš„UappsæŠ¥æ–‡ç»“æ„ä½“
+è¿”å›å€¼ï¼š   æ— 
+å¤‡ æ³¨ï¼š
 ---------------------------------------------------------------*/
 void APP_SendACK(UappsMessage *reqMsg, uint16_t payloadFlag, uapps_rw_buffer_t *scratch, uint8_t type, uint8_t repondCode)
 {
@@ -111,7 +111,7 @@ void APP_SendACK(UappsMessage *reqMsg, uint16_t payloadFlag, uapps_rw_buffer_t *
     memset(&respondPacket, 0, sizeof(UappsMessage));
 
     if (payloadFlag) {
-        UappsDataResponse(reqMsg, &respondPacket, type, repondCode, scratch->p, scratch->len, contentFormat, 0); // ´øÔØºÉ½øĞĞ»Ø¸´
+        UappsDataResponse(reqMsg, &respondPacket, type, repondCode, scratch->p, scratch->len, contentFormat, 0); // å¸¦è½½è·è¿›è¡Œå›å¤
     } else {
         UappsSimpleResponse(reqMsg, &respondPacket, type, repondCode);
     }
@@ -123,11 +123,11 @@ void APP_SendACK(UappsMessage *reqMsg, uint16_t payloadFlag, uapps_rw_buffer_t *
 }
 
 /*--------------------------------29-----------------------------
-º¯ÊıÃû³Æ£ºAPP_STATE_SET_STATE
-º¯Êı¹¦ÄÜ£ºÉè±¸¶Ë×îÖÕ´¦ÀíÅäÖÃ×´Ì¬µÄº¯Êı
-ÊäÈë²ÎÊı£ºuappsMsg--ÏûÏ¢Ö¸Õë
-·µ»ØÖµ£º   ÎŞ
-±¸ ×¢£º¸ù¾İÊı¾İÖ¸ÕëuappsMsg->pl_ptr×´Ì¬Êı¾İ£¬uappsMsg->pl_lenÊı¾İ³¤¶È
+å‡½æ•°åç§°ï¼šAPP_STATE_SET_STATE
+å‡½æ•°åŠŸèƒ½ï¼šè®¾å¤‡ç«¯æœ€ç»ˆå¤„ç†é…ç½®çŠ¶æ€çš„å‡½æ•°
+è¾“å…¥å‚æ•°ï¼šuappsMsg--æ¶ˆæ¯æŒ‡é’ˆ
+è¿”å›å€¼ï¼š   æ— 
+å¤‡ æ³¨ï¼šæ ¹æ®æ•°æ®æŒ‡é’ˆuappsMsg->pl_ptrçŠ¶æ€æ•°æ®ï¼ŒuappsMsg->pl_lenæ•°æ®é•¿åº¦
 ---------------------------------------------------------------*/
 void APP_STATE_SET_STATE(UappsMessage *uappsMsg, RSL_t *rsiMsg)
 {
@@ -161,8 +161,8 @@ void APP_STATE_SET_STATE(UappsMessage *uappsMsg, RSL_t *rsiMsg)
     // 	}
     // }
 
-    // »Ø¸´ACK
-    if (uappsMsg->hdr.type == UAPPS_TYPE_CON) // ÅĞ¶ÏÊÕµ½µÄ±¨ÎÄÄÚÊÇ·ñĞèÒª½øĞĞ»Ø¸´
+    // å›å¤ACK
+    if (uappsMsg->hdr.type == UAPPS_TYPE_CON) // åˆ¤æ–­æ”¶åˆ°çš„æŠ¥æ–‡å†…æ˜¯å¦éœ€è¦è¿›è¡Œå›å¤
     {
         APP_SendACK(uappsMsg, 0, &scratch, UAPPS_TYPE_ACK, respondCode);
     }
@@ -241,19 +241,19 @@ void APP_OTA_RES_Processing(UappsMessage* uappsMsg)
 		}
 	}
 
-	//»Ø¸´ACK
-	if (uappsMsg->hdr.type == UAPPS_TYPE_CON)//ÅĞ¶ÏÊÕµ½µÄ±¨ÎÄÄÚÊÇ·ñĞèÒª½øĞĞ»Ø¸´
+	//å›å¤ACK
+	if (uappsMsg->hdr.type == UAPPS_TYPE_CON)//åˆ¤æ–­æ”¶åˆ°çš„æŠ¥æ–‡å†…æ˜¯å¦éœ€è¦è¿›è¡Œå›å¤
 	{
 		APP_SendACK(uappsMsg, payloadFlag, &scratch, UAPPS_TYPE_ACK, respondCode);
 	}
 }
 #endif
 /*--------------------------------29-----------------------------
-º¯ÊıÃû³Æ£ºAPP_TOPIC_MSEProcessing
-º¯Êı¹¦ÄÜ£º·Ö±ğ´¦Àí½ÓÊÜµ½µÄÖ¸Áî
-ÊäÈë²ÎÊı£ºuappsMsgÇëÇó±¨ÎÄ½á¹¹Ìå£¬rsiMsg-ÊäÈëÊı¾İÖ¸Õë
-·µ»ØÖµ£º   ÎŞ
-±¸ ×¢£º
+å‡½æ•°åç§°ï¼šAPP_TOPIC_MSEProcessing
+å‡½æ•°åŠŸèƒ½ï¼šåˆ†åˆ«å¤„ç†æ¥å—åˆ°çš„æŒ‡ä»¤
+è¾“å…¥å‚æ•°ï¼šuappsMsgè¯·æ±‚æŠ¥æ–‡ç»“æ„ä½“ï¼ŒrsiMsg-è¾“å…¥æ•°æ®æŒ‡é’ˆ
+è¿”å›å€¼ï¼š   æ— 
+å¤‡ æ³¨ï¼š
 ---------------------------------------------------------------*/
 void APP_TOPIC_MSEProcessing(UappsMessage *uappsMsg, RSL_t *rsiMsg)
 {
@@ -272,11 +272,11 @@ void APP_TOPIC_MSEProcessing(UappsMessage *uappsMsg, RSL_t *rsiMsg)
 }
 
 /*--------------------------------1-----------------------------
-º¯ÊıÃû³Æ£ºAPP_Tx_ProcessOfACKReceived
-º¯Êı¹¦ÄÜ£ºAPP²ãÊÕµ½»Ø¸´È·ÈÏÖ¡µÄ´¦Àíº¯Êı¡£
-ÊäÈë²ÎÊı£ºuappsMsg--ÏûÏ¢Ö¸Õë
-·µ»ØÖµ£º0-ack²»Æ¥Åä,1-ackÆ¥Åä
-±¸ ×¢£º
+å‡½æ•°åç§°ï¼šAPP_Tx_ProcessOfACKReceived
+å‡½æ•°åŠŸèƒ½ï¼šAPPå±‚æ”¶åˆ°å›å¤ç¡®è®¤å¸§çš„å¤„ç†å‡½æ•°ã€‚
+è¾“å…¥å‚æ•°ï¼šuappsMsg--æ¶ˆæ¯æŒ‡é’ˆ
+è¿”å›å€¼ï¼š0-ackä¸åŒ¹é…,1-ackåŒ¹é…
+å¤‡ æ³¨ï¼š
 ---------------------------------------------------------------*/
 extern uint8_t button_num_max_get;
 extern uint8_t relay_num_max_get;
@@ -301,11 +301,11 @@ void APP_Tx_ProcessOfACKReceived(UappsMessage *uappsMsg)
 }
 
 /*--------------------------------29-----------------------------
-º¯ÊıÃû³Æ£ºAPP_UappsMsgProcessing
-º¯Êı¹¦ÄÜ£º¸ù¾İ´®¿Ú½ÓÊÜµ½µÄÊı¾İ½øĞĞ´¦Àí
-ÊäÈë²ÎÊı£ºinputDataBuff-Êı¾İ£¬inputDataBuffLen-Êı¾İ³¤¶È
-·µ»ØÖµ£º   ÎŞ
-±¸ ×¢£º¸Ãº¯ÊıÓÃÓÚ´®¿Ú½ÓÊÕÊı¾İºó½øĞĞ´¦Àí½âÎö
+å‡½æ•°åç§°ï¼šAPP_UappsMsgProcessing
+å‡½æ•°åŠŸèƒ½ï¼šæ ¹æ®ä¸²å£æ¥å—åˆ°çš„æ•°æ®è¿›è¡Œå¤„ç†
+è¾“å…¥å‚æ•°ï¼šinputDataBuff-æ•°æ®ï¼ŒinputDataBuffLen-æ•°æ®é•¿åº¦
+è¿”å›å€¼ï¼š   æ— 
+å¤‡ æ³¨ï¼šè¯¥å‡½æ•°ç”¨äºä¸²å£æ¥æ”¶æ•°æ®åè¿›è¡Œå¤„ç†è§£æ
 ---------------------------------------------------------------*/
 void APP_UappsMsgProcessing(uint8_t *inputDataBuff, uint16_t inputDataBuffLen)
 {
@@ -313,9 +313,9 @@ void APP_UappsMsgProcessing(uint8_t *inputDataBuff, uint16_t inputDataBuffLen)
     uint16_t uappsMsgStartIndex = 0;
     uint16_t uappsMsgLen        = 0;
     uint8_t isRSIDataFlag       = 0;
-    static UappsMessage uappsMsg;
+    UappsMessage uappsMsg;
     RSL_t rsiMsg;
-    static uint8_t rsiStr[100];
+    uint8_t rsiStr[100];
     uint16_t optionValueLen = 0;
 
     memset(&uappsMsg, 0, sizeof(UappsMessage));
@@ -331,14 +331,14 @@ void APP_UappsMsgProcessing(uint8_t *inputDataBuff, uint16_t inputDataBuffLen)
         rsiStr[optionValueLen] = '\0';
         RslFromStr(&rsiMsg, (char *)rsiStr);
         if (UAPPS_OK == isRSIDataFlag) {
-            // µ÷ÓÃÓÃ»§×Ô¶¨ÒåµÄ´¦Àíº¯Êı
+            // è°ƒç”¨ç”¨æˆ·è‡ªå®šä¹‰çš„å¤„ç†å‡½æ•°
             APP_TOPIC_MSEProcessing(&uappsMsg, &rsiMsg);
-            // ack´¦Àíº¯Êı
+            // ackå¤„ç†å‡½æ•°
             APP_Tx_ProcessOfACKReceived(&uappsMsg);
         }
         // else
         // {
-        // 	// ¸ù¾İ´®¿Ú½ÓÊÕµ½µÄÊı¾İ½âÎöÅĞ¶ÏÖ®ºó²»ÎªUappsÖ¸Áî¡£Èç¹ûmcuĞèÒª¶Ô¸ÃÊı¾İÁíÍâµ¥¶À½øĞĞ´¦ÀíÔò·Åµ½´Ë´¦½øĞĞ½âÎö
+        // 	// æ ¹æ®ä¸²å£æ¥æ”¶åˆ°çš„æ•°æ®è§£æåˆ¤æ–­ä¹‹åä¸ä¸ºUappsæŒ‡ä»¤ã€‚å¦‚æœmcuéœ€è¦å¯¹è¯¥æ•°æ®å¦å¤–å•ç‹¬è¿›è¡Œå¤„ç†åˆ™æ”¾åˆ°æ­¤å¤„è¿›è¡Œè§£æ
         // 	printf("not Uapps msg\r\n");
         // }
     }

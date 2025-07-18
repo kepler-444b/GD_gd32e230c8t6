@@ -12,7 +12,7 @@
     增加宏定义 RTT_ENABLE,开启后,debug 会通过RTT输出,
 */
 
-#define RTT_ENABLE      // 启用 RTT 调试
+// #define RTT_ENABLE      // 启用 RTT 调试
 
 #define UART0_RECV_SIZE 256
 #define UART1_RECV_SIZE 128

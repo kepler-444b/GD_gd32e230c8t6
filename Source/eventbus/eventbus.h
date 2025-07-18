@@ -18,6 +18,10 @@ typedef enum {
     EVENT_SEND_CMD,    // 面板发送命令
     EVENT_RECEIVE_CMD, // 模块接收命令
 
+    EVENT_PLCP_NOTIFY, // PLCP 发送事件
+    EVENT_PLCP_INIT_TIMER,
+    EVENT_PLCP_SYCN_FLAG,
+
     // 添加更多事件类型...
     EVENT_COUNT // 自动计算事件数量
 } event_type_e;

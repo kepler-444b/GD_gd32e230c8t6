@@ -7,7 +7,7 @@
     新增pcb模块,用于管理所有与硬件相关定义
 */
 
-#if defined PANEL_6KEY_A11 // 预定义灯控面板按键的电压范围
+#if defined PANEL_6KEY_A11
     #define PANEL_VOL_RANGE_DEF          \
         [0] = {.vol_range = {0, 15}},    \
         [1] = {.vol_range = {25, 45}},   \
@@ -47,7 +47,7 @@
 
 #endif
 
-#if defined PANEL_6KEY_A13
+#if defined PANEL_6KEY_A13 || defined PLCP_PANEL_6KEY
     #define PANEL_VOL_RANGE_DEF          \
         [0] = {.vol_range = {30, 40}},   \
         [1] = {.vol_range = {85, 95}},   \
@@ -57,8 +57,8 @@
         [5] = {.vol_range = {240, 250}}
 
     #define RELAY_GPIO_MAP_DEF {PB12, PB13, PB14, PB15}        // 继电器 GPIO 映射
-    #define LED_W_GPIO_MAP_DEF {PB3, PB4, PB5, PA15, PA1, PA2} // LED 白灯 GPIO
-    #define LED_Y_GPIO_MAP_DEF {PB1, PB6, PB7, PB0, PA3, PA8}  // LED 黄灯 GPIO
+    #define LED_W_GPIO_MAP_DEF {PB3, PB4, PB5, PA15, PA1, PA5} // LED 白灯 GPIO
+    #define LED_Y_GPIO_MAP_DEF {PB1, PB6, PB7, PB0, PA6, PA8}  // LED 黄灯 GPIO
 
 #endif
 

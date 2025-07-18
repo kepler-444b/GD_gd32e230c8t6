@@ -530,27 +530,6 @@
         "folders": []
       },
       {
-        "name": "cJSON",
-        "files": [
-          {
-            "path": "../../Source/plcp/cJSON/cJSON.c"
-          },
-          {
-            "path": "../../Source/plcp/cJSON/cJSON.h"
-          },
-          {
-            "path": "../../Source/plcp/cJSON/cJSON_Utils.c"
-          },
-          {
-            "path": "../../Source/plcp/cJSON/cJSON_Utils.h"
-          },
-          {
-            "path": "../../Source/plcp/cJSON/README.md"
-          }
-        ],
-        "folders": []
-      },
-      {
         "name": "::CMSIS",
         "files": [],
         "folders": []
@@ -570,9 +549,7 @@
   },
   "targets": {
     "GD32E23x": {
-      "excludeList": [
-        "<virtual_root>/cJSON"
-      ],
+      "excludeList": [],
       "toolchain": "AC6",
       "compileConfig": {
         "cpuType": "Cortex-M23",
@@ -749,7 +726,6 @@
           "../../Source/FreeRTOS/port",
           "../../Source/FreeRTOS",
           "../../Source/rtt",
-          "../../Source/plcp/cJSON",
           "../../Source/plcp/Inc",
           ".cmsis/include",
           "RTE/_GD32E23x"

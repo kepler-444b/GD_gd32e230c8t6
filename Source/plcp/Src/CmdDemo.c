@@ -30,7 +30,6 @@ void MCU_Send_date(uint8_t *SendBuff, uint16_t SendBuffLen);
 uint16_t Uapps_PackRSLWithFromMsg(uint8_t *sendBuff, char *rslStr, char *from, uint8_t *playload, uint8_t playloadLen)
 {
     uint16_t sendBuffLen;
-
     UappsMessage txMsg;
     char RSLtemp[65];
 
@@ -69,7 +68,7 @@ uint16_t Uapps_PackRSLWithFromMsg(uint8_t *sendBuff, char *rslStr, char *from, u
 #include "../base/debug.h"
 uint8_t APP_SendRSL(char *rslStr, char *from, uint8_t *playload, uint8_t playloadLen)
 {
-    uint8_t uartSendBuff[64];
+    uint8_t uartSendBuff[200];
     uint16_t uartSendBuffLen = 0;
 
     uartSendBuffLen = Uapps_PackRSLWithFromMsg(uartSendBuff, rslStr, from, playload, playloadLen);

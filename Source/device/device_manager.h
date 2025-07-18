@@ -26,7 +26,8 @@
         // #define PANEL_6KEY_A13
         // #define PANEL_8KEY_A13
 
-        #define PLCP_PANEL_4KEY
+        // #define PLCP_PANEL_4KEY
+        #define PLCP_PANEL_6KEY
 
         /* *********** 确定继电器数量 *********** */
         #define RELAY_NUMBER 4
@@ -35,7 +36,7 @@
         #if defined PANEL_4KEY_A11 || defined PANEL_4KEY_A13 || defined PANEL_8KEY_A13 || defined PLCP_PANEL_4KEY
             #define KEY_NUMBER 4
         #endif
-        #if defined PANEL_6KEY_A11 || defined PANEL_6KEY_A13
+        #if defined PANEL_6KEY_A11 || defined PANEL_6KEY_A13 || defined PLCP_PANEL_6KEY
             #define KEY_NUMBER 6
         #endif
 

@@ -2,39 +2,8 @@
     "folders": [
         {
             "path": "."
-        },
-        {
-            "path": "../.."
         }
     ],
-    "settings": {
-        "files.associations": {
-            "plcp_panel_api.h": "c",
-            "debug.h": "c",
-            "stdio.h": "c",
-            "plcp_panel.h": "c",
-            "device_manager.h": "c",
-            "gd32e23x.h": "c",
-            "adc.h": "c",
-            "panel_key.h": "c",
-            "timers.h": "c",
-            "config.h": "c",
-            "usart.h": "c",
-            "string": "c",
-            "string_view": "c",
-            "pcb_device.h": "c",
-            "base.h": "c",
-            "mseprocess.h": "c",
-            "plcp_ota.h": "c",
-            "jump_device.h": "c",
-            "quick_box.h": "c",
-            "float.h": "c",
-            "protocol.h": "c",
-            "app_timer.h": "c",
-            "freertos.h": "c",
-            "eventbus.h": "c",
-            "watchdog.h": "c"
-        }
-    },
+    "settings": {},
     "extensions": {}
 }

@@ -63,7 +63,7 @@ static panel_status_t my_panel_status[KEY_NUMBER] = {
     PANEL_VOL_RANGE_DEF,
 };
 
-static void plcp_process_key(uint8_t key_number);
+static void plcp_process_key(uint8_t key_number, panel_status_t *temp_status);
 static void plcp_panel_read_adc(TimerHandle_t xTimer);
 static void plcp_panel_event_handler(event_type_e event, void *params);
 static void plcp_process_panel_adc(panel_status_t *temp_status, adc_value_t *adc_value);
@@ -74,12 +74,14 @@ void CmdTest_MSE_Factory(void);
 void CmdTest_MSE_RST(void);
 void cmd_switch_init(uint8_t button_mun, uint8_t relay_mun);
 void cmd_switch_get_init_info(void);
+
 uint8_t button_num_max_set = 0xff;
 uint8_t relay_num_max_set  = 0xff;
 
 uint8_t button_num_max_get = 0xff;
 uint8_t relay_num_max_get  = 0xff;
 uint8_t sycn_flag;
+
 uint16_t local_did;
 
 void plcp_panel_key_init(void)
@@ -94,9 +96,6 @@ void plcp_panel_key_init(void)
     for (uint8_t i = 0; i < KEY_NUMBER; i++) {
         app_pwm_add_pin(app_get_panel_cfg()[i].led_y_pin);
     };
-    for (uint8_t i = 0; i < KEY_NUMBER; i++) {
-        app_set_pwm_fade(app_get_panel_cfg()[i].led_y_pin, 500, 3000);
-    }
 
     static StaticTimer_t ReadAdcStaticBuffer;
     static TimerHandle_t ReadAdcTimerHandle = NULL;
@@ -108,12 +107,11 @@ void plcp_panel_key_init(void)
         APP_ERROR("timer_start error");
     }
 
-    button_num_max_get = 4;
-    relay_num_max_get  = 4;
-    inin_timer         = true;
-
     button_num_max_set = KEY_NUMBER;
-    relay_num_max_get  = RELAY_NUMBER;
+    relay_num_max_set  = RELAY_NUMBER - 1;
+
+    local_did  = 0x0000;
+    inin_timer = true;
 }
 
 static void plcp_panel_read_adc(TimerHandle_t xTimer)
@@ -145,15 +143,15 @@ static void plcp_process_panel_adc(panel_status_t *temp_status, adc_value_t *adc
         }
         if (!p_status->key_press) { // 处理按键按下
             p_status->key_status ^= 1;
-            plcp_process_key(i);
+            plcp_process_key(i, &my_panel_status[i]);
             p_status->key_press = true;
             continue;
         }
     }
-    if (inin_timer == true) {
+    if (inin_timer) {
         init_count++;
         if (init_count >= 1000) {
-            init_timer_handler();
+            app_eventbus_publish(EVENT_PLCP_INIT_TIMER, NULL);
             init_count = 0;
         }
     }
@@ -161,7 +159,7 @@ static void plcp_process_panel_adc(panel_status_t *temp_status, adc_value_t *adc
         if (++sync_timer_counter >= sync_timer_interval) {
             sync_timer_counter = 0; // 重置计数器
             APP_PRINTF("sycn_flag\n");
-            CmdTest_MSE_RST(); // 执行复位命令
+            app_eventbus_publish(EVENT_PLCP_SYCN_FLAG, NULL);
             // 增加时间间隔(每次增加3秒)
             sync_timer_interval += 3000;
         }
@@ -170,7 +168,7 @@ static void plcp_process_panel_adc(panel_status_t *temp_status, adc_value_t *adc
 
 void plcp_panel_event_notify(uint8_t button_id)
 {
-    static uint8_t playload[128];
+    uint8_t playload[128];
 
     memset(playload, 0, sizeof(playload));
     snprintf((char *)playload, sizeof(playload), "{\"button\":\"k%d\"}", button_id + 1);
@@ -181,15 +179,21 @@ void plcp_panel_event_notify(uint8_t button_id)
     APP_SendRSL("@SE200./0/_e", NULL, playload, strlen((char *)playload));
 }
 
-static void plcp_process_key(uint8_t key_number)
+static void plcp_process_key(uint8_t key_number, panel_status_t *temp_status)
 {
     const panel_cfg_t *temp_cfg = app_get_panel_cfg();
-    APP_PRINTF("key:%d\n", key_number);
-    my_panel_status[key_number].led_w_open = !my_panel_status[key_number].led_w_open;
-    if (my_panel_status[key_number].led_w_open != my_panel_status[key_number].led_w_last) {
-        my_panel_status[key_number].led_w_last = my_panel_status[key_number].led_w_open;
+    static uint8_t s_key_number;
 
-        plcp_panel_event_notify(key_number);
+    temp_status->led_w_open = !temp_status->led_w_open;
+    if (temp_status->led_w_open != temp_status->led_w_last) {
+        APP_SET_GPIO(temp_cfg[key_number].led_w_pin, true);
+        vTaskDelay(20);
+        APP_SET_GPIO(temp_cfg[key_number].led_w_pin, false);
+        temp_status->led_w_last = temp_status->led_w_open;
+        s_key_number            = key_number;
+        APP_PRINTF("key:%d\n", s_key_number);
+        app_eventbus_publish(EVENT_PLCP_NOTIFY, &s_key_number);
+        // plcp_panel_event_notify(key_number);
     }
 }
 
@@ -200,6 +204,15 @@ static void plcp_panel_event_handler(event_type_e event, void *params)
             valid_data_t *rc_buf = (valid_data_t *)params;
             APP_UappsMsgProcessing(rc_buf->data, rc_buf->length);
         } break;
+        case EVENT_PLCP_NOTIFY:
+            plcp_panel_event_notify(*(uint8_t *)params);
+            break;
+        case EVENT_PLCP_INIT_TIMER:
+            init_timer_handler();
+            break;
+        case EVENT_PLCP_SYCN_FLAG:
+            CmdTest_MSE_RST();
+            break;
         default:
             return;
     }
@@ -214,6 +227,8 @@ static void init_timer_handler(void)
             step++;
             break;
         case 1:
+            // APP_PRINTF("button_num_max_get:%d relay_num_max_get:%d\n", button_num_max_get, relay_num_max_get);
+            // APP_PRINTF("button_num_max_set:%d relay_num_max_set:%d\n", button_num_max_set, relay_num_max_set);
             if (button_num_max_get == 0xff || relay_num_max_get == 0xff) {
                 cmd_switch_get_init_info();
                 break;
@@ -221,6 +236,7 @@ static void init_timer_handler(void)
             if (button_num_max_set != 0xff && relay_num_max_set != 0xff) {
                 if (button_num_max_set != button_num_max_get || relay_num_max_set != relay_num_max_get) {
                     cmd_switch_init(button_num_max_set, relay_num_max_set);
+                    APP_PRINTF("button_num_max_set:%d  relay_num_max_set:%d\n", button_num_max_set, relay_num_max_set);
                     button_num_max_get = 0xff;
                     relay_num_max_get  = 0xff;
                     break;
@@ -240,34 +256,37 @@ bool plcp_panel_set_status(char *aei, uint8_t *stateParam, uint16_t stateParamLe
     const panel_cfg_t *temp_cfg = app_get_panel_cfg();
     uint8_t id;
     uint8_t index;
-
+    index = 3;
     switch (stateParam[0]) {
         case 0x05: {
-            index = 7;
-            for (id = 0; id < 8; id++) {            // 设置指示灯
-                if (stateParam[1] & (0x80 >> id)) { // 前四个需要设置
-                    // APP_PRINTF("id:%d  status:%d\n", id, stateParam[index]);
-                    APP_SET_GPIO(temp_cfg[id].led_w_pin, stateParam[index]);
-                    app_set_pwm_fade(temp_cfg[id].led_y_pin, stateParam[index] ? 0 : 500, 500);
+            index = 3;
+            for (id = 0; id < 8; id++) { // 设置背光灯
+                if (stateParam[1] & (0x80 >> id)) {
+                    app_set_pwm_fade(temp_cfg[id].led_y_pin, stateParam[index] ? 500 : 0, 500);
                     index++;
                 }
             }
+            for (id = 0; id < 8; id++) { // 设置指示灯
+                if (stateParam[1] & (0x80 >> id)) {
+                    // APP_PRINTF("led_id:%d status:%d\n", id, stateParam[index]);
+                    APP_SET_GPIO(temp_cfg[id].led_w_pin, stateParam[index]);
+                    index++;
+                }
+            }
+            sycn_flag = 1;
         } break;
         case 0x04: {
-            index = 3;
             for (id = 0; id < 4; id++) { // 设置继电器
                 if (stateParam[1] & (0x80 >> id)) {
                     APP_SET_GPIO(temp_cfg[id].relay_pin[0], stateParam[index]);
-                    APP_PRINTF("%d %s %d\n", id, app_get_gpio_name(temp_cfg[id].relay_pin[0]), stateParam[index]);
-                    // printf("relay id %d, index %d\n", id, stateParam[index]);
-                    // plcp_panel_realy_process(id, stateParam[index]);
+                    // APP_PRINTF("relay_id:%d status:%d\n", id, stateParam[index]);
                     index++;
                 }
             }
+            sycn_flag = 1;
         } break;
         default:
             break;
     }
-    sycn_flag = 1;
     return true;
 }

@@ -73,7 +73,7 @@ void app_load_config(void)
 
 void app_plcp_map(void)
 {
-#if defined PLCP_PANEL_4KEY
+#if defined PLCP_PANEL_4KEY || defined PLCP_PANEL_6KEY
     static const gpio_pin_t RELAY_GPIO_MAP[RELAY_NUMBER] = RELAY_GPIO_MAP_DEF;
     static const gpio_pin_t LED_W_GPIO_MAP[KEY_NUMBER]   = LED_W_GPIO_MAP_DEF;
     static const gpio_pin_t LED_Y_GPIO_MAP[KEY_NUMBER]   = LED_Y_GPIO_MAP_DEF;

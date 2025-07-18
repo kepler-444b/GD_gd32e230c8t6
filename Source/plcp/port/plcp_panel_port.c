@@ -1,11 +1,12 @@
 
+
 #include "plcp_panel_api.h"
 
 void led_ctrl(uint8_t id, uint8_t on_off);
 void relay_ctrl(uint8_t id, uint8_t connect);
 void bk_ctrl(uint8_t id, uint8_t on_off);
 void mcu_reset(void);
-void uart_send(uint8_t* send_data, uint16_t len);
+void uart_send(uint8_t *send_data, uint16_t len);
 void blocking_delay_ms(uint16_t ms);
 
 uint8_t realy_state[8];
@@ -16,32 +17,32 @@ uint8_t bk_state[8];
 /****************************************************************/
 void plcp_panel_led_process(uint8_t id, uint8_t onoff)
 {
-	led_state[id] = onoff;
-	// led_ctrl(id, onoff);
+    led_state[id] = onoff;
+    // led_ctrl(id, onoff);
 }
 
 void plcp_panel_bk_process(uint8_t id, uint8_t onoff)
 {
-	bk_state[id] = onoff;
-	// bk_ctrl(id, onoff);
+    bk_state[id] = onoff;
+    // bk_ctrl(id, onoff);
 }
 
 void plcp_panel_realy_process(uint8_t id, uint8_t onoff)
 {
-	realy_state[id] = onoff;
-	// relay_ctrl(id, onoff);
+    realy_state[id] = onoff;
+    // relay_ctrl(id, onoff);
 }
 
-void plcp_panel_uart_send_process(uint8_t* send_data, uint16_t len)
+void plcp_panel_uart_send_process(uint8_t *send_data, uint16_t len)
 {
-	// uart_send(send_data, len);
+    // uart_send(send_data, len);
 }
-
 
 #if 0
+
 /****************************************************************/
 /****************************************************************/
-#include "LTM32F103CB_ota.h"
+    #include "LTM32F103CB_ota.h"
 static uint8_t ota_buff[1024];
 static uint16_t ota_buff_count = 0;
 static uint8_t write_page = 0;
