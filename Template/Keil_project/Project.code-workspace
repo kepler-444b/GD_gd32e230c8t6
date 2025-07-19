@@ -2,8 +2,16 @@
     "folders": [
         {
             "path": "."
+        },
+        {
+            "path": "../.."
         }
     ],
-    "settings": {},
+    "settings": {
+        "files.associations": {
+            "gd32e23x.h": "c",
+            "stdbool.h": "c"
+        }
+    },
     "extensions": {}
 }

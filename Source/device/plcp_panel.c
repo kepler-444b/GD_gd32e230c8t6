@@ -14,6 +14,7 @@
 #include "../eventbus/eventbus.h"
 #include "../usart/usart.h"
 #include "../pwm/pwm.h"
+#include "../zero/zero.h"
 
 #define ADC_TO_VOL(adc_val) ((adc_val) * 330 / 4096) // adc值转电压
 #define ADC_VOL_NUMBER      10                       // 电压值缓冲区数量
@@ -91,7 +92,7 @@ void plcp_panel_key_init(void)
     adc_channel_t my_adc_channel = {0};
     my_adc_channel.adc_channel_0 = true;
     app_adc_init(&my_adc_channel);
-
+    app_zero_init(EXTI_11);
     app_pwm_init(); // 初始化 PWM 模块
     for (uint8_t i = 0; i < KEY_NUMBER; i++) {
         app_pwm_add_pin(app_get_panel_cfg()[i].led_y_pin);
@@ -252,7 +253,7 @@ static void init_timer_handler(void)
 
 bool plcp_panel_set_status(char *aei, uint8_t *stateParam, uint16_t stateParamLen)
 {
-    APP_PRINTF_BUF("PLCP_RX", stateParam, stateParamLen);
+    // APP_PRINTF_BUF("PLCP_RX", stateParam, stateParamLen);
     const panel_cfg_t *temp_cfg = app_get_panel_cfg();
     uint8_t id;
     uint8_t index;
@@ -278,7 +279,9 @@ bool plcp_panel_set_status(char *aei, uint8_t *stateParam, uint16_t stateParamLe
         case 0x04: {
             for (id = 0; id < 4; id++) { // 设置继电器
                 if (stateParam[1] & (0x80 >> id)) {
-                    APP_SET_GPIO(temp_cfg[id].relay_pin[0], stateParam[index]);
+                    // APP_SET_GPIO(temp_cfg[id].relay_pin[0], stateParam[index]);
+                    zero_set_gpio(temp_cfg[id].relay_pin[0], stateParam[index]);
+
                     // APP_PRINTF("relay_id:%d status:%d\n", id, stateParam[index]);
                     index++;
                 }
