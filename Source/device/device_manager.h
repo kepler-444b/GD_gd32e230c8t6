@@ -42,8 +42,8 @@
 
     #if defined PANEL_PLCP
         // 面板类型(多选一)
-        // #define PANEL_PLCP_4KEY
-        #define PLCP_PANEL_6KEY
+        #define PANEL_PLCP_4KEY
+        // #define PLCP_PANEL_6KEY
 
         /* *********** 确定继电器数量 *********** */
         #define RELAY_NUMBER 4
