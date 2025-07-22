@@ -1,7 +1,7 @@
 #include "gd32e23x.h"
 #include "pcb_device.h"
 
-#if defined PANEL_KEY
+#if defined PANEL_KEY || defined PANEL_PLCP
 void panel_gpio_init(void)
 {
     rcu_periph_clock_enable(RCU_GPIOA);
@@ -56,7 +56,7 @@ void panel_gpio_init(void)
     gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_15);
     #endif
 
-    #if defined PANEL_4KEY_A13 || defined PLCP_PANEL_4KEY
+    #if defined PANEL_4KEY_A13 || defined PANEL_PLCP_4KEY
     // 4 个黄灯
     gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_0);
     gpio_mode_set(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_1);

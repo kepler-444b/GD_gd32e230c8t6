@@ -21,14 +21,6 @@
 #define MIN_VOL             329                      // 无按键按下时的最小电压值
 #define MAX_VOL             330                      // 无按键按下时的最大电压值
 
-bool inin_timer     = false;
-uint16_t init_count = 0;
-bool sync_timer     = false;
-uint16_t sync_conut = 0;
-
-static uint32_t sync_timer_counter  = 0;
-static uint32_t sync_timer_interval = 3000; // 初始3秒
-
 typedef struct {
     // 用于处理adc数据
     uint8_t buf_idx; // 缓冲区下标
@@ -43,18 +35,9 @@ typedef struct {
 
 typedef struct { // 用于每个按键的状态
 
-    bool key_press;  // 按键按下
-    bool key_status; // 按键状态
-
-    bool led_w_open; // 白灯状态
-    bool led_w_last; // 白灯上次状态
-
-    bool led_y_open; // 黄灯状态
-    bool led_y_last; // 黄灯上次状态
-
-    bool relay_open; // 继电状态
-    bool relay_last; // 继电器上次状态
-
+    bool key_press;            // 按键按下
+    bool led_w_open;           // 白灯状态
+    bool led_w_last;           // 白灯上次状态
     const key_vol_t vol_range; // 按键电压范围
 
 } panel_status_t;
@@ -64,26 +47,44 @@ static panel_status_t my_panel_status[KEY_NUMBER] = {
     PANEL_VOL_RANGE_DEF,
 };
 
+uint8_t button_num_max_set = 0xff;
+uint8_t relay_num_max_set  = 0xff;
+uint8_t button_num_max_get = 0xff;
+uint8_t relay_num_max_get  = 0xff;
+uint8_t sycn_flag;
+uint16_t local_did;
+
+static bool inin_timer     = false;
+static uint16_t init_count = 0;
+static bool sync_timer     = false;
+static uint16_t sync_conut = 0;
+
+static bool bl_blink           = false; // 背光灯开始闪烁
+static bool bl_blink_status    = false; // 背光灯闪烁状态
+static uint32_t bl_blink_count = 0;     // 背光灯闪烁计数
+
+static uint8_t key_press_number       = 0; // 按键按下次数
+static uint16_t key_press_clear_count = 0; // 按键按下次数超时清理
+static uint32_t key_press_long_count  = 0; // 按键长按计数
+
+static bool mcu_rest = false; // 单片机重启
+
+static uint32_t sync_timer_counter  = 0;
+static uint32_t sync_timer_interval = 3000; // 初始3秒
+
 static void plcp_process_key(uint8_t key_number, panel_status_t *temp_status);
-static void plcp_panel_read_adc(TimerHandle_t xTimer);
+static void plcp_panel_timer(TimerHandle_t xTimer);
 static void plcp_panel_event_handler(event_type_e event, void *params);
 static void plcp_process_panel_adc(panel_status_t *temp_status, adc_value_t *adc_value);
 static void init_timer_handler(void);
+static void plcp_panel_bl_blink(bool status, bool breathe);
+static uint16_t plcp_panel_get_did(void);
 
 void CmdTest_MSE_GET_DID(void);
 void CmdTest_MSE_Factory(void);
 void CmdTest_MSE_RST(void);
 void cmd_switch_init(uint8_t button_mun, uint8_t relay_mun);
 void cmd_switch_get_init_info(void);
-
-uint8_t button_num_max_set = 0xff;
-uint8_t relay_num_max_set  = 0xff;
-
-uint8_t button_num_max_get = 0xff;
-uint8_t relay_num_max_get  = 0xff;
-uint8_t sycn_flag;
-
-uint16_t local_did;
 
 void plcp_panel_key_init(void)
 {
@@ -97,11 +98,11 @@ void plcp_panel_key_init(void)
     for (uint8_t i = 0; i < KEY_NUMBER; i++) {
         app_pwm_add_pin(app_get_panel_cfg()[i].led_y_pin);
     };
-
+    app_eventbus_subscribe(plcp_panel_event_handler); // 订阅事件总线
     static StaticTimer_t ReadAdcStaticBuffer;
     static TimerHandle_t ReadAdcTimerHandle = NULL;
-    app_eventbus_subscribe(plcp_panel_event_handler); // 订阅事件总线
-    ReadAdcTimerHandle = xTimerCreateStatic("ReadAdcTimer", 1, true, NULL, plcp_panel_read_adc, &ReadAdcStaticBuffer);
+
+    ReadAdcTimerHandle = xTimerCreateStatic("ReadAdcTimer", 1, true, NULL, plcp_panel_timer, &ReadAdcStaticBuffer);
 
     if (xTimerStart(ReadAdcTimerHandle, 0) != true) {
         // 启动定时器(0表示不阻塞)
@@ -113,12 +114,36 @@ void plcp_panel_key_init(void)
 
     local_did  = 0x0000;
     inin_timer = true;
+    bl_blink   = true;
 }
 
-static void plcp_panel_read_adc(TimerHandle_t xTimer)
+static void plcp_panel_timer(TimerHandle_t xTimer)
 {
     my_adc_value.vol = ADC_TO_VOL(app_get_adc_value()[0]);
     plcp_process_panel_adc(my_panel_status, &my_adc_value);
+
+    if (inin_timer) {
+        init_count++;
+        if (init_count >= 1000) {
+            app_eventbus_publish(EVENT_PLCP_INIT_TIMER, NULL);
+            init_count = 0;
+        }
+    }
+    if (!sycn_flag) {
+        if (++sync_timer_counter >= sync_timer_interval) {
+            sync_timer_counter = 0; // 重置计数器
+            APP_PRINTF("sycn_flag\n");
+            app_eventbus_publish(EVENT_PLCP_SYCN_FLAG, NULL);
+            sync_timer_interval += 3000; // 增加时间间隔(每次增加3秒)
+        }
+    }
+    if (bl_blink) {
+        bl_blink_count++;
+        if (bl_blink_count % 100 == 0) {
+            bl_blink_status = !bl_blink_status;
+            plcp_panel_bl_blink(bl_blink_status, false);
+        }
+    }
 }
 
 static void plcp_process_panel_adc(panel_status_t *temp_status, adc_value_t *adc_value)
@@ -143,26 +168,65 @@ static void plcp_process_panel_adc(panel_status_t *temp_status, adc_value_t *adc
             continue; // 检查平均值是否在有效范围
         }
         if (!p_status->key_press) { // 处理按键按下
-            p_status->key_status ^= 1;
             plcp_process_key(i, &my_panel_status[i]);
+            if (i == 0) { // 按键1被按下
+                key_press_number++;
+                key_press_clear_count = 0;
+                APP_PRINTF("key_press_number:%d\n", key_press_number);
+            }
             p_status->key_press = true;
             continue;
         }
     }
-    if (inin_timer) {
-        init_count++;
-        if (init_count >= 1000) {
-            app_eventbus_publish(EVENT_PLCP_INIT_TIMER, NULL);
-            init_count = 0;
+
+    const key_vol_t *p_range = &temp_status[0].vol_range; // 按键1的电压范围
+    bool temp_key_status     = false;                     // 存储按键1的状态
+    if (adc_value->vol >= p_range->min && adc_value->vol <= p_range->max) {
+        temp_key_status = true;
+    }
+    if (key_press_number != 0) {
+        if (key_press_number >= 3 && temp_key_status) {
+            key_press_long_count++;
+            if (key_press_long_count >= 6000 && key_press_long_count % 1000 == 0) { // 按下6s后开始呼吸闪烁
+                bl_blink_status = !bl_blink_status;
+                plcp_panel_bl_blink(bl_blink_status, true);
+            }
+            if (key_press_long_count >= 8000) {
+                key_press_long_count = 0;
+                mcu_rest             = true;
+            }
+        }
+        if (!temp_key_status) {
+            key_press_clear_count++;
+            if (key_press_clear_count >= 200) {
+                key_press_clear_count = 0;
+                key_press_number      = 0;
+            }
         }
     }
-    if (!sycn_flag) {
-        if (++sync_timer_counter >= sync_timer_interval) {
-            sync_timer_counter = 0; // 重置计数器
-            APP_PRINTF("sycn_flag\n");
-            app_eventbus_publish(EVENT_PLCP_SYCN_FLAG, NULL);
-            // 增加时间间隔(每次增加3秒)
-            sync_timer_interval += 3000;
+    if (mcu_rest && !temp_key_status) {
+        NVIC_SystemReset();
+    }
+}
+
+static void plcp_panel_bl_blink(bool status, bool breathe)
+{
+    const panel_cfg_t *temp_cfg = app_get_panel_cfg();
+    if (breathe) {
+        for (uint8_t i = 0; i < KEY_NUMBER; i++) {
+            app_set_pwm_fade(temp_cfg[i].led_y_pin, status ? 500 : 0, 500);
+        }
+    } else {
+        if (plcp_panel_get_did() == 0x0000) {
+            for (uint8_t i = 0; i < KEY_NUMBER; i++) {
+                app_set_pwm_fade(temp_cfg[i].led_y_pin, status ? 500 : 0, 50);
+            }
+
+        } else {
+            APP_PRINTF("get_did_succ\n");
+            bl_blink        = false;
+            bl_blink_count  = 0;
+            bl_blink_status = false;
         }
     }
 }
@@ -251,9 +315,14 @@ static void init_timer_handler(void)
     }
 }
 
+uint16_t plcp_panel_get_did(void)
+{
+    return local_did;
+}
+
 bool plcp_panel_set_status(char *aei, uint8_t *stateParam, uint16_t stateParamLen)
 {
-    // APP_PRINTF_BUF("PLCP_RX", stateParam, stateParamLen);
+    APP_PRINTF_BUF("PLCP_RX", stateParam, stateParamLen);
     const panel_cfg_t *temp_cfg = app_get_panel_cfg();
     uint8_t id;
     uint8_t index;
@@ -261,13 +330,13 @@ bool plcp_panel_set_status(char *aei, uint8_t *stateParam, uint16_t stateParamLe
     switch (stateParam[0]) {
         case 0x05: {
             index = 3;
-            for (id = 0; id < 8; id++) { // 设置背光灯
+            for (id = 0; id < KEY_NUMBER; id++) { // 设置背光灯
                 if (stateParam[1] & (0x80 >> id)) {
                     app_set_pwm_fade(temp_cfg[id].led_y_pin, stateParam[index] ? 500 : 0, 500);
                     index++;
                 }
             }
-            for (id = 0; id < 8; id++) { // 设置指示灯
+            for (id = 0; id < KEY_NUMBER; id++) { // 设置指示灯
                 if (stateParam[1] & (0x80 >> id)) {
                     // APP_PRINTF("led_id:%d status:%d\n", id, stateParam[index]);
                     APP_SET_GPIO(temp_cfg[id].led_w_pin, stateParam[index]);
@@ -277,7 +346,7 @@ bool plcp_panel_set_status(char *aei, uint8_t *stateParam, uint16_t stateParamLe
             sycn_flag = 1;
         } break;
         case 0x04: {
-            for (id = 0; id < 4; id++) { // 设置继电器
+            for (id = 0; id < RELAY_NUMBER; id++) { // 设置继电器
                 if (stateParam[1] & (0x80 >> id)) {
                     // APP_SET_GPIO(temp_cfg[id].relay_pin[0], stateParam[index]);
                     zero_set_gpio(temp_cfg[id].relay_pin[0], stateParam[index]);

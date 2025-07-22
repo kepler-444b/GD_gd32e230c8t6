@@ -56,7 +56,6 @@ void app_zero_init(exti_line_enum exti_pin)
 
     // 创建一个队列
     ZeroQueueHandle = xQueueCreateStatic(QUEUE_SIZE, sizeof(gpio_ctrl_t), ZeroQueueStorage, &ZeroStaticBuffer);
-    APP_PRINTF("zero_init\n");
 }
 
 void EXTI4_15_IRQHandler(void) // 过零点触发中断服务函数

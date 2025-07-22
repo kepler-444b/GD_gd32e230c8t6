@@ -545,7 +545,7 @@
   "deviceName": null,
   "packDir": null,
   "miscInfo": {
-    "uid": "1aafd2e5c4526ac5a914caa7304d3e35"
+    "uid": "a15a557a016578f305e935947acbe7af"
   },
   "targets": {
     "GD32E23x": {
@@ -553,6 +553,7 @@
       "toolchain": "AC6",
       "compileConfig": {
         "cpuType": "Cortex-M23",
+        "archExtensions": "",
         "floatingPointHardware": "none",
         "scatterFilePath": "output/Project.sct",
         "useCustomScatterFile": false,
@@ -662,56 +663,21 @@
             }
           ]
         },
-        "options": "null",
-        "archExtensions": ""
+        "options": "null"
       },
       "uploader": "JLink",
       "uploadConfig": {
         "bin": "",
         "baseAddr": "",
         "cpuInfo": {
-          "vendor": "GigaDevice",
-          "cpuName": "GD32E230C8"
+          "vendor": "null",
+          "cpuName": "null"
         },
         "proType": 1,
         "speed": 8000,
         "otherCmds": ""
       },
-      "uploadConfigMap": {
-        "JLink": {
-          "bin": "",
-          "baseAddr": "",
-          "cpuInfo": {
-            "vendor": "GigaDevice",
-            "cpuName": "GD32E230C8"
-          },
-          "proType": 1,
-          "speed": 8000,
-          "otherCmds": ""
-        },
-        "OpenOCD": {
-          "bin": "",
-          "target": "stm32f1x",
-          "interface": "stlink",
-          "baseAddr": "0x08000000"
-        },
-        "Custom": {
-          "bin": "",
-          "commandLine": "",
-          "eraseChipCommand": ""
-        },
-        "STLink": {
-          "bin": "",
-          "proType": "SWD",
-          "resetMode": "default",
-          "runAfterProgram": true,
-          "speed": 4000,
-          "address": "0x8000000",
-          "elFile": "None",
-          "optionBytes": ".eide/gd32e23x.st.option.bytes.ini",
-          "otherCmds": ""
-        }
-      },
+      "uploadConfigMap": {},
       "custom_dep": {
         "name": "default",
         "incList": [
@@ -739,20 +705,7 @@
         "AC6": {
           "version": 3,
           "beforeBuildTasks": [],
-          "afterBuildTasks": [
-            {
-              "name": "[Copy linker output for Keil User Commands]",
-              "command": "mkdir ${KEIL_OUTPUT_DIR} & copy \"${OutDir}\\${ProjectName}.axf\" \"${KEIL_OUTPUT_DIR}\\${ProjectName}.axf\"",
-              "disable": true,
-              "abortAfterFailed": true
-            },
-            {
-              "name": "fromelf --bin --output=.\\output\\@L.bin !L",
-              "command": "fromelf --bin --output=.\\output\\${ProjectName}.bin ${KEIL_OUTPUT_DIR}\\${ProjectName}.axf",
-              "disable": true,
-              "abortAfterFailed": true
-            }
-          ],
+          "afterBuildTasks": [],
           "global": {
             "use-microLIB": true,
             "output-debug-info": "enable"

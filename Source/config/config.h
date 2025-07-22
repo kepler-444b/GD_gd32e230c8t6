@@ -11,7 +11,7 @@
     由于协议问题,导致 relay的GPIO映射比较复杂
 */
 
-#if defined PANEL_KEY
+#if defined PANEL_KEY || defined PANEL_PLCP
 
 // 用于panel类型的信息存储
 typedef struct

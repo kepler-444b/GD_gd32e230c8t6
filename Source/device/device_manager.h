@@ -13,8 +13,9 @@
 
 #if defined PLC_LHW || defined PLC_HI || defined PLCP_LHW
     // 设备类型(多选一)
-    #define PANEL_KEY // 灯控面板
-    // #define QUICK_BOX // 快装盒子
+    // #define PANEL_KEY  // 灯控面板
+    // #define QUICK_BOX  // 快装盒子
+    #define PANEL_PLCP // 灯控面板 PLCP
 
     #if defined PANEL_KEY
 
@@ -24,22 +25,35 @@
 
         // #define PANEL_4KEY_A13
         // #define PANEL_6KEY_A13
-        // #define PANEL_8KEY_A13
-
-        #define PLCP_PANEL_4KEY
-        // #define PLCP_PANEL_6KEY
+        #define PANEL_8KEY_A13
 
         /* *********** 确定继电器数量 *********** */
         #define RELAY_NUMBER 4
 
         /* ************ 确定按键数量 ************ */
-        #if defined PANEL_4KEY_A11 || defined PANEL_4KEY_A13 || defined PANEL_8KEY_A13 || defined PLCP_PANEL_4KEY
+        #if defined PANEL_4KEY_A11 || defined PANEL_4KEY_A13 || defined PANEL_8KEY_A13
             #define KEY_NUMBER 4
         #endif
-        #if defined PANEL_6KEY_A11 || defined PANEL_6KEY_A13 || defined PLCP_PANEL_6KEY
+        #if defined PANEL_6KEY_A11 || defined PANEL_6KEY_A13
             #define KEY_NUMBER 6
         #endif
 
+    #endif
+
+    #if defined PANEL_PLCP
+        // 面板类型(多选一)
+        // #define PANEL_PLCP_4KEY
+        #define PLCP_PANEL_6KEY
+
+        /* *********** 确定继电器数量 *********** */
+        #define RELAY_NUMBER 4
+        /* ************ 确定按键数量 ************ */
+        #if defined PANEL_PLCP_4KEY
+            #define KEY_NUMBER 4
+        #endif
+        #if defined PLCP_PANEL_6KEY
+            #define KEY_NUMBER 6
+        #endif
     #endif
 
     #if defined QUICK_BOX

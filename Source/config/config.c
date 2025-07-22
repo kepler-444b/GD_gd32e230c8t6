@@ -7,12 +7,9 @@
 #include "../device/device_manager.h"
 #include "../device/pcb_device.h"
 
-#if defined PANEL_KEY
-    #ifndef PANEL_8KEY_A13
+#if defined PANEL_KEY || defined PANEL_PLCP
 static panel_cfg_t my_panel_cfg[KEY_NUMBER] = {0};
-    #endif
     #if defined PANEL_8KEY_A13
-static panel_cfg_t my_panel_cfg[KEY_NUMBER]    = {0};
 static panel_cfg_t my_panel_cfg_ex[KEY_NUMBER] = {0};
     #endif
 #endif
@@ -73,7 +70,7 @@ void app_load_config(void)
 
 void app_plcp_map(void)
 {
-#if defined PLCP_PANEL_4KEY || defined PLCP_PANEL_6KEY
+#if defined PANEL_PLCP_4KEY || defined PLCP_PANEL_6KEY
     static const gpio_pin_t RELAY_GPIO_MAP[RELAY_NUMBER] = RELAY_GPIO_MAP_DEF;
     static const gpio_pin_t LED_W_GPIO_MAP[KEY_NUMBER]   = LED_W_GPIO_MAP_DEF;
     static const gpio_pin_t LED_Y_GPIO_MAP[KEY_NUMBER]   = LED_Y_GPIO_MAP_DEF;
@@ -90,7 +87,7 @@ void app_plcp_map(void)
 
 static void app_load_panel_4key(uint8_t *data)
 {
-#if defined PANEL_4KEY_A13 || defined PLCP_PANEL_4KEY
+#if defined PANEL_4KEY_A13
     static const gpio_pin_t RELAY_GPIO_MAP[RELAY_NUMBER] = RELAY_GPIO_MAP_DEF;
     static const gpio_pin_t LED_W_GPIO_MAP[KEY_NUMBER]   = LED_W_GPIO_MAP_DEF;
     static const gpio_pin_t LED_Y_GPIO_MAP[KEY_NUMBER]   = LED_Y_GPIO_MAP_DEF;
@@ -284,7 +281,7 @@ static void app_panel_get_relay_num(uint8_t *data, const gpio_pin_t *relay_map, 
 #endif
 }
 
-#if defined PANEL_KEY
+#if defined PANEL_KEY || defined PANEL_PLCP
 const panel_cfg_t *app_get_panel_cfg(void)
 {
     return my_panel_cfg;

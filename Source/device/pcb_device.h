@@ -34,7 +34,7 @@
 
 #endif
 
-#if defined PANEL_4KEY_A13 || defined PLCP_PANEL_4KEY
+#if defined PANEL_4KEY_A13 || defined PANEL_PLCP_4KEY
     #define PANEL_VOL_RANGE_DEF          \
         [0] = {.vol_range = {25, 40}},   \
         [1] = {.vol_range = {88, 95}},   \

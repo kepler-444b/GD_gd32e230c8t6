@@ -3,12 +3,11 @@
 #include "jump_device.h"
 
 #if defined PANEL_KEY
-    #if defined PLCP_LHW
-        #include "plcp_panel.h"
-    #else
-        #include "panel_key.h"
-    #endif
+    #include "panel_key.h"
+#endif
 
+#if defined PANEL_PLCP
+    #include "plcp_panel.h"
 #endif
 
 #if defined QUICK_BOX
@@ -19,12 +18,11 @@ void app_jump_device_init(void)
 {
 
 #if defined PANEL_KEY
-    #if defined PLCP_LHW
-    plcp_panel_key_init();
-    #else
     panel_key_init();
-    #endif
+#endif
 
+#if defined PANEL_PLCP
+    plcp_panel_key_init();
 #endif
 
 #if defined QUICK_BOX
