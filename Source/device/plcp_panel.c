@@ -322,7 +322,7 @@ uint16_t plcp_panel_get_did(void)
 
 bool plcp_panel_set_status(char *aei, uint8_t *stateParam, uint16_t stateParamLen)
 {
-    APP_PRINTF_BUF("PLCP_RX", stateParam, stateParamLen);
+    // APP_PRINTF_BUF("PLCP_RX", stateParam, stateParamLen);
     const panel_cfg_t *temp_cfg = app_get_panel_cfg();
     uint8_t id;
     uint8_t index;
