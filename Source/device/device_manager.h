@@ -11,11 +11,10 @@
 // #define PLC_HI
 #define PLCP_LHW
 
-#if defined PLC_LHW || defined PLC_HI || defined PLCP_LHW
+#if defined PLC_LHW || defined PLC_HI
     // 设备类型(多选一)
     // #define PANEL_KEY  // 灯控面板
     // #define QUICK_BOX  // 快装盒子
-    #define PANEL_PLCP // 灯控面板 PLCP
 
     #if defined PANEL_KEY
 
@@ -39,6 +38,17 @@
         #endif
 
     #endif
+    #if defined QUICK_BOX
+
+        #define LED_NUMBER 6
+        #define PWM_DIR    // pwm 方向(开启为反,关闭为正)
+
+    #endif
+#endif
+
+#if defined PLCP_LHW
+    // 设备类型(多选一)
+    #define PANEL_PLCP
 
     #if defined PANEL_PLCP
         // 面板类型(多选一)
@@ -54,13 +64,6 @@
         #if defined PLCP_PANEL_6KEY
             #define KEY_NUMBER 6
         #endif
-    #endif
-
-    #if defined QUICK_BOX
-
-        #define LED_NUMBER 6
-        #define PWM_DIR    // pwm 方向(开启为反,关闭为正)
-
     #endif
 #endif
 #endif //_DEVICE_MANAGER_H_
