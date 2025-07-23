@@ -107,6 +107,9 @@ static void app_proto_check(usart0_rx_buf_t *buf)
     app_proto_process(&my_valid_data);
 #endif
 #if defined PLC_LHW
+    if (buf->length < 41) {
+        return;
+    }
     memcpy(my_valid_data.data, &buf->buffer[41], buf->length - 41);
     my_valid_data.length = buf->length - 41;
     app_proto_process(&my_valid_data);

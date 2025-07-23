@@ -151,9 +151,9 @@ static void panel_night_light(FUNC_PARAMS);
 void panel_key_init(void)
 {
     panel_gpio_init();
+    app_zero_init(EXTI_11);
     adc_channel_t my_adc_channel = {0};
     app_pwm_init(); // 初始化 PWM 模块
-
     #if defined PANEL_4KEY_A13 || defined PANEL_6KEY_A13
     my_adc_channel.adc_channel_0 = true;
     app_adc_init(&my_adc_channel);
@@ -162,7 +162,7 @@ void panel_key_init(void)
         app_pwm_add_pin(app_get_panel_cfg()[i].led_y_pin);
     };
     panel_backlight_status(app_get_panel_cfg(), my_panel_status, true);
-    app_zero_init(EXTI_11);
+
     #endif
 
     #if defined PANEL_6KEY_A11

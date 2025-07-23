@@ -16,8 +16,15 @@ static panel_cfg_t my_panel_cfg_ex[KEY_NUMBER] = {0};
 #if defined QUICK_BOX
 static quick_ctg_t quick_cfg[LED_NUMBER] = {0};
 #endif
+
+#define DEF_PANEL_CONFIG 0xF2, 0x0E, 0x0E, 0x0E, 0x0E, 0x01, 0x02, 0x03, \
+                         0x04, 0x00, 0x00, 0x00, 0x00, 0x29, 0x21, 0x21, \
+                         0x21, 0x00, 0x00, 0x00, 0x00, 0x0E, 0x05, 0x00, \
+                         0x2D, 0x00, 0x21, 0x00, 0x0F, 0x06, 0x00, 0x21, \
+                         0x00, 0xA9, 0x21, 0x84, 0x00, 0x00
 // 函数声明
-static void app_load_quick_box(uint8_t *data);
+static void
+app_load_quick_box(uint8_t *data);
 static void app_load_panel_4key(uint8_t *data);
 static void app_load_panel_6key(uint8_t *data);
 static void app_load_panel_8key(uint8_t *data, uint8_t *data_ex);
@@ -27,28 +34,33 @@ void app_load_config(void)
 {
     // app_flash_mass_erase();  // 擦除整个扇区(测试使用)
     static uint32_t read_data[32] = {0};
-    static uint8_t new_data[128]  = {0};
-    memset(read_data, 0, sizeof(read_data));
-    memset(new_data, 0, sizeof(new_data));
+    static uint8_t new_data[128]  = {DEF_PANEL_CONFIG};
     __disable_irq();
     if (app_flash_read(CONFIG_START_ADDR, read_data, sizeof(read_data)) != FMC_READY) {
         APP_ERROR("app_flash_read failed\n");
     }
-    if (app_uint32_to_uint8(read_data, sizeof(read_data) / sizeof(read_data[0]), new_data, sizeof(new_data)) != true) {
-        APP_ERROR("app_uint32_to_uint8 error\n");
+    if (read_data[0] == 0xFFFFFFFF) { // 若没有配置串码,则使用默认的面板串码
+        APP_PRINTF("config is null\n");
+    } else {
+        if (app_uint32_to_uint8(read_data, sizeof(read_data) / sizeof(read_data[0]), new_data, sizeof(new_data)) != true) {
+            APP_ERROR("app_uint32_to_uint8 error\n");
+        }
     }
 #if defined PANEL_8KEY_A13
 
-    static uint32_t read_data_ex[24] = {0};
-    static uint8_t new_data_ex[96]   = {0};
-    memset(read_data_ex, 0, sizeof(read_data_ex));
-    memset(new_data_ex, 0, sizeof(new_data_ex));
+    static uint32_t read_data_ex[16] = {0};
+    static uint8_t new_data_ex[64]   = {DEF_PANEL_CONFIG};
     if (app_flash_read(CONFIG_EXTEN_ADDR, read_data_ex, sizeof(read_data_ex)) != FMC_READY) {
         APP_ERROR("app_flash_read failed\n");
     }
-    if (app_uint32_to_uint8(read_data_ex, sizeof(read_data_ex) / sizeof(read_data_ex[0]), new_data_ex, sizeof(new_data_ex)) != true) {
-        APP_ERROR("app_uint32_to_uint8 error\n");
+    if (read_data[0] == 0XFFFFFFFF) {
+        APP_PRINTF("config is null\n");
+    } else {
+        if (app_uint32_to_uint8(read_data_ex, sizeof(read_data_ex) / sizeof(read_data_ex[0]), new_data_ex, sizeof(new_data_ex)) != true) {
+            APP_ERROR("app_uint32_to_uint8 error\n");
+        }
     }
+
 #endif
     __enable_irq();
 

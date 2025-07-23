@@ -7,13 +7,13 @@
 */
 
 // 通信方式(多选一)
-// #define PLC_LHW
+#define PLC_LHW
 // #define PLC_HI
-#define PLCP_LHW
+// #define PLCP_LHW
 
 #if defined PLC_LHW || defined PLC_HI
     // 设备类型(多选一)
-    // #define PANEL_KEY  // 灯控面板
+    #define PANEL_KEY // 灯控面板
     // #define QUICK_BOX  // 快装盒子
 
     #if defined PANEL_KEY
@@ -23,8 +23,8 @@
         // #define PANEL_6KEY_A11
 
         // #define PANEL_4KEY_A13
-        // #define PANEL_6KEY_A13
-        #define PANEL_8KEY_A13
+        #define PANEL_6KEY_A13
+        // #define PANEL_8KEY_A13
 
         /* *********** 确定继电器数量 *********** */
         #define RELAY_NUMBER 4
@@ -52,8 +52,8 @@
 
     #if defined PANEL_PLCP
         // 面板类型(多选一)
-        #define PANEL_PLCP_4KEY
-        // #define PLCP_PANEL_6KEY
+        // #define PANEL_PLCP_4KEY
+        #define PLCP_PANEL_6KEY
 
         /* *********** 确定继电器数量 *********** */
         #define RELAY_NUMBER 4
