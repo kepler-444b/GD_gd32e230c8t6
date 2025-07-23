@@ -693,7 +693,7 @@
           "../../Source/FreeRTOS",
           "../../Source/rtt",
           "../../Source/plcp/Inc",
-          ".cmsis/include",
+          "cmsis/include",
           "RTE/_GD32E23x"
         ],
         "libList": [],
@@ -725,7 +725,8 @@
             "output-format": "hex",
             "misc-controls": "--diag_suppress=L6329",
             "ro-base": "0x08000000",
-            "rw-base": "0x20000000"
+            "rw-base": "0x20000000",
+            "$disableOutputTask": true
           }
         }
       }
