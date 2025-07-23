@@ -722,7 +722,7 @@
             "$use": "asm-auto"
           },
           "linker": {
-            "output-format": "hex",
+            "output-format": "lib",
             "misc-controls": "--diag_suppress=L6329",
             "ro-base": "0x08000000",
             "rw-base": "0x20000000",
