@@ -1,6 +1,5 @@
 #ifndef _DEVICE_MANAGER_H_
 #define _DEVICE_MANAGER_H_
-#include <stdio.h>
 /*
     2025.05.14 舒东升
     在此管理每个设备的初始化
@@ -22,8 +21,8 @@
         // #define PANEL_4KEY_A11
         // #define PANEL_6KEY_A11
 
-        #define PANEL_4KEY_A13
-        // #define PANEL_6KEY_A13
+        // #define PANEL_4KEY_A13
+        #define PANEL_6KEY_A13
         // #define PANEL_8KEY_A13
 
         /* *********** 确定继电器数量 *********** */
@@ -66,4 +65,4 @@
         #endif
     #endif
 #endif
-#endif //_DEVICE_MANAGER_H_
+#endif
