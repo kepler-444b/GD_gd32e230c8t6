@@ -107,16 +107,30 @@ static void app_proto_check(usart0_rx_buf_t *buf)
     app_proto_process(&my_valid_data);
 #endif
 #if defined PLC_LHW
-    if (buf->length < 41) {
+    uint8_t index          = 0;
+    uint8_t found_ff_count = 0;
+    if (buf->buffer[0] != 0x1b && buf->buffer[7] != 0x0a) { // 验证前导码首尾
         return;
     }
-    memcpy(my_valid_data.data, &buf->buffer[41], buf->length - 41);
-    my_valid_data.length = buf->length - 41;
+    for (uint8_t i = 0; i < buf->length; i++) {
+        if (buf->buffer[i] != 0xff) {
+            continue;
+        }
+        found_ff_count++;
+        if (found_ff_count == 2) { // 找到第二个 FF,后面的数据是有效数据
+            index = i + 1;
+            break;
+        }
+    }
+    if (found_ff_count < 2) {
+        return;
+    }
+    memcpy(my_valid_data.data, &buf->buffer[index], buf->length - index);
+    my_valid_data.length = buf->length - index;
     app_proto_process(&my_valid_data);
 #endif
 
 #if defined PLCP_LHW
-
     memcpy(my_valid_data.data, buf->buffer, buf->length);
     my_valid_data.length = buf->length;
     app_eventbus_publish(EVENT_RECEIVE_CMD, &my_valid_data);
@@ -201,7 +215,6 @@ static void app_save_panel_cfg(valid_data_t *obj, bool is_ex)
     APP_PRINTF_BUF("[SAVE]", obj->data, obj->length);
     static uint32_t output[32] = {0};
     if (app_uint8_to_uint32(obj->data, obj->length, output, sizeof(output))) {
-
         __disable_irq(); // flash 写操作,需要关闭中断
         uint32_t flash_addr = is_ex ? CONFIG_EXTEN_ADDR : CONFIG_START_ADDR;
         if (app_flash_program(flash_addr, output, sizeof(output), true) != FMC_READY) {
@@ -314,10 +327,8 @@ void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t frame_head, ui
                 }
             } else if (cmd_type == COMMON_CMD || (cmd_type == SPECIAL_CMD && temp_cfg[key_number].func == LATER_MODE)) {
                 // 普通命令 或 特殊命令里的"请稍后"
-
                 send_frame.data[1] = temp_cfg[key_number].func;
                 send_frame.data[2] = key_status;
-
                 if (BIT4(temp_cfg[key_number].perm) && BIT6(temp_cfg[key_number].perm)) { // "只开" + "取反"
                     send_frame.data[2] = false;
                 } else if (BIT4(temp_cfg[key_number].perm)) { // "只开"
@@ -328,13 +339,11 @@ void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t frame_head, ui
                     send_frame.data[2] = key_status; // 默认
                 }
             }
-
             // 设置分组、区域、权限和场景组信息
             send_frame.data[3] = temp_cfg[key_number].group;
             send_frame.data[4] = temp_cfg[key_number].area;
             send_frame.data[6] = temp_cfg[key_number].perm;
             send_frame.data[7] = temp_cfg[key_number].scene_group;
-
             // 计算并设置CRC校验
             send_frame.data[5] = panel_crc(send_frame.data, 5);
             send_frame.length  = 8;

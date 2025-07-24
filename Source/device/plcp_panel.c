@@ -16,7 +16,6 @@
 #include "../pwm/pwm.h"
 #include "../zero/zero.h"
 
-
 #define ADC_TO_VOL(adc_val) ((adc_val) * 330 / 4096) // adc值转电压
 #define ADC_VOL_NUMBER      10                       // 电压值缓冲区数量
 #define MIN_VOL             329                      // 无按键按下时的最小电压值
@@ -90,6 +89,7 @@ void cmd_switch_get_init_info(void);
 void plcp_panel_key_init(void)
 {
     panel_gpio_init();
+    app_plcp_map();
     adc_channel_t my_adc_channel = {0};
     my_adc_channel.adc_channel_0 = true;
     app_adc_init(&my_adc_channel);

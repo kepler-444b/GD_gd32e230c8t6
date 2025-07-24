@@ -8,7 +8,7 @@
     2025.6.1 舒东升
     设备相关的配置,加载串码在此模块中处理,
     硬件相关的(如led relay的GPIO管脚也在此映射)
-    由于协议问题,导致 relay的GPIO映射比较复杂
+    由于协议问题,导致relay的GPIO映射比较复杂
 */
 
 #if defined PANEL_KEY || defined PANEL_PLCP

@@ -77,6 +77,7 @@ void app_pwm_init(void)
     nvic_irq_enable(TIMER13_IRQn, 1); // 配置NVIC,优先级1
 
     pwm_initialized = true;
+    APP_PRINTF("%s\n", __func__);
 }
 
 // 添加PWM引脚
@@ -216,7 +217,7 @@ void TIMER13_IRQHandler(void)
 
         // 计算进度并限制范围
         uint16_t progress = (uint16_t)pwm_channels[i].fade_counter * FADE_TABLE_SIZE / pwm_channels[i].fade_steps;
-        progress = MIN(progress, FADE_TABLE_SIZE - 1);
+        progress          = MIN(progress, FADE_TABLE_SIZE - 1);
         // 获取缓入缓出曲线值
         uint16_t curve_value = fade_table[progress];
         // 计算新占空比

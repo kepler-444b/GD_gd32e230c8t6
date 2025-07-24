@@ -12,19 +12,17 @@ static panel_cfg_t my_panel_cfg[KEY_NUMBER] = {0};
     #if defined PANEL_8KEY_A13
 static panel_cfg_t my_panel_cfg_ex[KEY_NUMBER] = {0};
     #endif
+
+// 按键类型默认配置
+    #define DEF_PANEL_CONFIG 0xF2, 0x0E, 0x0E, 0x0E, 0x0E, 0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, \
+                             0x00, 0x00, 0x0E, 0x05, 0x00, 0xB9, 0x00, 0x00, 0x00, 0x0E, 0x06, 0x00, 0x00, 0x00, 0xEC, 0x21, 0x84, 0x00, 0x00
 #endif
 #if defined QUICK_BOX
 static quick_ctg_t quick_cfg[LED_NUMBER] = {0};
 #endif
 
-#define DEF_PANEL_CONFIG 0xF2, 0x0E, 0x0E, 0x0E, 0x0E, 0x01, 0x02, 0x03, \
-                         0x04, 0x00, 0x00, 0x00, 0x00, 0x29, 0x21, 0x21, \
-                         0x21, 0x00, 0x00, 0x00, 0x00, 0x0E, 0x05, 0x00, \
-                         0x2D, 0x00, 0x21, 0x00, 0x0F, 0x06, 0x00, 0x21, \
-                         0x00, 0xA9, 0x21, 0x84, 0x00, 0x00
 // 函数声明
-static void
-app_load_quick_box(uint8_t *data);
+static void app_load_quick_box(uint8_t *data);
 static void app_load_panel_4key(uint8_t *data);
 static void app_load_panel_6key(uint8_t *data);
 static void app_load_panel_8key(uint8_t *data, uint8_t *data_ex);
@@ -105,13 +103,14 @@ static void app_load_panel_4key(uint8_t *data)
     static const gpio_pin_t LED_Y_GPIO_MAP[KEY_NUMBER]   = LED_Y_GPIO_MAP_DEF;
     for (uint8_t i = 0; i < KEY_NUMBER; i++) {
         panel_cfg_t *const p_cfg = &my_panel_cfg[i];
-        p_cfg->func              = data[i + 1];
-        p_cfg->group             = data[i + 5];
-        p_cfg->area              = data[i + 9];
-        p_cfg->perm              = data[i + 13];
-        p_cfg->scene_group       = data[i + 17];
-        p_cfg->led_w_pin         = LED_W_GPIO_MAP[i];
-        p_cfg->led_y_pin         = LED_Y_GPIO_MAP[i];
+
+        p_cfg->func        = data[i + 1];
+        p_cfg->group       = data[i + 5];
+        p_cfg->area        = data[i + 9];
+        p_cfg->perm        = data[i + 13];
+        p_cfg->scene_group = data[i + 17];
+        p_cfg->led_w_pin   = LED_W_GPIO_MAP[i];
+        p_cfg->led_y_pin   = LED_Y_GPIO_MAP[i];
     }
     app_panel_get_relay_num(data, RELAY_GPIO_MAP, false);
     for (uint8_t i = 0; i < KEY_NUMBER; i++) {
@@ -127,7 +126,6 @@ static void app_load_panel_4key(uint8_t *data)
         }
         APP_PRINTF("\n");
     }
-    APP_PRINTF("\n");
 #endif
 }
 static void app_load_panel_6key(uint8_t *data)
@@ -165,17 +163,18 @@ static void app_load_panel_6key(uint8_t *data)
     // 打印配置信息
     for (uint8_t i = 0; i < KEY_NUMBER; i++) {
         panel_cfg_t *const p_cfg = &my_panel_cfg[i];
-
+        
         APP_PRINTF("%02X %02X %02X %02X ", p_cfg->func, p_cfg->group, p_cfg->area, p_cfg->perm);
         const char *led_w_name = app_get_gpio_name(p_cfg->led_w_pin);
-        APP_PRINTF("%-4s| ", led_w_name);
+        const char *led_y_name = app_get_gpio_name(p_cfg->led_y_pin);
+        APP_PRINTF("%-4s %-4s| ", led_w_name, led_y_name);
         for (uint8_t j = 0; j < 4; j++) {
             const char *relay_name = app_get_gpio_name(p_cfg->relay_pin[j]);
             APP_PRINTF("%-4s ", relay_name);
         }
         APP_PRINTF("\n");
     }
-#endif /* PANEL_6KEY_A11 */
+#endif
 }
 
 static void app_load_panel_8key(uint8_t *data, uint8_t *data_ex)
@@ -237,7 +236,7 @@ static void app_load_panel_8key(uint8_t *data, uint8_t *data_ex)
         }
         APP_PRINTF("\n");
     }
-#endif // PANEL_8KEY_A13
+#endif
 }
 
 static void app_load_quick_box(uint8_t *data)
@@ -261,10 +260,10 @@ static void app_load_quick_box(uint8_t *data)
         }
         APP_PRINTF("\n");
     }
-#endif /* QUICK_BOX */
+#endif
 }
 
-// 辅助函数(将 relay 的 pin 映射到 key)
+// 辅助函数(将 relay 的 pin 绑定到 key)
 static void app_panel_get_relay_num(uint8_t *data, const gpio_pin_t *relay_map, bool is_ex)
 {
 #if defined PANEL_KEY
@@ -273,14 +272,12 @@ static void app_panel_get_relay_num(uint8_t *data, const gpio_pin_t *relay_map, 
     for (uint8_t i = 0; i < KEY_NUMBER; i++) {
         uint8_t byte_offset = base_offset + (i / 2);
         uint8_t relay_num   = (i % 2) ? H_BIT(data[byte_offset]) : L_BIT(data[byte_offset]);
-
         if (!is_ex) {
             my_panel_cfg[i].relay_pin[0] = BIT0(relay_num) ? relay_map[0] : DEF;
             my_panel_cfg[i].relay_pin[1] = BIT1(relay_num) ? relay_map[1] : DEF;
             my_panel_cfg[i].relay_pin[2] = BIT2(relay_num) ? relay_map[2] : DEF;
             my_panel_cfg[i].relay_pin[3] = BIT3(relay_num) ? relay_map[3] : DEF;
         }
-
     #if defined PANEL_8KEY_A13
         else if (is_ex) {
             my_panel_cfg_ex[i].relay_pin[0] = BIT0(relay_num) ? relay_map[0] : DEF;

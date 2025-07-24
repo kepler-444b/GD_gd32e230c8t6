@@ -152,17 +152,16 @@ void panel_key_init(void)
 {
     panel_gpio_init();
     app_zero_init(EXTI_11);
+    app_load_config();
     adc_channel_t my_adc_channel = {0};
     app_pwm_init(); // 初始化 PWM 模块
     #if defined PANEL_4KEY_A13 || defined PANEL_6KEY_A13
     my_adc_channel.adc_channel_0 = true;
     app_adc_init(&my_adc_channel);
-
     for (uint8_t i = 0; i < KEY_NUMBER; i++) {
         app_pwm_add_pin(app_get_panel_cfg()[i].led_y_pin);
     };
     panel_backlight_status(app_get_panel_cfg(), my_panel_status, true);
-
     #endif
 
     #if defined PANEL_6KEY_A11
@@ -186,7 +185,6 @@ void panel_key_init(void)
     panel_backlight_status(app_get_panel_cfg(), my_panel_status, true);
     panel_backlight_status(app_get_panel_cfg_ex(), my_panel_status_ex, true);
     #endif
-
     panel_power_status(); // 执行上电参数
 
     app_eventbus_subscribe(panel_event_handler); // 订阅事件总线
@@ -206,7 +204,7 @@ void panel_key_init(void)
         // 启动定时器(0表示不阻塞)
         APP_ERROR("timer_start error");
     }
-    APP_PRINTF("panel_key_init[%d]\n", KEY_NUMBER);
+    APP_PRINTF("%s[%d]\n", __func__, KEY_NUMBER);
 }
 
 static void panel_read_adc(TimerHandle_t xTimer)

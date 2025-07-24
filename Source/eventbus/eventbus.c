@@ -21,6 +21,7 @@ void app_eventbus_init(void)
 {
     handlerCount = 0;
     queueHead = queueTail = queueSize = 0;
+    APP_PRINTF("%s\n", __func__);
 }
 
 // 订阅所有事件(只需调用一次)

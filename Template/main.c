@@ -10,7 +10,6 @@
 #include "../Source/base/base.h"
 #include "../Source/device/jump_device.h"
 #include "../Source/protocol/protocol.h"
-#include "../Source/config/config.h"
 #include "../Source/eventbus/eventbus.h"
 #include "../Source/pwm/pwm.h"
 #include "../Source/watchdog/watchdog.h"
@@ -39,13 +38,8 @@ static void app_main_task(void *pvParameters)
     app_eventbus_init();            // 事件总线
     app_proto_init();               // 协议层
     app_watchdog_init();            // 看门狗
-#ifndef PLCP_LHW
-    app_load_config(); // 加载配置信息
-#else
-    app_plcp_map();
-#endif
+    app_jump_device_init();         // 设备初始化
 
-    app_jump_device_init();
     while (1) {
         app_eventbus_poll();
         vTaskDelay(1);
@@ -63,7 +57,7 @@ int main(void)
 
     TaskHandle_t AppInitTaskHandle = xTaskCreateStatic(
         app_main_task,   // 主任务
-        "app_init_task", // 任务名称
+        "app_main_task", // 任务名称
 #if defined PLCP_LHW
         512,
 #else

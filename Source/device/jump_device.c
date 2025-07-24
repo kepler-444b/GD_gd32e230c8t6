@@ -16,15 +16,12 @@
 
 void app_jump_device_init(void)
 {
-
 #if defined PANEL_KEY
     panel_key_init();
 #endif
-
 #if defined PANEL_PLCP
     plcp_panel_key_init();
 #endif
-
 #if defined QUICK_BOX
     quick_box_init();
 #endif

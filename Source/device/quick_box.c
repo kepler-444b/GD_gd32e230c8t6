@@ -64,6 +64,7 @@ void quick_box_init(void)
 {
     APP_PRINTF("quick_box_init\n");
     quick_box_gpio_init();
+    app_load_config();
     app_eventbus_subscribe(quick_event_handler); // 订阅事件总线
 
     // 初始化一个静态定时器,用于检测值
