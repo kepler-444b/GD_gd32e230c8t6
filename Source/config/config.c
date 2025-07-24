@@ -163,7 +163,7 @@ static void app_load_panel_6key(uint8_t *data)
     // 打印配置信息
     for (uint8_t i = 0; i < KEY_NUMBER; i++) {
         panel_cfg_t *const p_cfg = &my_panel_cfg[i];
-        
+
         APP_PRINTF("%02X %02X %02X %02X ", p_cfg->func, p_cfg->group, p_cfg->area, p_cfg->perm);
         const char *led_w_name = app_get_gpio_name(p_cfg->led_w_pin);
         const char *led_y_name = app_get_gpio_name(p_cfg->led_y_pin);
