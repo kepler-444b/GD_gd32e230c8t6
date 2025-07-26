@@ -22,6 +22,9 @@ typedef enum {
     EVENT_PLCP_INIT_TIMER,
     EVENT_PLCP_SYCN_FLAG,
 
+    EVENT_GET_MAC, // 获取mac地址
+    EVENT_SET_DID,
+
     // 添加更多事件类型...
     EVENT_COUNT // 自动计算事件数量
 } event_type_e;

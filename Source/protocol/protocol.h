@@ -39,16 +39,22 @@ typedef enum {
     COMMON_CMD  = 0x00, // 普通命令
     SPECIAL_CMD = 0x01, // 特殊命令
 
+    // AT 命令
+    COMMON_TYPE  = 0xA0, // 普通类型
+    GET_MAC_TYPE = 0xA1, // 获取mac地址
+    SET_DID_TYPE = 0xA2, // 设置did
+
+    // 快装盒子帧头
     QUICK_SINGLE = 0xE2, // quick (快装盒子)单发串码
     QUICK_MULTI  = 0xE3, // quick (快装盒子)群发串码
     QUICK_END    = 0x30,
+
     // 面板帧头
-    PANEL_HEAD   = 0xF1,
+    PANEL_HEAD   = 0xF1, // panel (面板)通讯数据
     PANEL_SINGLE = 0xF2, // panel (面板)单发串码
     PANEL_MULTI  = 0xF3, // panel (面板)群发串码
     APPLY_CONFIG = 0xF8, // 设置软件回复设置申请
     EXIT_CONFIG  = 0xF9, // 设置软件"退出"配置模式
-    TEST_CMD     = 0xF2,
 
     // 按键功能
     ALL_CLOSE     = 0x00, // 总关

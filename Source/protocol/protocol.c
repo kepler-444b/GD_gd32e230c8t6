@@ -17,11 +17,13 @@ static bool is_offline = false;
 #endif
 
 #if defined PLC_LHW
-    // #define AT_HEAD 0x1b, 0x1b, 0x1b, 0x1b, 0x1b, 0x0a, 0x1b, 0x0a, 0x52, 0x02, 0x03, 0x00, 0x00, 0x33, 0xff, 0xad, 0x08, 0x40, 0x31, 0x2e
-    // #define TG_MAC  0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x2f, 0x31, 0x30, 0x34, 0x2f, 0x33, 0x11, 0x2a, 0xff
-    #define ESCAPE_SEQ  0x1b, 0x1b, 0x1b, 0x1b, 0x1b, 0x0a, 0x1b, 0x0a
-    #define MAC_ADDRESS 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46
-    #define SERVICE_ID  0x31, 0x30, 0x34 // "104"
+    #define ESCAPE_SEQ    0x1b, 0x1b, 0x1b, 0x1b, 0x1b, 0x0a, 0x1b, 0x0a
+    #define MAC_ADDRESS   0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46
+    #define SERVICE_ID    0x31, 0x30, 0x34 // "104"
+
+    #define LHW_GET_MAC   0x42, 0x01, 0x28, 0x00, 0x00, 0xac, 0xff, 0xa4, 0x40, 0x30, 0x2f, 0x32
+    #define LHW_SET_DID_1 0x42, 0x03, 0x2b, 0x05, 0x11, 0x0a, 0xff, 0xad, 0x06, 0x40, 0x30, 0x2e
+    #define LHW_SET_DID_2 0x2f, 0x33, 0x2f, 0x31, 0x11, 0x10, 0xff
 
 #endif
 
@@ -42,13 +44,18 @@ typedef struct
 } apply_t;
 static apply_t my_apply;
 
+uint8_t device_mac[6] = {0};
+uint8_t device_did[2] = {0};
+
+bool set_did = false;
+
 // 函数声明
 static void app_proto_check(usart0_rx_buf_t *buf);
 static void app_proto_test(usart1_rx_buf_t *buf);
 static void app_save_panel_cfg(valid_data_t *boj, bool is_ex);
 static void app_save_quick_cfg(valid_data_t *obj);
 static void app_proto_process(valid_data_t *my_valid_data);
-static void app_at_send(at_frame_t *send_frame);
+static void app_at_send(at_frame_t *send_frame, uint8_t type);
 static uint8_t panel_crc(uint8_t *rxbuf, uint8_t len);
 static uint16_t quick_crc(uint8_t *data, uint8_t len);
 
@@ -62,14 +69,14 @@ void app_proto_init(void)
 static void app_proto_test(usart1_rx_buf_t *buf)
 {
     APP_PRINTF("%s\n", buf->buffer);
-    APP_PRINTF_BUF("", buf->buffer, buf->length);
+    // APP_PRINTF_BUF("", buf->buffer, buf->length);
     // app_usart_tx_string((const char *)buf->buffer, USART1);
 }
 
 // usart0 接收到数据首先回调在这里处理
 static void app_proto_check(usart0_rx_buf_t *buf)
 {
-    // APP_PRINTF_BUF("", buf->buffer, buf->length);
+    APP_PRINTF_BUF("", buf->buffer, buf->length);
     // APP_PRINTF("%s\n", buf->buffer);
     static valid_data_t my_valid_data;                // 不显式初始化
     memset(&my_valid_data, 0, sizeof(my_valid_data)); // 每次调用都清零
@@ -86,19 +93,13 @@ static void app_proto_check(usart0_rx_buf_t *buf)
     // 查找有效数据边界
     char *start_ptr = strchr((char *)buf->buffer, '"');
     // 检查是否找到起始引号，并且后面还有数据
-    if (start_ptr == NULL || *(start_ptr + 1) == '\0') {
-        return;
-    }
+    if (start_ptr == NULL || *(start_ptr + 1) == '\0') { return; }
     char *end_ptr = strchr(start_ptr + 1, '"');
     // 检查是否找到结束引号，并且位置合理
-    if (end_ptr == NULL || end_ptr <= start_ptr + 1) {
-        return;
-    }
+    if (end_ptr == NULL || end_ptr <= start_ptr + 1) { return; }
     // 计算数据长度并验证是否为偶数个十六进制字符
     size_t hex_len = end_ptr - start_ptr - 1;
-    if (hex_len == 0 || hex_len % 2 != 0) {
-        return;
-    }
+    if (hex_len == 0 || hex_len % 2 != 0) { return; }
     // 提取并转换十六进制数据
     my_valid_data.length = hex_len / 2;
     for (uint16_t i = 0; i < my_valid_data.length; i++) {
@@ -107,26 +108,46 @@ static void app_proto_check(usart0_rx_buf_t *buf)
     app_proto_process(&my_valid_data);
 #endif
 #if defined PLC_LHW
-    uint8_t index          = 0;
-    uint8_t found_ff_count = 0;
-    if (buf->buffer[0] != 0x1b && buf->buffer[7] != 0x0a) { // 验证前导码首尾
-        return;
-    }
-    for (uint8_t i = 0; i < buf->length; i++) {
-        if (buf->buffer[i] != 0xff) {
-            continue;
-        }
-        found_ff_count++;
-        if (found_ff_count == 2) { // 找到第二个 FF,后面的数据是有效数据
-            index = i + 1;
+
+    if (buf->buffer[0] != 0x1b && buf->buffer[7] != 0x0a) { return; }
+    uint8_t c  = (buf->buffer[9] >> 5) & 0x07; // 取高3位
+    uint8_t dd = buf->buffer[9] & 0x1F;        // 取低5位
+    APP_PRINTF(" [c.dd]:%d.%d\n", c, dd);
+    switch (c) {
+        case 0:
+            switch (dd) {
+                case 2: // 收到的广播数据
+                {
+                    uint8_t index;
+                    FIND_SECOND_FF(buf->buffer, buf->length, index);
+                    if (index == 0 || index >= buf->length) { return; }
+                    memcpy(my_valid_data.data, &buf->buffer[index], buf->length - index);
+                    my_valid_data.length = buf->length - index;
+                    break;
+                }
+            }
             break;
-        }
+        case 2:
+            switch (dd) {
+                case 4: // 设置模组did返回ack
+                    APP_PRINTF("did set succ\n");
+                    break;
+                case 5: // 读取模组mac地址ack
+                {
+                    uint8_t index;
+                    FIND_SECOND_FF(buf->buffer, buf->length, index);
+                    if (index == 0 || index >= buf->length) { return; }
+                    if (((buf->buffer[10] << 8) | buf->buffer[11]) == 0x2800) {
+                        my_valid_data.data[0] = GET_MAC_TYPE;
+                        memcpy(&my_valid_data.data[1], &buf->buffer[index], buf->length - index);
+                        my_valid_data.length = buf->length - index + 1;
+                    }
+                    break;
+                }
+            }
+        default:
+            break;
     }
-    if (found_ff_count < 2) {
-        return;
-    }
-    memcpy(my_valid_data.data, &buf->buffer[index], buf->length - index);
-    my_valid_data.length = buf->length - index;
     app_proto_process(&my_valid_data);
 #endif
 
@@ -134,7 +155,7 @@ static void app_proto_check(usart0_rx_buf_t *buf)
     memcpy(my_valid_data.data, buf->buffer, buf->length);
     my_valid_data.length = buf->length;
     app_eventbus_publish(EVENT_RECEIVE_CMD, &my_valid_data);
-    // APP_PRINTF_BUF("rc", buf->buffer, buf->length);
+// APP_PRINTF_BUF("rc", buf->buffer, buf->length);
 #endif
 }
 
@@ -142,12 +163,25 @@ static void app_proto_process(valid_data_t *my_valid_data)
 {
     uint8_t cmd = my_valid_data->data[0];
     switch (cmd) {
+        static at_frame_t recv_frame;
         case PANEL_HEAD: // 收到其他设备的AT指令
             if (my_valid_data->data[5] == panel_crc(my_valid_data->data, 5)) {
-                static at_frame_t recv_frame;
                 memcpy(recv_frame.data, my_valid_data->data, my_valid_data->length);
                 recv_frame.length = my_valid_data->length;
                 app_eventbus_publish(EVENT_RECEIVE_CMD, &recv_frame);
+            }
+            break;
+        case SET_DID_TYPE: // 设置模组 did
+            memcpy(&device_did, &my_valid_data->data[1], my_valid_data->length - 1);
+            app_at_send(NULL, GET_MAC_TYPE); // 先读取模组mac地址
+            set_did = true;
+            break;
+        case GET_MAC_TYPE: // 收到模组返回的mac地址
+            memcpy(&device_mac, &my_valid_data->data[1], my_valid_data->length - 1);
+            // APP_PRINTF_BUF("mac", device_mac, 6);
+            if (set_did) { // 如果是设置did
+                app_at_send(NULL, SET_DID_TYPE);
+                set_did = false;
             }
             break;
 #if defined PANEL_KEY
@@ -244,62 +278,92 @@ static void app_save_quick_cfg(valid_data_t *obj)
 #endif
 }
 // 构造发送 AT 帧
-static void app_at_send(at_frame_t *send_frame)
+static void app_at_send(at_frame_t *send_frame, uint8_t type)
 {
-    APP_PRINTF_BUF("[SEND]", send_frame->data, send_frame->length);
 
-// 转换为十六进制字符串
 #if defined PLC_HI
     static char at_frame[64]   = {0};
     static char hex_buffer[64] = {0};
-    for (int i = 0; i < send_frame->length; i++) {
-        snprintf(hex_buffer + 2 * i, 3, "%02X", send_frame->data[i]);
-    }
-    snprintf(at_frame, sizeof(at_frame), "%s,%d,\"%s\",1\r\n", AT_HEAD, send_frame->length * 2, hex_buffer);
-    app_usart_tx_string(at_frame, USART0); // 通过 usart0 发送到给 plc 模组
-    if (is_offline) {                      // 如果设备离线,把数据发送给自己
-        app_eventbus_publish(EVENT_RECEIVE_CMD, send_frame);
-        APP_ERROR("is_offline");
-    }
 #endif
 #if defined PLC_LHW
-    app_eventbus_publish(EVENT_RECEIVE_CMD, send_frame); // 先把数据发送给自己
     static uint8_t at_frame[64] = {0};
-
-    const uint8_t escape[] = {ESCAPE_SEQ};
-    memcpy(&at_frame[0], escape, sizeof(escape));
-    // 报文头域 (6字节)
-    at_frame[8]  = 0x52; // head
-    at_frame[9]  = 0x02; // request
-    at_frame[10] = 0x00; // id高字节
-    at_frame[11] = 0x03; // id低字节
-    at_frame[12] = 0x00; // token高字节
-    at_frame[13] = 0x33; // token低字节
-    // 选项域 (3字节)
-    at_frame[14] = 0xff; // spe
-    at_frame[15] = 0xad; // opt
-    at_frame[16] = 0x08; // ext_len
-    // RSL数据域 (20字节)
-    at_frame[17]        = 0x40; // port_mark ("@")
-    at_frame[18]        = 0x31; // port_number ("1")
-    at_frame[19]        = 0x2e; // addr_spe (".")
-    const uint8_t mac[] = {MAC_ADDRESS};
-    memcpy(&at_frame[20], mac, sizeof(mac)); // MAC地址 (12字节)
-    at_frame[32] = 0x2f;                     // path_spe ("/")
-
-    const uint8_t service[] = {SERVICE_ID};
-    memcpy(&at_frame[33], service, sizeof(service)); // 服务ID (3字节)
-
-    at_frame[36] = 0x2f; // path_sub_spe ("/")
-    at_frame[37] = 0x33; // func_sub ("3")
-
-    // 内容选项域 (3字节)
-    at_frame[38] = 0x11; // data_size
-    at_frame[39] = 0x2a; // data_format
-    at_frame[40] = 0xff; // end_mark
-    memcpy(&at_frame[41], send_frame->data, send_frame->length);
-    app_usart_tx_buf(at_frame, 41 + send_frame->length, USART0);
+    const uint8_t escape[8]     = {ESCAPE_SEQ};
 #endif
+    switch (type) {
+        case COMMON_TYPE: {
+            APP_PRINTF_BUF("[SEND]", send_frame->data, send_frame->length);
+#if defined PLC_HI
+            for (int i = 0; i < send_frame->length; i++) {
+                snprintf(hex_buffer + 2 * i, 3, "%02X", send_frame->data[i]);
+            }
+            snprintf(at_frame, sizeof(at_frame), "%s,%d,\"%s\",1\r\n", AT_HEAD, send_frame->length * 2, hex_buffer);
+            app_usart_tx_string(at_frame, USART0); // 通过 usart0 发送到给 plc 模组
+            if (is_offline) {                      // 如果设备离线,把数据发送给自己
+                app_eventbus_publish(EVENT_RECEIVE_CMD, send_frame);
+                APP_ERROR("is_offline");
+            }
+#endif
+#if defined PLC_LHW
+            app_eventbus_publish(EVENT_RECEIVE_CMD, send_frame); // 先把数据发送给自己
+            memcpy(&at_frame[0], escape, sizeof(escape));
+            // 报文头域 (6字节)
+            at_frame[8]  = 0x52; // head
+            at_frame[9]  = 0x02; // request
+            at_frame[10] = 0x00; // id高字节
+            at_frame[11] = 0x03; // id低字节
+            at_frame[12] = 0x00; // token高字节
+            at_frame[13] = 0x33; // token低字节
+            // 选项域 (3字节)
+            at_frame[14] = 0xff; // spe
+            at_frame[15] = 0xad; // opt
+            at_frame[16] = 0x08; // ext_len
+            // RSL数据域 (20字节)
+            at_frame[17]        = 0x40; // port_mark ("@")
+            at_frame[18]        = 0x31; // port_number ("1")
+            at_frame[19]        = 0x2e; // addr_spe (".")
+            const uint8_t mac[] = {MAC_ADDRESS};
+            memcpy(&at_frame[20], mac, sizeof(mac)); // MAC地址 (12字节)
+            at_frame[32] = 0x2f;                     // path_spe ("/")
+
+            const uint8_t service[] = {SERVICE_ID};
+            memcpy(&at_frame[33], service, sizeof(service)); // 服务ID (3字节)
+
+            at_frame[36] = 0x2f; // path_sub_spe ("/")
+            at_frame[37] = 0x33; // func_sub ("3")
+
+            // 内容选项域 (3字节)
+            at_frame[38] = 0x11; // data_size
+            at_frame[39] = 0x2a; // data_format
+            at_frame[40] = 0xff; // end_mark
+            memcpy(&at_frame[41], send_frame->data, send_frame->length);
+            app_usart_tx_buf(at_frame, 41 + send_frame->length, USART0);
+            APP_PRINTF_BUF("panel_send", at_frame, 41 + send_frame->length);
+#endif
+        } break;
+        case GET_MAC_TYPE: {
+#if defined PLC_LHW
+            memcpy(&at_frame[0], escape, sizeof(escape));
+            memcpy(&at_frame[8], (uint8_t[]){LHW_GET_MAC}, 12);
+            app_usart_tx_buf(at_frame, 20, USART0);
+#endif
+        } break;
+        case SET_DID_TYPE: {
+#if defined PLC_LHW
+            memcpy(&at_frame[0], escape, sizeof(escape));
+            memcpy(&at_frame[8], (uint8_t[]){LHW_SET_DID_1}, 12);
+            uint8_t temp_mac[12];
+            HEX_TO_ASCII(device_mac, temp_mac);
+            // APP_PRINTF_BUF("mac", temp_mac, 12);
+            memcpy(&at_frame[20], temp_mac, 12);
+            memcpy(&at_frame[32], (uint8_t[]){LHW_SET_DID_2}, 7);
+            memcpy(&at_frame[39], device_did, 2);
+            // APP_PRINTF_BUF("send_did", at_frame, 41);
+            app_usart_tx_buf(at_frame, 41, USART0);
+#endif
+        } break;
+        default:
+            break;
+    }
 }
 
 // 构造命令
@@ -347,7 +411,7 @@ void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t frame_head, ui
             // 计算并设置CRC校验
             send_frame.data[5] = panel_crc(send_frame.data, 5);
             send_frame.length  = 8;
-            app_at_send(&send_frame);
+            app_at_send(&send_frame, COMMON_TYPE);
 #endif
         } break;
         case APPLY_CONFIG: { // 申请进入设置模式(所有产品通用)
@@ -355,7 +419,7 @@ void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t frame_head, ui
             send_frame.data[1] = 0x01;
             send_frame.data[2] = 0x07;
             send_frame.length  = 3;
-            app_at_send(&send_frame);
+            app_at_send(&send_frame, COMMON_TYPE);
             my_apply.apply_cmd = true;
             my_apply.is_ex     = is_ex;
         } break;

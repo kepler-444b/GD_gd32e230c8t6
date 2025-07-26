@@ -1,6 +1,7 @@
 #include "panel_key.h"
 #include "device_manager.h"
 #include <float.h>
+#include <string.h>
 #include "gd32e23x.h"
 #include "FreeRTOS.h"
 #include "timers.h"
@@ -119,7 +120,8 @@ static panel_status_t my_panel_status_ex[KEY_NUMBER] = {
 };
     #endif
 
-static void panel_power_status(void);
+static void
+panel_power_status(void);
 static void panel_data_cb(at_frame_t *data);
 static void panel_read_adc(TimerHandle_t xTimer);
 static void panel_proce_cmd(TimerHandle_t xTimer);

@@ -21,19 +21,47 @@
 
 // 一个简单的非阻塞延时,在与plc模块通信时使用
 #if 0
-#define APP_DELAY                                        \
-    do {                                                 \
-        for (volatile uint32_t i = 0; i < (1000); i++) { \
-            __NOP(); /* 插入空指令防止编译器优化 */      \
-        }                                                \
-    } while (0)
+    #define APP_DELAY                                        \
+        do {                                                 \
+            for (volatile uint32_t i = 0; i < (1000); i++) { \
+                __NOP(); /* 插入空指令防止编译器优化 */      \
+            }                                                \
+        } while (0)
 #endif
 
 // 将连续的2个十六进制字符转为1个字节的 uint8_t 值(在协议解析时用到)
-#define HEX_TO_BYTE(ptr)                                             \
-    (((*(ptr) >= 'A') ? (*(ptr) - 'A' + 10) : (*(ptr) - '0')) << 4 | \
-     ((*(ptr + 1) >= 'A') ? (*(ptr + 1) - 'A' + 10) : (*(ptr + 1) - '0')))
+#if defined PLC_HI
+    #define HEX_TO_BYTE(ptr)                                             \
+        (((*(ptr) >= 'A') ? (*(ptr) - 'A' + 10) : (*(ptr) - '0')) << 4 | \
+         ((*(ptr + 1) >= 'A') ? (*(ptr + 1) - 'A' + 10) : (*(ptr + 1) - '0')))
+#endif
 
+#if defined PLC_LHW
+    //  将十六进制转为小写的asci
+    #define HEX_TO_ASCII(mac, ascii)                                         \
+        do {                                                                 \
+            for (int i = 0; i < 6; i++) {                                    \
+                ascii[2 * i]     = "0123456789abcdef"[(mac[i] >> 4) & 0x0F]; \
+                ascii[2 * i + 1] = "0123456789abcdef"[mac[i] & 0x0F];        \
+            }                                                                \
+        } while (0)
+
+    // 查找第二个 0xFF 力合微模组通信用到
+    #define FIND_SECOND_FF(buffer, length, index_var)   \
+        do {                                            \
+            uint8_t _found_ff_count = 0;                \
+            (index_var)             = 0;                \
+            for (uint8_t _i = 0; _i < (length); _i++) { \
+                if ((buffer)[_i] == 0xFF) {             \
+                    _found_ff_count++;                  \
+                    if (_found_ff_count == 2) {         \
+                        (index_var) = _i + 1;           \
+                        break;                          \
+                    }                                   \
+                }                                       \
+            }                                           \
+        } while (0)
+#endif
 uint16_t app_calculate_average(const uint16_t *buffer, uint16_t count);
 
 // 将 uint8_t 数组打包为 uint32_t 数组(小端序)

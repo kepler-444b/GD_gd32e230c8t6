@@ -6,10 +6,14 @@
 #include "usart.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "semphr.h"
 #include "../base/debug.h"
 #include "../base/base.h"
 #include "../device/device_manager.h"
 #include "../rtt/SEGGER_RTT.h"
+
+static SemaphoreHandle_t usart0_mutex = NULL;
+static SemaphoreHandle_t usart1_mutex = NULL;
 
 static usart0_rx_buf_t rx0_buf           = {0};
 static usart_rx0_callback_t rx0_callback = NULL;
