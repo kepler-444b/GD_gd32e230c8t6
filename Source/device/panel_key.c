@@ -231,7 +231,7 @@ static void process_panel_adc(ADC_PARAMS)
     for (uint8_t i = 0; i < KEY_NUMBER; i++) {
         panel_status_t *p_status = &temp_status[i];
         if (adc_value->vol < p_status->vol_range.min || adc_value->vol > p_status->vol_range.max) {
-            if (adc_value->vol >= MIN_VOL && adc_value->vol <= MAX_VOL) {
+            if (adc_value->vol >= MIN_VOL && adc_value->vol <= MAX_VOL) {   
                 p_status->key_press         = false;
                 temp_common->key_long_press = false;
                 temp_common->key_long_count = 0;
