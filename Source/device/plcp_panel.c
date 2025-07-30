@@ -110,7 +110,8 @@ void plcp_panel_key_init(void)
     }
 
     button_num_max_set = KEY_NUMBER;
-    relay_num_max_set  = RELAY_NUMBER - 1;
+    // relay_num_max_set  = RELAY_NUMBER;
+    relay_num_max_set = 4;
 
     local_did  = 0x0000;
     inin_timer = true;
@@ -139,9 +140,12 @@ static void plcp_panel_timer(TimerHandle_t xTimer)
     }
     if (bl_blink) {
         bl_blink_count++;
-        if (bl_blink_count % 100 == 0) {
+        if (bl_blink_count % 500 == 0) {
             bl_blink_status = !bl_blink_status;
-            plcp_panel_bl_blink(bl_blink_status, false);
+            APP_PRINTF("key_press_long_count:%d\n", key_press_long_count);
+            if (key_press_long_count == 0) {
+                plcp_panel_bl_blink(bl_blink_status, false);
+            }
         }
     }
 }
@@ -198,13 +202,16 @@ static void plcp_process_panel_adc(panel_status_t *temp_status, adc_value_t *adc
         }
         if (!temp_key_status) {
             key_press_clear_count++;
-            if (key_press_clear_count >= 200) {
+            if (key_press_clear_count >= 500) {
+                key_press_long_count  = 0;
                 key_press_clear_count = 0;
                 key_press_number      = 0;
             }
         }
     }
     if (mcu_rest && !temp_key_status) {
+        CmdTest_MSE_Factory();
+        vTaskDelay(5);
         NVIC_SystemReset();
     }
 }
@@ -224,6 +231,9 @@ static void plcp_panel_bl_blink(bool status, bool breathe)
 
         } else {
             APP_PRINTF("get_did_succ\n");
+            for (uint8_t i = 0; i < KEY_NUMBER; i++) {
+                app_set_pwm_fade(temp_cfg[i].led_y_pin, 500, 50);
+            }
             bl_blink        = false;
             bl_blink_count  = 0;
             bl_blink_status = false;
@@ -301,7 +311,7 @@ static void init_timer_handler(void)
             if (button_num_max_set != 0xff && relay_num_max_set != 0xff) {
                 if (button_num_max_set != button_num_max_get || relay_num_max_set != relay_num_max_get) {
                     cmd_switch_init(button_num_max_set, relay_num_max_set);
-                    APP_PRINTF("button_num_max_set:%d  relay_num_max_set:%d\n", button_num_max_set, relay_num_max_set);
+                    // APP_PRINTF("button_num_max_set:%d  relay_num_max_set:%d\n", button_num_max_set, relay_num_max_set);
                     button_num_max_get = 0xff;
                     relay_num_max_get  = 0xff;
                     break;
@@ -322,7 +332,7 @@ uint16_t plcp_panel_get_did(void)
 
 bool plcp_panel_set_status(char *aei, uint8_t *stateParam, uint16_t stateParamLen)
 {
-    // APP_PRINTF_BUF("PLCP_RX", stateParam, stateParamLen);
+    APP_PRINTF_BUF("PLCP_RX", stateParam, stateParamLen);
     const panel_cfg_t *temp_cfg = app_get_panel_cfg();
     uint8_t id;
     uint8_t index;
@@ -333,12 +343,13 @@ bool plcp_panel_set_status(char *aei, uint8_t *stateParam, uint16_t stateParamLe
             for (id = 0; id < KEY_NUMBER; id++) { // 设置背光灯
                 if (stateParam[1] & (0x80 >> id)) {
                     app_set_pwm_fade(temp_cfg[id].led_y_pin, stateParam[index] ? 500 : 0, 500);
+                    // APP_PRINTF("led_y_id:%d status:%d\n", id, stateParam[index]);
                     index++;
                 }
             }
             for (id = 0; id < KEY_NUMBER; id++) { // 设置指示灯
                 if (stateParam[1] & (0x80 >> id)) {
-                    // APP_PRINTF("led_id:%d status:%d\n", id, stateParam[index]);
+                    // APP_PRINTF("led_w_id:%d status:%d\n", id, stateParam[index]);
                     APP_SET_GPIO(temp_cfg[id].led_w_pin, stateParam[index]);
                     index++;
                 }
@@ -348,9 +359,8 @@ bool plcp_panel_set_status(char *aei, uint8_t *stateParam, uint16_t stateParamLe
         case 0x04: {
             for (id = 0; id < RELAY_NUMBER; id++) { // 设置继电器
                 if (stateParam[1] & (0x80 >> id)) {
-                    // APP_SET_GPIO(temp_cfg[id].relay_pin[0], stateParam[index]);
+                    APP_SET_GPIO(temp_cfg[id].relay_pin[0], stateParam[index]);
                     zero_set_gpio(temp_cfg[id].relay_pin[0], stateParam[index]);
-
                     // APP_PRINTF("relay_id:%d status:%d\n", id, stateParam[index]);
                     index++;
                 }

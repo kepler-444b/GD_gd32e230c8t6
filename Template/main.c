@@ -30,6 +30,7 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
     while (1); // 死循环,便于调试
 }
 
+static uint16_t feed_dog_count = 0;
 static void app_main_task(void *pvParameters)
 {
     // 初始化硬件和外设
@@ -44,6 +45,12 @@ static void app_main_task(void *pvParameters)
         app_eventbus_poll();
         vTaskDelay(1);
 
+        feed_dog_count++;
+        if (feed_dog_count >= 1000) { // 1s 喂狗
+            fwdgt_counter_reload();
+            feed_dog_count = 0;
+        }
+
 #if 0 // 打印任务剩余栈空间(word),调试使用
         UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
         APP_PRINTF("Stack remaining: %lu words\n", (unsigned long)uxHighWaterMark);
@@ -54,7 +61,6 @@ static void app_main_task(void *pvParameters)
 int main(void)
 {
     systick_config(); // 配置系统定时器
-
     TaskHandle_t AppInitTaskHandle = xTaskCreateStatic(
         app_main_task,   // 主任务
         "app_main_task", // 任务名称

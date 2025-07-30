@@ -68,15 +68,13 @@ void app_proto_init(void)
 // usart1 接收到的数据首先回调在这里处理
 static void app_proto_test(usart1_rx_buf_t *buf)
 {
-    APP_PRINTF("%s\n", buf->buffer);
-    // APP_PRINTF_BUF("", buf->buffer, buf->length);
-    // app_usart_tx_string((const char *)buf->buffer, USART1);
+    app_usart_tx_buf(buf->buffer, buf->length, USART1);
 }
 
 // usart0 接收到数据首先回调在这里处理
 static void app_proto_check(usart0_rx_buf_t *buf)
 {
-    APP_PRINTF_BUF("", buf->buffer, buf->length);
+    // APP_PRINTF_BUF("", buf->buffer, buf->length);
     // APP_PRINTF("%s\n", buf->buffer);
     static valid_data_t my_valid_data;                // 不显式初始化
     memset(&my_valid_data, 0, sizeof(my_valid_data)); // 每次调用都清零

@@ -12,9 +12,6 @@
 #include "../device/device_manager.h"
 #include "../rtt/SEGGER_RTT.h"
 
-static SemaphoreHandle_t usart0_mutex = NULL;
-static SemaphoreHandle_t usart1_mutex = NULL;
-
 static usart0_rx_buf_t rx0_buf           = {0};
 static usart_rx0_callback_t rx0_callback = NULL;
 
@@ -27,10 +24,12 @@ void app_usart0_rx_callback(usart_rx0_callback_t callback)
 {
     rx0_callback = callback;
 }
+
 void app_usart1_rx_callback(usart_rx1_callback_t callback)
 {
     rx1_callback = callback;
 }
+
 void app_usart_init(uint32_t usart_com, uint32_t baudrate)
 {
     rcu_periph_clock_enable(RCU_GPIOA);
@@ -90,6 +89,7 @@ void USART0_IRQHandler(void)
         }
     }
 }
+
 void USART1_IRQHandler(void)
 {
     // 接收缓冲区非空中断
@@ -106,8 +106,10 @@ void USART1_IRQHandler(void)
             rx1_callback(&rx1_buf);
             rx1_buf.length = 0;
         }
+        APP_PRINTF("1\n");
     }
 }
+
 // 发送一个字节
 static void usart_tx_byte(uint8_t data, uint32_t usart_periph)
 {

@@ -75,7 +75,7 @@ uint8_t APP_SendRSL(char *rslStr, char *from, uint8_t *playload, uint8_t playloa
     if (uartSendBuffLen) {
         // MCU_Send_date(uartSendBuff, uartSendBuffLen);
         app_usart_tx_buf(uartSendBuff, uartSendBuffLen, USART0);
-        // APP_PRINTF_BUF("PLCP_TX", uartSendBuff, uartSendBuffLen);
+        APP_PRINTF_BUF("PLCP_TX", uartSendBuff, uartSendBuffLen);
         return 1;
     } else {
         return 0;

@@ -9,10 +9,10 @@
 
     2025.5.8 舒东升
     usart1 也改为业务串口,新增了 uart1_rx_buf_t,
-    增加宏定义 RTT_ENABLE,开启后,debug 会通过RTT输出,
+    增加宏定义 RTT_ENABLE,开启后,APP_PRINTF 会通过RTT输出,
 */
 
-#define RTT_ENABLE      // 启用 RTT 调试
+// #define RTT_ENABLE      // 启用 RTT 调试
 
 #define UART0_RECV_SIZE 256
 #define UART1_RECV_SIZE 128
