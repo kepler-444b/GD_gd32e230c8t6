@@ -106,7 +106,6 @@ void USART1_IRQHandler(void)
             rx1_callback(&rx1_buf);
             rx1_buf.length = 0;
         }
-        APP_PRINTF("1\n");
     }
 }
 

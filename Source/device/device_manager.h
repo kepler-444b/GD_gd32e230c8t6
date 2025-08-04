@@ -7,8 +7,8 @@
 
 // 通信方式(多选一)
 // #define PLC_LHW
-// #define PLC_HI
-#define PLCP_LHW
+#define PLC_HI
+// #define PLCP_LHW
 
 #if defined PLC_LHW || defined PLC_HI
     // 设备类型(多选一)

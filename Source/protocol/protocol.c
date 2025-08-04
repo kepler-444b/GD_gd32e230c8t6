@@ -13,7 +13,7 @@
 
 #if defined PLC_HI
     #define AT_HEAD "AT+SEND=FFFFFFFFFFFF" // AT 指令固定帧头
-static bool is_offline = false;
+static bool is_offline = true;
 #endif
 
 #if defined PLC_LHW
@@ -75,39 +75,43 @@ static void app_proto_test(usart1_rx_buf_t *buf)
 static void app_proto_check(usart0_rx_buf_t *buf)
 {
     // APP_PRINTF_BUF("", buf->buffer, buf->length);
-    // APP_PRINTF("%s\n", buf->buffer);
+    // APP_PRINTF("recv:%s\n", buf->buffer);
     static valid_data_t my_valid_data;                // 不显式初始化
     memset(&my_valid_data, 0, sizeof(my_valid_data)); // 每次调用都清零
+
 #if defined PLC_HI
-    if (strncmp((char *)buf->buffer, "OK", 2) == 0) {
+    if (buf->buffer[0] == 'O' && buf->buffer[1] == 'K') { // 先收到"OK,标记为"掉线"
         is_offline = true;
-    }
-    // 检查协议头
-    if (strncmp((char *)buf->buffer, "+RECV:", 6) == 0) {
+        return;
+    } else if (buf->buffer[1] == 'R' && buf->buffer[2] == 'E' && buf->buffer[3] == 'C' && buf->buffer[4] == 'V') { // 再收到"+RECV",标记为"上线"
         is_offline = false;
+        if (buf->length < 24) return;
+        const uint8_t *first_quote = &buf->buffer[22]; // 查找第一个双引号
+        if (*first_quote != '"') return;
+
+        const uint8_t *end_ptr      = buf->buffer + buf->length; // 计算缓冲区结束位置
+        const uint8_t *second_quote = first_quote + 1;
+        while (second_quote < end_ptr && *second_quote != '"') {
+            second_quote++;
+        }
+        if (second_quote >= end_ptr) return; // 未找到第二个双引号
+
+        size_t hex_len = second_quote - (first_quote + 1);
+        if (hex_len == 0 || hex_len % 2 != 0 || hex_len > sizeof(my_valid_data.data)) return; // 必须为偶数
+
+        my_valid_data.length = hex_len / 2;
+        for (size_t i = 0; i < my_valid_data.length; i++) {
+            my_valid_data.data[i] = HEX_TO_BYTE(first_quote + 1 + i * 2);
+        }
     } else {
         return;
     }
-    // 查找有效数据边界
-    char *start_ptr = strchr((char *)buf->buffer, '"');
-    // 检查是否找到起始引号，并且后面还有数据
-    if (start_ptr == NULL || *(start_ptr + 1) == '\0') { return; }
-    char *end_ptr = strchr(start_ptr + 1, '"');
-    // 检查是否找到结束引号，并且位置合理
-    if (end_ptr == NULL || end_ptr <= start_ptr + 1) { return; }
-    // 计算数据长度并验证是否为偶数个十六进制字符
-    size_t hex_len = end_ptr - start_ptr - 1;
-    if (hex_len == 0 || hex_len % 2 != 0) { return; }
-    // 提取并转换十六进制数据
-    my_valid_data.length = hex_len / 2;
-    for (uint16_t i = 0; i < my_valid_data.length; i++) {
-        my_valid_data.data[i] = HEX_TO_BYTE(start_ptr + 1 + i * 2);
-    }
     app_proto_process(&my_valid_data);
+
 #endif
 #if defined PLC_LHW
-
-    if (buf->buffer[0] != 0x1b && buf->buffer[7] != 0x0a) { return; }
+    // 检查前导码
+    if (buf->buffer[0] != 0x1b && buf->buffer[7] != 0x0a) return;
     uint8_t c  = (buf->buffer[9] >> 5) & 0x07; // 取高3位
     uint8_t dd = buf->buffer[9] & 0x1F;        // 取低5位
     APP_PRINTF(" [c.dd]:%d.%d\n", c, dd);
@@ -118,7 +122,7 @@ static void app_proto_check(usart0_rx_buf_t *buf)
                 {
                     uint8_t index;
                     FIND_SECOND_FF(buf->buffer, buf->length, index);
-                    if (index == 0 || index >= buf->length) { return; }
+                    if (index == 0 || index >= buf->length) return;
                     memcpy(my_valid_data.data, &buf->buffer[index], buf->length - index);
                     my_valid_data.length = buf->length - index;
                     break;
@@ -148,7 +152,6 @@ static void app_proto_check(usart0_rx_buf_t *buf)
     }
     app_proto_process(&my_valid_data);
 #endif
-
 #if defined PLCP_LHW
     memcpy(my_valid_data.data, buf->buffer, buf->length);
     my_valid_data.length = buf->length;
@@ -296,7 +299,8 @@ static void app_at_send(at_frame_t *send_frame, uint8_t type)
             }
             snprintf(at_frame, sizeof(at_frame), "%s,%d,\"%s\",1\r\n", AT_HEAD, send_frame->length * 2, hex_buffer);
             app_usart_tx_string(at_frame, USART0); // 通过 usart0 发送到给 plc 模组
-            if (is_offline) {                      // 如果设备离线,把数据发送给自己
+            // APP_PRINTF("send:%s\n", at_frame);
+            if (is_offline) { // 如果设备离线,把数据发送给自己
                 app_eventbus_publish(EVENT_RECEIVE_CMD, send_frame);
                 APP_ERROR("is_offline");
             }
@@ -369,7 +373,6 @@ void app_send_cmd(uint8_t key_number, uint8_t key_status, uint8_t frame_head, ui
 {
     static at_frame_t send_frame;
     memset(&send_frame, 0, sizeof(send_frame));
-
     switch (frame_head) {
         case PANEL_HEAD: { // 发送通信帧(panel产品用到)
 #if defined PANEL_KEY

@@ -110,8 +110,7 @@ void plcp_panel_key_init(void)
     }
 
     button_num_max_set = KEY_NUMBER;
-    // relay_num_max_set  = RELAY_NUMBER;
-    relay_num_max_set = 4;
+    relay_num_max_set  = RELAY_NUMBER;
 
     local_did  = 0x0000;
     inin_timer = true;
@@ -142,7 +141,6 @@ static void plcp_panel_timer(TimerHandle_t xTimer)
         bl_blink_count++;
         if (bl_blink_count % 500 == 0) {
             bl_blink_status = !bl_blink_status;
-            APP_PRINTF("key_press_long_count:%d\n", key_press_long_count);
             if (key_press_long_count == 0) {
                 plcp_panel_bl_blink(bl_blink_status, false);
             }
@@ -231,9 +229,6 @@ static void plcp_panel_bl_blink(bool status, bool breathe)
 
         } else {
             APP_PRINTF("get_did_succ\n");
-            for (uint8_t i = 0; i < KEY_NUMBER; i++) {
-                app_set_pwm_fade(temp_cfg[i].led_y_pin, 500, 50);
-            }
             bl_blink        = false;
             bl_blink_count  = 0;
             bl_blink_status = false;

@@ -37,8 +37,8 @@ static void app_main_task(void *pvParameters)
     app_usart_init(USART1, 115200); // 调试串口
     app_usart_init(USART0, 115200); // 业务串口
     app_eventbus_init();            // 事件总线
-    app_proto_init();               // 协议层
     app_watchdog_init();            // 看门狗
+    app_proto_init();               // 协议层
     app_jump_device_init();         // 设备初始化
 
     while (1) {

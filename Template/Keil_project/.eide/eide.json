@@ -556,7 +556,7 @@
         "archExtensions": "",
         "floatingPointHardware": "none",
         "scatterFilePath": "output/Project.sct",
-        "useCustomScatterFile": false,
+        "useCustomScatterFile": true,
         "storageLayout": {
           "RAM": [
             {
