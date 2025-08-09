@@ -15,13 +15,11 @@
 #include "../device/pcb_device.h"
 
 #if defined QUICK_BOX
-    #define SYSTEM_CLOCK_FREQ  72000000 // 系统时钟频率(72MHz)
-    #define TIMER_PERIOD       999      // 定时器周期(1ms中断)
 
     #define TO_500(x)          ((x) <= 0 ? 0 : ((x) >= 100 ? 500 : ((x) * 500) / 100))
     #define SCALE_5_TO_5000(x) ((x) <= 0 ? 0 : ((x) >= 5 ? 5000 : ((x) * 5000) / 5))
 
-    #define FUNC_PARAMS        valid_data_t *data, const quick_ctg_t *temp_cfg
+    #define FUNC_PARAMS        at_frame_t *data, const quick_ctg_t *temp_cfg
     #define FUNC_ARGS          data, temp_cfg
 
     // 遍历
@@ -42,12 +40,13 @@ typedef struct {
     bool enter_config;        // 进入配置状态
     uint16_t key_long_count;  // 长按计数
     uint32_t led_filck_count; // 闪烁计数
+    bool ind_led;             // 通信指示灯
 
 } common_quick_t;
 static common_quick_t my_common_quick = {0};
 
 // 函数声明
-static void quick_box_data_cb(valid_data_t *data);
+static void quick_box_data_cb(at_frame_t *data);
 static void quick_event_handler(event_type_e event, void *params);
 static void quick_box_timer(TimerHandle_t xTimer);
 static void quick_ctrl_led_all(bool status);
@@ -62,7 +61,7 @@ static void quick_light_mode(FUNC_PARAMS);
 
 void quick_box_init(void)
 {
-    APP_PRINTF("quick_box_init\n");
+    // APP_PRINTF("quick_box_init\n");
     quick_box_gpio_init();
     app_load_config();
     app_eventbus_subscribe(quick_event_handler); // 订阅事件总线
@@ -87,11 +86,16 @@ void quick_box_init(void)
     app_pwm_add_pin(PB6);
     app_pwm_add_pin(PB5);
 
+    // app_set_pwm_fade(PB5, 500, 5000);
+    // app_set_pwm_fade(PB6, 500, 5000);
+    // app_set_pwm_fade(PB7, 500, 5000);
+
     app_zero_init(EXTI_11); // 过零检测外部中断配置(PB11)
 }
 
-static void quick_box_data_cb(valid_data_t *data)
+static void quick_box_data_cb(at_frame_t *data)
 {
+    APP_SET_GPIO(PB1, my_common_quick.ind_led = !my_common_quick.ind_led);
     APP_PRINTF_BUF("[RECV]", data->data, data->length);
     const quick_ctg_t *temp_cfg = app_get_quick_cfg();
     switch (data->data[1]) {
@@ -127,8 +131,8 @@ static void quick_event_handler(event_type_e event, void *params)
             my_common_quick.led_filck = true;
             break;
         case EVENT_RECEIVE_CMD: {
-            valid_data_t *valid_data = (valid_data_t *)params;
-            quick_box_data_cb(valid_data);
+            at_frame_t *frame = (at_frame_t *)params;
+            quick_box_data_cb(frame);
         } break;
         default:
             return;

@@ -15,11 +15,12 @@
 #include "../usart/usart.h"
 #include "../pwm/pwm.h"
 #include "../zero/zero.h"
+#if defined PANEL_PLCP
 
-#define ADC_TO_VOL(adc_val) ((adc_val) * 330 / 4096) // adc值转电压
-#define ADC_VOL_NUMBER      10                       // 电压值缓冲区数量
-#define MIN_VOL             329                      // 无按键按下时的最小电压值
-#define MAX_VOL             330                      // 无按键按下时的最大电压值
+    #define ADC_TO_VOL(adc_val) ((adc_val) * 330 / 4096) // adc值转电压
+    #define ADC_VOL_NUMBER      10                       // 电压值缓冲区数量
+    #define MIN_VOL             329                      // 无按键按下时的最小电压值
+    #define MAX_VOL             330                      // 无按键按下时的最大电压值
 
 typedef struct {
     // 用于处理adc数据
@@ -367,3 +368,4 @@ bool plcp_panel_set_status(char *aei, uint8_t *stateParam, uint16_t stateParamLe
     }
     return true;
 }
+#endif

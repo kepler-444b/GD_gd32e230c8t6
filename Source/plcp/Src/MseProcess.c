@@ -18,13 +18,15 @@
 #include "gd32e23x.h"
 #include "../base/debug.h"
 #include "../device/plcp_panel.h"
+#include "../device/device_manager.h"
+#if defined PLCP_LHW
 
-#define MSE_DEVICE_SET_STATE "/_state" // 设置状态
+    #define MSE_DEVICE_SET_STATE "/_state" // 设置状态
 
-/*OTA*/
-#define MSE_OTA_UPDATE "/mcu/update"
-#define MSE_OTA_FILE   "/mcu/file"
-#define MSE_OTA_RES    "/mcu/res"
+    /*OTA*/
+    #define MSE_OTA_UPDATE "/mcu/update"
+    #define MSE_OTA_FILE   "/mcu/file"
+    #define MSE_OTA_RES    "/mcu/res"
 
 void MCU_Send_date(uint8_t *SendBuff, uint16_t SendBuffLen);
 
@@ -136,13 +138,13 @@ void APP_STATE_SET_STATE(UappsMessage *uappsMsg, RSL_t *rsiMsg)
     memset(&scratch, 0, sizeof(uapps_rw_buffer_t));
     // printf("enter SET_STATE\n");
 
-#if 0
+    #if 0
     if (uappsMsg->hdr.hdrCode == UAPPS_REQ_PUT) {
         if (PLCP_write_state(rsiMsg->aei, uappsMsg->pl_ptr, uappsMsg->pl_len)) {
             respondCode = UAPPS_ACK_CHANGED;
         }
     }
-#endif
+    #endif
     if (uappsMsg->hdr.hdrCode == UAPPS_REQ_PUT) {
         if (plcp_panel_set_status(rsiMsg->aei, uappsMsg->pl_ptr, uappsMsg->pl_len)) {
             respondCode = UAPPS_ACK_CHANGED;
@@ -168,7 +170,7 @@ void APP_STATE_SET_STATE(UappsMessage *uappsMsg, RSL_t *rsiMsg)
     }
 }
 
-#if 0
+    #if 0
 void APP_OTA_UPDATA_Processing(UappsMessage* uappsMsg)
 {
 	uapps_rw_buffer_t scratch;
@@ -247,7 +249,7 @@ void APP_OTA_RES_Processing(UappsMessage* uappsMsg)
 		APP_SendACK(uappsMsg, payloadFlag, &scratch, UAPPS_TYPE_ACK, respondCode);
 	}
 }
-#endif
+    #endif
 /*--------------------------------29-----------------------------
 函数名称：APP_TOPIC_MSEProcessing
 函数功能：分别处理接受到的指令
@@ -260,7 +262,7 @@ void APP_TOPIC_MSEProcessing(UappsMessage *uappsMsg, RSL_t *rsiMsg)
     if (strcmp(rsiMsg->rsi, MSE_DEVICE_SET_STATE) == 0) {
         APP_STATE_SET_STATE(uappsMsg, rsiMsg);
     }
-#if 0
+    #if 0
 	else if (strcmp(rsiMsg->rsi, MSE_OTA_UPDATE) == 0) {
         APP_OTA_UPDATA_Processing(uappsMsg);
     } else if (strcmp(rsiMsg->rsi, MSE_OTA_FILE) == 0) {
@@ -268,7 +270,7 @@ void APP_TOPIC_MSEProcessing(UappsMessage *uappsMsg, RSL_t *rsiMsg)
     } else if (strcmp(rsiMsg->rsi, MSE_OTA_RES) == 0) {
         APP_OTA_RES_Processing(uappsMsg);
     }
-#endif
+    #endif
 }
 
 /*--------------------------------1-----------------------------
@@ -347,3 +349,4 @@ void APP_UappsMsgProcessing(uint8_t *inputDataBuff, uint16_t inputDataBuffLen)
     // 	printf("no Topic opt\n");
     // }
 }
+#endif

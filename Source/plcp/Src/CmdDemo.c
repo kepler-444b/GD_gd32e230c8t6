@@ -16,6 +16,10 @@
 #include "MseProcess.h"
 #include "gd32e23x.h"
 #include "../usart/usart.h"
+#include "../base/debug.h"
+#include "../device/device_manager.h"
+
+#if defined PLCP_LHW
 
 void MCU_Send_date(uint8_t *SendBuff, uint16_t SendBuffLen);
 
@@ -26,7 +30,7 @@ void MCU_Send_date(uint8_t *SendBuff, uint16_t SendBuffLen);
 返回值：  sendBuffLen-发送缓存长度
 备 注：
 ---------------------------------------------------------------*/
-#include "../base/debug.h"
+
 uint16_t Uapps_PackRSLWithFromMsg(uint8_t *sendBuff, char *rslStr, char *from, uint8_t *playload, uint8_t playloadLen)
 {
     uint16_t sendBuffLen;
@@ -65,7 +69,7 @@ uint16_t Uapps_PackRSLWithFromMsg(uint8_t *sendBuff, char *rslStr, char *from, u
     return sendBuffLen;
 }
 
-#include "../base/debug.h"
+    #include "../base/debug.h"
 uint8_t APP_SendRSL(char *rslStr, char *from, uint8_t *playload, uint8_t playloadLen)
 {
     uint8_t uartSendBuff[200];
@@ -186,3 +190,4 @@ void CmdTest_MSE_RST(void)
     // MCU_Send_date(uartSendBuff, uartSendBuffLen);
     app_usart_tx_buf(uartSendBuff, uartSendBuffLen, USART0);
 }
+#endif

@@ -17,7 +17,8 @@
 #include "APP_timer.h"
 #include "APP_RxBuffer.h"
 #include "APP_TxBuffer.h"
-
+#include "../device/device_manager.h"
+#if defined PLCP_LHW
 void plcp_panel_uart_send_process(uint8_t *send_data, uint16_t len);
 
 void APP_UappsMsgProcessing(uint8_t *inputDataBuff, uint16_t inputDataBuffLen);
@@ -37,17 +38,15 @@ uint8_t MCU_UartReceive(uint8_t *recbuf, uint16_t reclen)
     return APP_RxBuffer_Add(&rxDataParam);
 }
 
-
 static void MCU_Send_date_timer_handler(void)
 {
-	APP_DataTxTask txTask;
-	if (APP_TxBuffer_GetFirstMsgDataParameters(&txTask))
-	{
-		// printf("sdk uart send\n");
-		// printData(txTask.nsdu, txTask.nsduLength);
-		plcp_panel_uart_send_process(txTask.nsdu, txTask.nsduLength);
-		APP_TxBuffer_DeleteFirstMsg();
-	}
+    APP_DataTxTask txTask;
+    if (APP_TxBuffer_GetFirstMsgDataParameters(&txTask)) {
+        // printf("sdk uart send\n");
+        // printData(txTask.nsdu, txTask.nsduLength);
+        plcp_panel_uart_send_process(txTask.nsdu, txTask.nsduLength);
+        APP_TxBuffer_DeleteFirstMsg();
+    }
 }
 /*****************************************************************************
 函数名称 : MCU_Send_date
@@ -92,3 +91,4 @@ void APP_Queue_ListenAndHandleMessage(void)
         APP_RxBuffer_DeleteFirstMsg();
     }
 }
+#endif

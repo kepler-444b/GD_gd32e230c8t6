@@ -47,7 +47,7 @@ typedef enum {
     // 快装盒子帧头
     QUICK_SINGLE = 0xE2, // quick (快装盒子)单发串码
     QUICK_MULTI  = 0xE3, // quick (快装盒子)群发串码
-    QUICK_END    = 0x30,
+    QUICK_END    = 0x30, // quick (快装盒子)结束串码
 
     // 面板帧头
     PANEL_HEAD   = 0xF1, // panel (面板)通讯数据

@@ -14,24 +14,20 @@
 #if defined PLC_HI
     #define AT_HEAD "AT+SEND=FFFFFFFFFFFF" // AT 指令固定帧头
 static bool is_offline = true;
-#endif
 
-#if defined PLC_LHW
-    #define ESCAPE_SEQ    0x1b, 0x1b, 0x1b, 0x1b, 0x1b, 0x0a, 0x1b, 0x0a
-    #define MAC_ADDRESS   0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46
-    #define SERVICE_ID    0x31, 0x30, 0x34 // "104"
+#elif defined PLC_LHW
+    #define ESCAPE_SEQ    0x1b, 0x1b, 0x1b, 0x1b, 0x1b, 0x0a, 0x1b, 0x0a                         // 前导码
+    #define MAC_ADDRESS   0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46, 0x46 // MAC 地址
+    #define SERVICE_ID    0x31, 0x30, 0x34                                                       // "104"
 
     #define LHW_GET_MAC   0x42, 0x01, 0x28, 0x00, 0x00, 0xac, 0xff, 0xa4, 0x40, 0x30, 0x2f, 0x32
     #define LHW_SET_DID_1 0x42, 0x03, 0x2b, 0x05, 0x11, 0x0a, 0xff, 0xad, 0x06, 0x40, 0x30, 0x2e
     #define LHW_SET_DID_2 0x2f, 0x33, 0x2f, 0x31, 0x11, 0x10, 0xff
-
 #endif
 
 #if defined PANEL_KEY
 static uint8_t extend_data[16] = {0}; // 灯控面板的第二个校验值所校验的数据
-#endif
-
-#if defined QUICK_BOX
+#elif defined QUICK_BOX
 static valid_data_t temp_save = {0}; // 快装盒子存储配置信息用到的临时缓冲区
 #endif
 
@@ -56,6 +52,9 @@ static void app_save_panel_cfg(valid_data_t *boj, bool is_ex);
 static void app_save_quick_cfg(valid_data_t *obj);
 static void app_proto_process(valid_data_t *my_valid_data);
 static void app_at_send(at_frame_t *send_frame, uint8_t type);
+static void app_proto_hi(usart0_rx_buf_t *buf);
+static void app_proto_lhw(usart0_rx_buf_t *buf);
+static void app_proto_plcp(usart0_rx_buf_t *buf);
 static uint8_t panel_crc(uint8_t *rxbuf, uint8_t len);
 static uint16_t quick_crc(uint8_t *data, uint8_t len);
 
@@ -71,15 +70,11 @@ static void app_proto_test(usart1_rx_buf_t *buf)
     app_usart_tx_buf(buf->buffer, buf->length, USART1);
 }
 
-// usart0 接收到数据首先回调在这里处理
-static void app_proto_check(usart0_rx_buf_t *buf)
-{
-    // APP_PRINTF_BUF("", buf->buffer, buf->length);
-    // APP_PRINTF("recv:%s\n", buf->buffer);
-    static valid_data_t my_valid_data;                // 不显式初始化
-    memset(&my_valid_data, 0, sizeof(my_valid_data)); // 每次调用都清零
-
 #if defined PLC_HI
+static void app_proto_hi(usart0_rx_buf_t *buf)
+{
+    static valid_data_t my_valid_data;
+    memset(&my_valid_data, 0, sizeof(my_valid_data));
     if (buf->buffer[0] == 'O' && buf->buffer[1] == 'K') { // 先收到"OK,标记为"掉线"
         is_offline = true;
         return;
@@ -107,14 +102,17 @@ static void app_proto_check(usart0_rx_buf_t *buf)
         return;
     }
     app_proto_process(&my_valid_data);
-
-#endif
-#if defined PLC_LHW
+}
+#elif defined PLC_LHW
+static void app_proto_lhw(usart0_rx_buf_t *buf)
+{
+    static valid_data_t my_valid_data;
+    memset(&my_valid_data, 0, sizeof(my_valid_data));
     // 检查前导码
     if (buf->buffer[0] != 0x1b && buf->buffer[7] != 0x0a) return;
     uint8_t c  = (buf->buffer[9] >> 5) & 0x07; // 取高3位
     uint8_t dd = buf->buffer[9] & 0x1F;        // 取低5位
-    APP_PRINTF(" [c.dd]:%d.%d\n", c, dd);
+    // APP_PRINTF(" [c.dd]:%d.%d\n", c, dd);
     switch (c) {
         case 0:
             switch (dd) {
@@ -125,6 +123,7 @@ static void app_proto_check(usart0_rx_buf_t *buf)
                     if (index == 0 || index >= buf->length) return;
                     memcpy(my_valid_data.data, &buf->buffer[index], buf->length - index);
                     my_valid_data.length = buf->length - index;
+                    // APP_PRINTF_BUF("recv", my_valid_data.data, my_valid_data.length);
                     break;
                 }
             }
@@ -148,15 +147,32 @@ static void app_proto_check(usart0_rx_buf_t *buf)
                 }
             }
         default:
-            break;
+            return;
     }
     app_proto_process(&my_valid_data);
-#endif
-#if defined PLCP_LHW
+}
+#elif defined PLCP_LHW
+static void app_proto_plcp(usart0_rx_buf_t *buf)
+{
+    static valid_data_t my_valid_data;
+    memset(&my_valid_data, 0, sizeof(my_valid_data));
     memcpy(my_valid_data.data, buf->buffer, buf->length);
     my_valid_data.length = buf->length;
     app_eventbus_publish(EVENT_RECEIVE_CMD, &my_valid_data);
-// APP_PRINTF_BUF("rc", buf->buffer, buf->length);
+}
+#endif
+
+// usart0 接收到数据首先回调在这里处理
+static void app_proto_check(usart0_rx_buf_t *buf)
+{
+    // APP_PRINTF_BUF("RECV_1", buf->buffer, buf->length);
+    // APP_PRINTF("recv:%s\n", buf->buffer);
+#if defined PLC_HI
+    app_proto_hi(buf);
+#elif defined PLC_LHW
+    app_proto_lhw(buf);
+#elif defined PLCP_LHW
+    app_proto_plcp(buf);
 #endif
 }
 
@@ -200,8 +216,7 @@ static void app_proto_process(valid_data_t *my_valid_data)
                 app_save_panel_cfg(my_valid_data, my_apply.is_ex);
             }
             break;
-#endif
-#if defined QUICK_BOX
+#elif defined QUICK_BOX
         case QUICK_SINGLE:
         case QUICK_MULTI: {
             if (cmd == QUICK_MULTI || my_apply.enter_apply) {
@@ -281,12 +296,10 @@ static void app_save_quick_cfg(valid_data_t *obj)
 // 构造发送 AT 帧
 static void app_at_send(at_frame_t *send_frame, uint8_t type)
 {
-
 #if defined PLC_HI
     static char at_frame[64]   = {0};
     static char hex_buffer[64] = {0};
-#endif
-#if defined PLC_LHW
+#elif defined PLC_LHW
     static uint8_t at_frame[64] = {0};
     const uint8_t escape[8]     = {ESCAPE_SEQ};
 #endif
@@ -304,8 +317,7 @@ static void app_at_send(at_frame_t *send_frame, uint8_t type)
                 app_eventbus_publish(EVENT_RECEIVE_CMD, send_frame);
                 APP_ERROR("is_offline");
             }
-#endif
-#if defined PLC_LHW
+#elif defined PLC_LHW
             app_eventbus_publish(EVENT_RECEIVE_CMD, send_frame); // 先把数据发送给自己
             memcpy(&at_frame[0], escape, sizeof(escape));
             // 报文头域 (6字节)
@@ -339,10 +351,10 @@ static void app_at_send(at_frame_t *send_frame, uint8_t type)
             at_frame[40] = 0xff; // end_mark
             memcpy(&at_frame[41], send_frame->data, send_frame->length);
             app_usart_tx_buf(at_frame, 41 + send_frame->length, USART0);
-            APP_PRINTF_BUF("panel_send", at_frame, 41 + send_frame->length);
+            // APP_PRINTF_BUF("panel_send", at_frame, 41 + send_frame->length);
 #endif
         } break;
-        case GET_MAC_TYPE: {
+        case GET_MAC_TYPE: { // 获取模组mac地址
 #if defined PLC_LHW
             memcpy(&at_frame[0], escape, sizeof(escape));
             memcpy(&at_frame[8], (uint8_t[]){LHW_GET_MAC}, 12);
